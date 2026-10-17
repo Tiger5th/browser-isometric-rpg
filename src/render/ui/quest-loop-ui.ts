@@ -27,6 +27,11 @@ export interface QuestLoopUiOptions {
   /** 调试战斗入口：用真实战斗攻击最近的敌人（方便手动验证任务进度）。 */
   onDebugKill?(): IntentResult | void;
   /**
+   * 票 29：对话改由 galgame 立绘 UI（dialogue-portrait.ts）呈现时为 true；
+   * 旧对话框面板不再渲染，避免两套 UI 叠加。
+   */
+  usePortraitDialogue?: boolean;
+  /**
    * 重击技能（票 27）：对当前选中/最近敌人发起重击意图。
    * HUD 只负责把冷却剩余显示成转圈，不持有任何逻辑状态。
    */
@@ -598,6 +603,13 @@ export function createQuestLoopUi(options: QuestLoopUiOptions): QuestLoopUi {
   };
 
   const renderDialogue = (snapshot: GameSessionSnapshot): void => {
+    // 票 29：galgame 立绘 UI（dialogue-portrait.ts）接管对话呈现，
+    // 这里只在不使用立绘的场景（dialogue-quest 等验证场景）渲染旧面板，
+    // 避免两套对话框叠加。
+    if (options.usePortraitDialogue === true) {
+      dialogue.style.display = "none";
+      return;
+    }
     dialogue.replaceChildren();
     const active = snapshot.dialogue;
     if (active === null) {

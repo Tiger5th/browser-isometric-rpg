@@ -49,6 +49,18 @@ import {
   type GameSessionSnapshot,
   type IntentResult,
 } from "../../logic/game-session";
+import {
+  activateBubble,
+  createInteractionState,
+  requestMove,
+  selectNpc,
+  setInteractionPhase,
+  updateInteraction,
+  type InteractionAction,
+  type InteractionState,
+  type InteractableInfo,
+  type InteractableIndex,
+} from "../../logic/interaction";
 import { summarizeFrameTimes } from "../../logic/perf";
 import type { Metric } from "../../logic/report";
 import { GameSaveService } from "../../logic/save";
@@ -65,6 +77,7 @@ import type { ScenarioContext, ScenarioDefinition } from "../harness";
 import { setCameraSpan, setGreyboxEnabled } from "../navmesh-scene";
 import { IndexedDbSaveStorage } from "../persistence/indexed-db-save-storage";
 import { createQuestLoopUi, type QuestLoopUi } from "../ui/quest-loop-ui";
+import { createDialogueUi, type DialogueUi } from "../ui/dialogue-portrait";
 import {
   createProceduralNpc,
   createSlimeEnemy,
@@ -103,11 +116,17 @@ import {
   type QualityLevel,
 } from "../presentation/quality";
 import {
+  DIALOGUE_ZOOM_DURATION_MS,
+  dialogueDimStrength,
+  dialogueZoomSpan,
+} from "../ui/portrait-layout";
+import {
   createCombatFeedbackLayer,
   type CombatFeedbackLayer,
 } from "../presentation/combat-feedback";
 import { CombatAudio } from "../presentation/combat-audio";
 import { createWhiteTexture } from "../presentation/textures";
+import { paletteOf, portraitUrlOf } from "../presentation/character-palettes";
 import {
   bushAlphaForOcclusion,
   bushOcclusionAt,
@@ -231,6 +250,12 @@ interface P1WorldState {
   }>;
   probeHoldUntil: number;
   previousHardwareScaling: number;
+  /** 两段式对话交互状态（纯逻辑，见 src/logic/interaction.ts）。 */
+  interaction: InteractionState;
+  /** galgame 立绘 + 气泡 UI（纯 DOM）。 */
+  dialogueUi: DialogueUi;
+  /** 对话镜头推近进度 0–1；0 = 常规全景。 */
+  zoomProgress: number;
   /** 票 27：战斗反馈层（飘字/血条/顿帧/震屏/闪红），只消费订阅事件。 */
   feedback: CombatFeedbackLayer;
   /** 票 27：事件驱动的 CC0 音效；首次交互后解锁。 */
@@ -313,6 +338,20 @@ export interface P1WorldDebugApi {
   };
   /** 保持眯眼/眨眼 ms，便于截图（默认 500ms）。 */
   blink(holdMs?: number): void;
+  /** 两段式交互：点击远处 NPC（只靠近不出气泡）。 */
+  interactNpc(npcId: string): void;
+  /** 第二段：点击头顶气泡，开对话（双方互转面对面 + 立绘）。 */
+  activateBubble(): void;
+  /** 当前交互阶段与气泡内容（ego-browser 断言两段式流程）。 */
+  getInteraction(): {
+    phase: string;
+    npcId: string | null;
+    bubble: "talk" | "quest" | null;
+    dialogueOpen: boolean;
+    portraitSides: Array<{ entityId: string; speaking: boolean; brightness: number }>;
+    cameraSpan: number;
+    dimStrength: number;
+  };
   /** 世界质感证据（票 28）：网格化/碰撞/雾/景观/主光/NPC 待机/灌木可穿。 */
   getWorldEvidence(): {
     meshedPartCount: number;
@@ -521,12 +560,13 @@ function createEntityVisual(
   }
 
   if (entity.identity.type === "npc") {
-    const tint = entity.identity.displayName === "马婆婆" ? "#f0abfc" : "#a3e635";
+    // 票 29：3D tint 取自角色色板卡主色，与立绘/对话框同源。
+    const palette = paletteOf(id);
     const procedural = createProceduralNpc(
       scene,
       root,
       `${id}.`,
-      Color3.FromHexString(tint),
+      Color3.FromHexString(palette.primary),
       state.whiteTexture,
     );
     state.materials.push(procedural.material);
@@ -536,7 +576,8 @@ function createEntityVisual(
       mesh: procedural.mesh,
       targetY: 0.55,
       procedural,
-      baseTint: Color3.FromHexString(tint),
+      // 票 27：基础色调（受击闪白等反馈要恢复到它），同源取色板卡主色。
+      baseTint: Color3.FromHexString(palette.primary),
     };
   } else {
     const tint = entity.identity.displayName.includes("蓝") ? "#60a5fa" : "#86efac";
@@ -611,6 +652,140 @@ function clearWaypoints(state: P1WorldState): void {
   state.waypoints.length = 0;
 }
 
+/** 两段式对话：可交互实体表（是否有对话 / 是否有可接任务）。 */
+function interactableIndex(session: GameSession): InteractableIndex {
+  const snapshot = session.snapshot();
+  const questsByNpc = new Map<string, boolean>();
+  for (const quest of snapshot.quests) {
+    if (quest.status === "available") {
+      questsByNpc.set(quest.giverNpcId, true);
+    }
+  }
+  const index = new Map<string, InteractableInfo>();
+  for (const entity of snapshot.entities) {
+    if (entity.identity.type !== "npc") {
+      continue;
+    }
+    index.set(entity.id, {
+      hasDialogue: session.canTalkTo(entity.id),
+      hasQuest: questsByNpc.get(entity.id) ?? false,
+    });
+  }
+  return index;
+}
+
+function entityPositions(session: GameSession): Map<string, { x: number; y: number; z: number }> {
+  return new Map(
+    session.snapshot().entities.map((entity) => [entity.id, entity.position]),
+  );
+}
+
+/** 执行交互状态机给出的动作（提交意图 + UI 同步）。 */
+function applyInteractionAction(
+  state: P1WorldState,
+  action: InteractionAction,
+): void {
+  switch (action.kind) {
+    case "approach":
+      moveAlongNavMesh(state, { x: action.target.x, z: action.target.z });
+      break;
+    case "arrived":
+      state.ui.setSaveStatus("走到面前了：点击头顶气泡开始对话", "idle");
+      break;
+    case "start-dialogue":
+      startDialogue(state, action.npcId);
+      break;
+    case "end-dialogue":
+      state.session.endDialogue();
+      break;
+    case "none":
+      break;
+  }
+}
+
+/** 第二段：双方互转面对面 → 开对话 → 立绘 + 镜头推近。 */
+function startDialogue(state: P1WorldState, npcId: string): void {
+  const result = state.session.tryTalkTo(npcId);
+  if (!result.ok) {
+    state.ui.setSaveStatus(`无法对话：${result.message ?? "未知原因"}`, "idle");
+    return;
+  }
+  state.session.faceNpc(PLAYER_ID, npcId);
+  const snapshot = state.session.snapshot();
+  const dialogue = snapshot.dialogue;
+  if (dialogue === null) {
+    return;
+  }
+  state.dialogueUi.openDialogue(dialogue.npcId, PLAYER_ID, dialogue.text, dialogue.choices);
+  syncVisualToSnapshot(state, snapshot);
+}
+
+/** 对话结束（ink 走完 / 移动打断 / 走开）：恢复镜头与 UI。 */
+function closeDialoguePresentation(state: P1WorldState): void {
+  state.dialogueUi.closeDialogue();
+  // 交互阶段同步复位：对话可能由 ink 自然结束（选完选项后故事走到 END），
+  // 此时没有移动意图触发 requestMove，状态机会停在 talking。
+  // 不复位会让下一次点击 NPC 被「已有对话」逻辑拒绝。
+  setInteractionPhase(state.interaction, createInteractionState());
+}
+
+/** 每帧推进交互状态机 + 气泡投影 + 对话镜头。 */
+function updateInteractionPresentation(state: P1WorldState, scene: Scene, deltaMs: number): void {
+  const session = state.session;
+  const interactables = interactableIndex(session);
+  const positions = entityPositions(session);
+  const action = updateInteraction(state.interaction, positions, interactables, PLAYER_ID);
+  applyInteractionAction(state, action);
+
+  // 气泡投影：NPC 头顶（视觉位置 + 目标高度）→ 屏幕坐标。
+  const npcId = state.interaction.npcId;
+  const bubbleKind = state.interaction.bubble;
+  const bubbleVisual = npcId === null ? undefined : state.visuals.get(npcId);
+  const camera = scene.activeCamera;
+  if (bubbleKind === null || npcId === null || bubbleVisual === undefined || camera === null) {
+    state.dialogueUi.setBubble(null);
+  } else {
+    const head = bubbleVisual.node.position.add(
+      new Vector3(0, bubbleVisual.targetY + 0.6, 0),
+    );
+    const projected = Vector3.Project(
+      head,
+      Matrix.Identity(),
+      scene.getTransformMatrix(),
+      camera.viewport.toGlobal(
+        scene.getEngine().getRenderWidth(),
+        scene.getEngine().getRenderHeight(),
+      ),
+    );
+    state.dialogueUi.setBubble({
+      npcId,
+      kind: bubbleKind,
+      x: projected.x,
+      y: projected.y,
+    });
+  }
+
+  // 对话内容变化（说话方/文本/选项）→ 立绘与对话框刷新。
+  const dialogue = session.snapshot().dialogue;
+  if (state.dialogueUi.isOpen()) {
+    if (dialogue === null) {
+      closeDialoguePresentation(state);
+    } else {
+      state.dialogueUi.updateDialogue(dialogue.text, dialogue.choices, dialogue.npcId);
+    }
+  }
+
+  // 镜头推近/恢复：对话进行中趋向目标 span，结束后回到常规全景。
+  const zoomTarget = session.snapshot().dialogue !== null ? 1 : 0;
+  const step = Math.min(1, deltaMs / DIALOGUE_ZOOM_DURATION_MS);
+  const next = state.zoomProgress + (zoomTarget - state.zoomProgress) * step;
+  if (Math.abs(next - state.zoomProgress) > 1e-4) {
+    state.zoomProgress = next;
+    const span = dialogueZoomSpan(CAMERA_VERTICAL_SPAN, state.zoomProgress);
+    setCameraSpan(scene, span);
+  }
+}
+
 /** 把下一个路点提交给逻辑层；到达后由 beforeRender 继续推进。 */
 function advanceWaypoint(state: P1WorldState): void {
   const player = playerSnapshot(state.session);
@@ -680,6 +855,13 @@ async function loadFromStorage(state: P1WorldState): Promise<boolean> {
     }
     state.session.restoreSnapshot(snapshot);
     clearWaypoints(state);
+    // 读档不保留「靠近中/气泡待点」这类会话内交互阶段；对话本身由
+    // ink 快照恢复，下一帧 updateInteraction 会重新判定气泡显隐。
+    setInteractionPhase(state.interaction, createInteractionState());
+    closeDialoguePresentation(state);
+    state.zoomProgress = 0;
+    const scene = state.player.rootNode.getScene();
+    setCameraSpan(scene, CAMERA_VERTICAL_SPAN);
     const restored = state.session.snapshot();
     state.deadEnemies.clear();
     for (const entity of restored.entities) {
@@ -690,6 +872,17 @@ async function loadFromStorage(state: P1WorldState): Promise<boolean> {
     syncVisualToSnapshot(state, restored);
     state.saveAvailable = true;
     state.ui.update(restored);
+    // 存档中带进行中的对话：恢复 galgame 立绘与镜头（存读档不回归）。
+    if (restored.dialogue !== null) {
+      state.session.faceNpc(PLAYER_ID, restored.dialogue.npcId);
+      state.dialogueUi.openDialogue(
+        restored.dialogue.npcId,
+        PLAYER_ID,
+        restored.dialogue.text,
+        restored.dialogue.choices,
+      );
+      syncVisualToSnapshot(state, state.session.snapshot());
+    }
     state.ui.setSaveStatus(
       `已从存档恢复 · v${snapshot.version} · ${snapshot.elapsedMs}ms`,
       "ok",
@@ -994,6 +1187,69 @@ function installDebugApi(scene: Scene, state: P1WorldState): void {
       };
     },
     blink: (holdMs = 500) => state.player.triggerBlink(holdMs),
+    interactNpc: (npcId) => {
+      // 两段式第一段：只靠近（远处）或出气泡（距离内），不开对话。
+      const player = playerSnapshot(state.session);
+      const npc = state.session.snapshot().entities.find((entity) => entity.id === npcId);
+      if (player === null || npc === undefined) {
+        state.ui.setSaveStatus(`无法交互：${npcId}`, "idle");
+        return;
+      }
+      const action = selectNpc(
+        state.interaction,
+        npcId,
+        interactableIndex(state.session),
+        player.position,
+        npc.position,
+      );
+      applyInteractionAction(state, action);
+    },
+    activateBubble: () => {
+      const action = activateBubble(
+        state.interaction,
+        entityPositions(state.session),
+        interactableIndex(state.session),
+        PLAYER_ID,
+      );
+      applyInteractionAction(state, action);
+    },
+    getInteraction: () => {
+      const scene2 = scene;
+      const camera = scene2.activeCamera;
+      const dialogueOpen = state.session.snapshot().dialogue !== null;
+      const visuals: Array<{ entityId: string; speaking: boolean; brightness: number }> = [];
+      if (dialogueOpen) {
+        const dialogue = state.session.snapshot().dialogue!;
+        const npcFrame = document.querySelector<HTMLElement>(
+          `[data-testid="dialogue-portrait"][data-entity-id="${dialogue.npcId}"]`,
+        );
+        const playerFrame = document.querySelector<HTMLElement>(
+          `[data-testid="dialogue-portrait"][data-entity-id="${PLAYER_ID}"]`,
+        );
+        for (const frame of [npcFrame, playerFrame]) {
+          if (frame === null) {
+            continue;
+          }
+          visuals.push({
+            entityId: frame.dataset.entityId ?? "",
+            speaking: frame.dataset.speaking === "true",
+            brightness: Number(frame.dataset.brightness ?? "0"),
+          });
+        }
+      }
+      return {
+        phase: state.interaction.phase,
+        npcId: state.interaction.npcId,
+        bubble: state.interaction.bubble,
+        dialogueOpen,
+        portraitSides: visuals,
+        cameraSpan:
+          camera === null
+            ? 0
+            : round(cameraVerticalSpan(camera, CAMERA_VERTICAL_SPAN), 3),
+        dimStrength: round(dialogueDimStrength(state.zoomProgress), 3),
+      };
+    },
     getWorldEvidence: () => {
       const enabledLights = scene.lights.filter((light) => light.isEnabled());
       const light = enabledLights[0] ?? null;
@@ -1284,6 +1540,13 @@ export const p1WorldScenario: ScenarioDefinition = {
       occlusionTargets: [],
       probeHoldUntil: 0,
       previousHardwareScaling: engine.getHardwareScalingLevel(),
+      interaction: createInteractionState(),
+      dialogueUi: {
+        update: () => undefined,
+        setSaveStatus: () => undefined,
+        dispose: () => undefined,
+      } as unknown as DialogueUi,
+      zoomProgress: 0,
       feedback: null as unknown as CombatFeedbackLayer,
       audio: new CombatAudio(),
       selectedEnemyId: null,
@@ -1357,6 +1620,7 @@ export const p1WorldScenario: ScenarioDefinition = {
       onEquipItem: (instanceId) => session.tryEquip(PLAYER_ID, instanceId),
       onUnequipItem: (instanceId) => session.tryUnequip(PLAYER_ID, instanceId),
       onDebugKill: killNextEnemy,
+      usePortraitDialogue: true,
       onHeavyAttack: () => heavyAttack(),
       onSave: () => {
         void saveToStorage(state);
@@ -1397,18 +1661,54 @@ export const p1WorldScenario: ScenarioDefinition = {
       setStatus: (text, kind) => state.ui.setSaveStatus(text, kind),
     });
 
+    state.dialogueUi = createDialogueUi({
+      mount: document.body,
+      characters: [
+        {
+          id: PLAYER_ID,
+          displayName:
+            initialSnapshot.entities.find((entity) => entity.id === PLAYER_ID)?.identity
+              .displayName ?? "旅人",
+          primaryColor: paletteOf(PLAYER_ID).primary,
+          portraitUrl: portraitUrlOf(PLAYER_ID),
+        },
+        ...initialSnapshot.entities
+          .filter((entity) => entity.identity.type === "npc")
+          .map((entity) => ({
+            id: entity.id,
+            displayName: entity.identity.displayName,
+            primaryColor: paletteOf(entity.id).primary,
+            portraitUrl: portraitUrlOf(entity.id),
+          })),
+      ],
+      onActivateBubble: () => {
+        // 气泡只对当前交互目标有效；目标由交互状态机持有。
+        const action = activateBubble(
+          state.interaction,
+          entityPositions(session),
+          interactableIndex(session),
+          PLAYER_ID,
+        );
+        applyInteractionAction(state, action);
+      },
+      onChoose: (index) => {
+        state.session.chooseDialogueOption(index);
+      },
+    });
+
     // 画质档位：?quality=high|medium|low|auto（默认 auto = 动态分辨率）。
     const requestedQuality = parseQualityLevel(
       new URLSearchParams(window.location.search).get("quality"),
     );
     configureQuality(scene, state, requestedQuality);
 
-    // 点击 NPC = 对话；点击敌人 = 发起攻击（GameSession 自动接近）；
-    // 点击其他实体/地面 = 走过去。
+    // 点击 NPC = 两段式第一段（靠近，不弹对话）；点击敌人 = 攻击；
+    // 点击其他实体/地面 = 走过去（同时取消靠近/结束对话）。
     const pointerObserver = scene.onPointerObservable.add((pointerInfo) => {
       if (pointerInfo.type !== PointerEventTypes.POINTERDOWN) {
         return;
       }
+
       // 浏览器自动播放策略：首次用户交互后才允许 AudioContext 发声。
       if (!state.audio.isUnlocked) {
         void state.audio.unlock();
@@ -1425,17 +1725,29 @@ export const p1WorldScenario: ScenarioDefinition = {
           .snapshot()
           .entities.find((entity) => entity.id === pickedId);
         if (picked?.identity.type === "npc") {
-          if (!session.canTalkTo(pickedId)) {
+          const interactables = interactableIndex(session);
+          const info = interactables.get(pickedId);
+          if (info === undefined || (!info.hasDialogue && !info.hasQuest)) {
             state.ui.setSaveStatus(
               `${picked.identity.displayName} 现在没有可进行的对话`,
               "idle",
             );
             return;
           }
-          const result = session.tryTalkTo(pickedId);
-          if (!result.ok) {
-            state.ui.setSaveStatus(`无法对话：${result.message ?? "未知原因"}`, "idle");
+          const player = playerSnapshot(session);
+          if (player === null || !player.combat.alive) {
+            state.ui.setSaveStatus("角色倒下中，等待重生", "idle");
+            return;
           }
+          // 两段式：远处点击只寻路靠近；距离内直接出气泡。
+          const action = selectNpc(
+            state.interaction,
+            pickedId,
+            interactables,
+            player.position,
+            picked.position,
+          );
+          applyInteractionAction(state, action);
           return;
         }
         if (picked?.identity.type === "enemy") {
@@ -1459,6 +1771,7 @@ export const p1WorldScenario: ScenarioDefinition = {
         // 点到地面/其它实体：取消目标圈（走 A 由 moveTo 打断攻击意图）。
         state.selectEnemy(null);
         if (picked !== undefined) {
+          applyInteractionAction(state, requestMove(state.interaction));
           moveAlongNavMesh(state, {
             x: picked.position.x,
             z: picked.position.z + 1.5,
@@ -1466,8 +1779,10 @@ export const p1WorldScenario: ScenarioDefinition = {
         }
         return;
       }
+      // 点击地面：移动意图（会取消靠近/结束对话）。
       const point = groundPoint(scene);
       if (point !== null) {
+        applyInteractionAction(state, requestMove(state.interaction));
         moveAlongNavMesh(state, { x: point.x, z: point.z });
       }
     });
@@ -1520,6 +1835,8 @@ export const p1WorldScenario: ScenarioDefinition = {
         now < state.probeHoldUntil ? PLAYER_ID : null,
       );
 
+      // 两段式对话交互 + 气泡投影 + 立绘/镜头（票 29）。
+      updateInteractionPresentation(state, scene, deltaMs);
       // 票 27：受击抖动（衰减位移）与击杀消散（缩小上浮）。
       for (const [entityId, react] of state.hitReacts) {
         const visual = state.visuals.get(entityId);
@@ -1988,6 +2305,7 @@ export const p1WorldScenario: ScenarioDefinition = {
       context.scene.onAfterRenderObservable.remove(state.afterRenderObserver);
     }
     state.ui.dispose();
+    state.dialogueUi.dispose();
 
     // 票 31：先摘掉卸载兜底与事件订阅，避免场景销毁过程中再写一次盘。
     state.autoSaver.detachBeforeUnload();

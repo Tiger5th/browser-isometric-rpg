@@ -1,0 +1,11 @@
+{
+  "id": "character_palette:elder_ma",
+  "displayName": "马婆婆",
+  "role": "翠谷村长者，发布清理史莱姆任务；慈祥、稳重、略带疲惫",
+  "primary": "#f0abfc",
+  "secondary": "#4c1d95",
+  "accent": "#fde68a",
+  "hairKeywords": "white silver hair, low bun, thin strands",
+  "costumeKeywords": "deep purple linen robe, straw sandals, wooden bead necklace",
+  "status": "generated"
+}

@@ -13,5 +13,10 @@
   },
   "tags": ["npc", "quest-giver"],
   "dialogueId": "elder_ma",
-  "questIds": ["quest:cull_slimes"]
+  "questIds": ["quest:cull_slimes"],
+  "paletteId": "character_palette:elder_ma",
+  "portrait": {
+    "image": "assets/portraits/elder_ma.png",
+    "keywords": ["elder village woman", "purple robe", "silver bun"]
+  }
 }
