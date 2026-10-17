@@ -16,7 +16,8 @@ export type ContentKind =
   | "enemy"
   | "item"
   | "quest"
-  | "character-palette";
+  | "character-palette"
+  | "level-curve";
 
 export interface ContentFileInput {
   kind: ContentKind;
@@ -215,6 +216,21 @@ export interface CharacterPaletteDefinition {
   status?: "pending" | "generated";
 }
 
+/**
+ * 等级曲线（票 34）：累计经验 → 等级的阈值表；每级属性加成走修饰器模板。
+ * 运行时解释口是 src/logic/leveling.ts。
+ */
+export interface LevelCurveFileDefinition {
+  id: string;
+  displayName: string;
+  defaultModifiers: ModifierTemplate[];
+  levels: Array<{
+    level: number;
+    xpRequired: number;
+    modifiers?: ModifierTemplate[];
+  }>;
+}
+
 /** 一个章节/切片的全量内容数据。 */
 export interface ContentBundle {
   regions: RegionDefinition[];
@@ -225,6 +241,8 @@ export interface ContentBundle {
   quests: QuestDefinition[];
   /** 角色色板卡（票 29）；缺省视为空集。 */
   characterPalettes?: CharacterPaletteDefinition[];
+  /** 等级曲线（票 34）；缺省视为无成长系统。 */
+  levelCurves?: LevelCurveFileDefinition[];
 }
 
 /** 工具链扫描 ink 文件后交给校验器的对话元数据。 */
@@ -250,6 +268,7 @@ export interface ContentSchemas {
   item: object;
   quest: object;
   characterPalette: object;
+  levelCurve: object;
 }
 
 export type ContentIssueCode =
@@ -258,6 +277,7 @@ export type ContentIssueCode =
   | "duplicate-id"
   | "file-name"
   | "range"
+  | "level-curve"
   | "dialogue-reference"
   | "json"
   | "ink";

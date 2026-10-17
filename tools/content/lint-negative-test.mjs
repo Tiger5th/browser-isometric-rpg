@@ -25,6 +25,7 @@ async function loadSchemas() {
     item: "item.schema.json",
     quest: "quest.schema.json",
     characterPalette: "character-palette.schema.json",
+    levelCurve: "level-curve.schema.json",
   };
   const schemas = {};
   for (const [key, name] of Object.entries(names)) {
@@ -41,6 +42,7 @@ const KIND_DIRS = [
   { kind: "item", dir: "items" },
   { kind: "quest", dir: "quests" },
   { kind: "character-palette", dir: "character-palettes" },
+  { kind: "level-curve", dir: "level-curves" },
 ];
 
 async function loadFiles() {
@@ -149,13 +151,47 @@ const cases = [];
   });
 }
 
-// 5) 对照组：原始内容集必须通过。
+// 5) 等级曲线阈值倒退（票 34）：schema 表达不了区间关系，必须由结构校验拦截。
+{
+  const files = clone(baseFiles);
+  const data = find(files, "content/level-curves/standard.json").data;
+  data.levels[2].xpRequired = 10;
+  const result = validateContent(files, schemas, dialogues);
+  cases.push({
+    id: "level-curve-non-monotonic",
+    label: "等级曲线 xpRequired 倒退",
+    expectation: "level-curve 错误指向 /levels",
+    status: result.valid ? "passed" : "failed",
+    caught: result.issues.some(
+      (issue) => issue.file === "content/level-curves/standard.json" && issue.code === "level-curve",
+    ),
+    issues: result.issues.filter((issue) => issue.file === "content/level-curves/standard.json"),
+  });
+}
+
+// 6) 等级曲线缺省加成为空：升级将没有任何属性变化。
+{
+  const files = clone(baseFiles);
+  find(files, "content/level-curves/standard.json").data.defaultModifiers = [];
+  const result = validateContent(files, schemas, dialogues);
+  cases.push({
+    id: "level-curve-empty-modifiers",
+    label: "等级曲线 defaultModifiers 为空",
+    expectation: "schema 或 level-curve 错误",
+    status: result.valid ? "passed" : "failed",
+    caught: result.issues.some((issue) => issue.file === "content/level-curves/standard.json"),
+    issues: result.issues.filter((issue) => issue.file === "content/level-curves/standard.json"),
+  });
+}
+
+// 7) 对照组：原始内容集必须通过。
 const control = validateContent(clone(baseFiles), schemas, dialogues);
 
 const allCaught = cases.every((entry) => entry.caught) && control.valid;
 const report = {
   schemaVersion: 1,
-  purpose: "L2 负向测试：确认色板卡/立绘引用的 schema 与引用规则会拦截坏数据（票 29）",
+  purpose:
+    "L2 负向测试：确认色板卡/立绘引用（票 29）与等级曲线（票 34）的 schema、引用与结构规则会拦截坏数据",
   exitExpectation: "failed",
   status: allCaught ? "passed" : "failed",
   control: { valid: control.valid, issues: control.issues },

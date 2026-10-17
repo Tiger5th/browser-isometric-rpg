@@ -31,8 +31,10 @@ import slimeGelData from "../../../content/items/slime_gel.json";
 import travelerSwordData from "../../../content/items/traveler_sword.json";
 import npcElderData from "../../../content/npcs/elder_ma.json";
 import npcScoutData from "../../../content/npcs/scout_lin.json";
+import levelCurveData from "../../../content/level-curves/standard.json";
 import regionData from "../../../content/regions/green_hollow.json";
 import type { ContentBundle } from "../../logic/content/types";
+import type { LevelCurveDefinition } from "../../logic/leveling";
 import {
   GameSession,
   type EntitySnapshot,
@@ -68,6 +70,7 @@ const CONTENT_BUNDLE = {
   enemies: [slimeMeadowData, slimeBlueData, slimeElderData],
   items: [healingHerbData, oldCoinData, slimeGelData, travelerSwordData],
   quests: [cullSlimesData],
+  levelCurves: [levelCurveData],
 } as unknown as ContentBundle;
 
 interface DialogueQuestState {
@@ -399,6 +402,8 @@ export const dialogueQuestScenario: ScenarioDefinition = {
     state.ui = createQuestLoopUi({
       mount: document.body,
       bundle: CONTENT_BUNDLE,
+      // 票 34：HUD 只拿曲线做等级/经验条换算，不持有任何逻辑状态。
+      levelCurve: levelCurveData as unknown as LevelCurveDefinition,
       onChoose: (index) => session.chooseDialogueOption(index),
       onUseItem: (instanceId) => session.tryUseItem(PLAYER_ID, instanceId),
       onEquipItem: (instanceId) => session.tryEquip(PLAYER_ID, instanceId),

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "purpose": "L2 负向测试：确认色板卡/立绘引用的 schema 与引用规则会拦截坏数据（票 29）",
+  "purpose": "L2 负向测试：确认色板卡/立绘引用（票 29）与等级曲线（票 34）的 schema、引用与结构规则会拦截坏数据",
   "exitExpectation": "failed",
   "status": "passed",
   "control": {
@@ -71,6 +71,36 @@
           "file": "content/npcs/scout_lin.json",
           "path": "/portrait",
           "message": "must have required property 'image'"
+        }
+      ]
+    },
+    {
+      "id": "level-curve-non-monotonic",
+      "label": "等级曲线 xpRequired 倒退",
+      "expectation": "level-curve 错误指向 /levels",
+      "status": "failed",
+      "caught": true,
+      "issues": [
+        {
+          "code": "level-curve",
+          "file": "content/level-curves/standard.json",
+          "path": "/levels",
+          "message": "/levels/2/xpRequired（10）必须严格大于上一级（100）"
+        }
+      ]
+    },
+    {
+      "id": "level-curve-empty-modifiers",
+      "label": "等级曲线 defaultModifiers 为空",
+      "expectation": "schema 或 level-curve 错误",
+      "status": "failed",
+      "caught": true,
+      "issues": [
+        {
+          "code": "schema",
+          "file": "content/level-curves/standard.json",
+          "path": "/defaultModifiers",
+          "message": "must NOT have fewer than 1 items"
         }
       ]
     }

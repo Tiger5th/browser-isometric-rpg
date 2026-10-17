@@ -56,15 +56,26 @@ import type {
 } from "./content/types";
 import { interactionTarget } from "./interaction";
 import {
+  levelForXp,
+  modifiersForLevel,
+  xpToNextLevel,
+  type LevelCurveDefinition,
+} from "./leveling";
+import {
+  appendModifiers,
   createModifiers,
   effectiveAttributes,
   grantQuestReward,
+  removeModifiersBySource,
   type Modifier,
 } from "./modifier";
 import { QuestLog, type QuestSnapshot } from "./quest";
 
 /** 与 Crowd V2 的 maxSpeed 对齐，逻辑与表现的速度感一致。 */
 export const DEFAULT_MOVE_SPEED = 5.5;
+
+/** 等级加成的修饰器来源（票 34）：整源替换，不逐级叠加。 */
+const LEVEL_MODIFIER_SOURCE = { kind: "level" as const, id: "growth" };
 /**
  * 快照版本。
  * v2（票 22）：实体快照补充属性/背包/修饰器/战斗状态，顶层新增 dialogue 与 quests。
@@ -127,6 +138,11 @@ export interface GameSessionIntents {
   equip(entityId: EntityId | string, instanceId: string): void;
   /** 卸下已装备的物品并移除其修饰器。 */
   unequip(entityId: EntityId | string, instanceId: string): void;
+  /**
+   * 直接发放经验并结算升级（票 34）。击杀奖励已内部走同一路径，
+   * 这个入口给的是「非击杀来源的经验」（任务发奖、调试造经验）。
+   */
+  grantExperience(entityId: EntityId | string, amount: number): void;
 }
 
 /**
@@ -366,7 +382,8 @@ function assertModifierShape(value: unknown, label: string): asserts value is Mo
   if (
     source.kind !== "equipment" &&
     source.kind !== "buff" &&
-    source.kind !== "quest"
+    source.kind !== "quest" &&
+    source.kind !== "level"
   ) {
     throw new Error(`${label} 的 source.kind 非法：${String(source.kind)}`);
   }
@@ -430,6 +447,8 @@ export class GameSession implements GameSessionIntents {
   private playerId: EntityId | null = null;
   private respawnAtMs: number | null = null;
   private nextItemInstanceId = 1;
+  /** 票 34：等级曲线（内容包可选提供）；缺省时 xp 只累积、不升级。 */
+  private levelCurve: LevelCurveDefinition | null = null;
 
   constructor(options: GameSessionOptions = {}) {
     this.random = options.random ?? createSeededRandom(0x5eed);
@@ -464,6 +483,11 @@ export class GameSession implements GameSessionIntents {
     });
     if (cloned.identity.type === "player" && this.playerId === null) {
       this.playerId = cloned.id;
+    }
+
+    if (cloned.identity.type === "player") {
+      // 等级是成长系统的锚点，缺省 L1；快照往返时由 baseAttributes 带回来。
+      cloned.baseAttributes.level = Math.max(1, Math.round(cloned.baseAttributes.level ?? 1));
     }
 
     const attributes = effectiveAttributes(cloned, this.elapsedMs);
@@ -537,7 +561,27 @@ export class GameSession implements GameSessionIntents {
       });
     }
 
+    const curves = bundle.levelCurves ?? [];
+    if (curves.length > 1) {
+      throw new Error(`内容包提供了 ${curves.length} 条等级曲线，P2 只支持一条`);
+    }
+    this.levelCurve = curves[0] === undefined ? null : { ...curves[0] };
+
     this.regionId = regionId;
+  }
+
+  /**
+   * 玩家的等级进度（票 34）：等级/累计经验/距下一级。
+   * 快照结构归票 31，本会话只按累计经验现算；HUD 与存档槽都用它展示等级。
+   */
+  playerLevelProgress(): { level: number; cumulativeXp: number; xpToNext: number | null } {
+    const player = this.playerId === null ? undefined : this.entities.get(this.playerId);
+    const cumulativeXp = Math.max(0, Math.round(player?.baseAttributes.xp ?? 0));
+    if (this.levelCurve === null) {
+      return { level: 1, cumulativeXp, xpToNext: null };
+    }
+    const level = levelForXp(this.levelCurve, cumulativeXp);
+    return { level, cumulativeXp, xpToNext: xpToNextLevel(this.levelCurve, level, cumulativeXp) };
   }
 
   /** 当前已加载的区域 id；未加载时为 null。 */
@@ -1597,20 +1641,43 @@ export class GameSession implements GameSessionIntents {
     }
   }
 
+  /**
+   * 经验入账并结算升级（票 34）。
+   *
+   * 击杀奖励、任务/调试发奖都走这一条路径：经验事件 + 逐级升级只写一处。
+   * 负数与非有限数值按 0 处理，调用方不必自己夹逼。
+   */
+  grantExperience(entityId: EntityId | string, amount: number): void {
+    const entity = this.requireEntity(entityId);
+    if (entity.identity.type !== "player") {
+      throw new Error(`经验只能发给玩家：${entityId}`);
+    }
+    const xp = Number.isFinite(amount) ? Math.max(0, Math.round(amount)) : 0;
+    if (xp === 0) {
+      return;
+    }
+    this.creditExperience(entity, xp);
+  }
+
+  private creditExperience(player: Entity, xp: number): void {
+    const total = (player.baseAttributes.xp ?? 0) + xp;
+    player.baseAttributes.xp = total;
+    this.events.push({
+      type: "xp",
+      at: this.elapsedMs,
+      entityId: player.id,
+      amount: xp,
+      total,
+    });
+    this.settleLevelUps(player, total);
+  }
+
   /** 击杀奖励：经验进玩家属性，掉落按模板概率/区间进背包。 */
   private grantKillRewards(enemy: Entity, player: Entity): void {
     const enemyAttributes = this.attributesOf(enemy);
     const xp = Math.max(0, Math.round(enemyAttributes.xp ?? 0));
     if (xp > 0) {
-      const total = (player.baseAttributes.xp ?? 0) + xp;
-      player.baseAttributes.xp = total;
-      this.events.push({
-        type: "xp",
-        at: this.elapsedMs,
-        entityId: player.id,
-        amount: xp,
-        total,
-      });
+      this.creditExperience(player, xp);
     }
 
     const profile = this.enemyProfiles.get(enemy.id);
@@ -1640,6 +1707,63 @@ export class GameSession implements GameSessionIntents {
         entityId: player.id,
         itemId: drop.itemId,
         quantity,
+      });
+    }
+  }
+
+  /**
+   * 经验入账后的升级结算（票 34）。
+   *
+   * 跨过多个阈值时逐级结算，每级一个 `player-level-up` 事件，属性变化按
+   * 「该级相对上一级」的增量给出，HUD 飘字直接消费。
+   * 等级加成走修饰器系统的 `level` 源：每次按当前等级整体重算，
+   * 因此读档重算、跨级与撤销都不会重复入账。
+   */
+  private settleLevelUps(player: Entity, cumulativeXp: number): void {
+    const curve = this.levelCurve;
+    if (curve === null) {
+      return;
+    }
+    // 等级本身记在玩家基础属性里（随实体快照往返，票 31 的世界状态只是可选镜像）。
+    const previousLevel = Math.max(1, Math.round(player.baseAttributes.level ?? 1));
+    const currentLevel = levelForXp(curve, cumulativeXp);
+    if (currentLevel <= previousLevel) {
+      return;
+    }
+    player.baseAttributes.level = currentLevel;
+
+    // 升级先长属性：maxHp 变大后按差额补当前生命，避免升级反而「变脆」。
+    const before = this.attributesOf(player);
+    const leveled: Entity = appendModifiers(
+      removeModifiersBySource(player, LEVEL_MODIFIER_SOURCE),
+      createModifiers(modifiersForLevel(curve, currentLevel), LEVEL_MODIFIER_SOURCE),
+    );
+    this.entities.set(leveled.id, leveled);
+
+    const after = this.attributesOf(leveled);
+    const runtime = this.combat.get(leveled.id);
+    if (runtime !== undefined) {
+      const grownMaxHp = after.maxHp ?? before.maxHp ?? runtime.hp;
+      runtime.hp = Math.min(grownMaxHp, runtime.hp + Math.max(0, grownMaxHp - (before.maxHp ?? grownMaxHp)));
+    }
+
+    const gained = new Map<string, number>();
+    for (const attribute of new Set([
+      ...Object.keys(before),
+      ...Object.keys(after),
+    ])) {
+      const delta = (after[attribute] ?? 0) - (before[attribute] ?? 0);
+      if (delta !== 0) {
+        gained.set(attribute, delta);
+      }
+    }
+
+    for (let level = previousLevel + 1; level <= currentLevel; level += 1) {
+      this.publish({
+        type: "player-level-up",
+        entityId: leveled.id,
+        level,
+        attributesGained: [...gained].map(([attribute, delta]) => ({ attribute, delta })),
       });
     }
   }
