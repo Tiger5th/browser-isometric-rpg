@@ -1,0 +1,209 @@
+{
+  "schemaVersion": 1,
+  "harness": "P0Harness",
+  "scenario": "crowd-hot-swap",
+  "status": "passed",
+  "startedAt": "2026-10-17T04:50:39.281Z",
+  "finishedAt": "2026-10-17T04:50:45.562Z",
+  "durationMs": 6281,
+  "environment": {
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "renderBackend": "webgl2",
+    "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+    "capturedAt": "2026-10-17T04:50:45.562Z",
+    "devicePixelRatio": 2,
+    "hardwareConcurrency": 10
+  },
+  "metrics": [
+    {
+      "name": "hotSwap.activeRegionB",
+      "value": 1,
+      "unit": "boolean",
+      "threshold": 1,
+      "comparison": "eq",
+      "passed": true
+    },
+    {
+      "name": "hotSwap.agentCount",
+      "value": 50,
+      "unit": "agents",
+      "threshold": 50,
+      "comparison": "eq",
+      "passed": true
+    },
+    {
+      "name": "hotSwap.commandedAgents",
+      "value": 50,
+      "unit": "agents"
+    },
+    {
+      "name": "hotSwap.fpsAfter",
+      "value": 40.82,
+      "unit": "fps"
+    },
+    {
+      "name": "hotSwap.fpsBefore",
+      "value": 42.76,
+      "unit": "fps"
+    },
+    {
+      "name": "hotSwap.frameTimeAfterAvgMs",
+      "value": 24.5,
+      "unit": "ms"
+    },
+    {
+      "name": "hotSwap.frameTimeAfterMaxMs",
+      "value": 51.4,
+      "unit": "ms"
+    },
+    {
+      "name": "hotSwap.frameTimeAfterP95Ms",
+      "value": 35,
+      "unit": "ms"
+    },
+    {
+      "name": "hotSwap.frameTimeBeforeAvgMs",
+      "value": 23.38,
+      "unit": "ms"
+    },
+    {
+      "name": "hotSwap.frameTimeBeforeMaxMs",
+      "value": 35.3,
+      "unit": "ms"
+    },
+    {
+      "name": "hotSwap.frameTimeBeforeP95Ms",
+      "value": 34.62,
+      "unit": "ms"
+    },
+    {
+      "name": "hotSwap.longFrameRatioAfter",
+      "value": 0.25,
+      "unit": "ratio"
+    },
+    {
+      "name": "hotSwap.longFrameRatioBefore",
+      "value": 0.209,
+      "unit": "ratio"
+    },
+    {
+      "name": "hotSwap.longFramesAfter",
+      "value": 25,
+      "unit": "frames"
+    },
+    {
+      "name": "hotSwap.longFramesBefore",
+      "value": 27,
+      "unit": "frames"
+    },
+    {
+      "name": "hotSwap.maxPositionSnap",
+      "value": 0,
+      "unit": "units"
+    },
+    {
+      "name": "hotSwap.migratedAgents",
+      "value": 50,
+      "unit": "agents",
+      "threshold": 50,
+      "comparison": "eq",
+      "passed": true
+    },
+    {
+      "name": "hotSwap.navmeshBytes.a",
+      "value": 19824,
+      "unit": "bytes"
+    },
+    {
+      "name": "hotSwap.navmeshBytes.b",
+      "value": 20368,
+      "unit": "bytes"
+    },
+    {
+      "name": "hotSwap.navmeshCs",
+      "value": 0.5,
+      "unit": "units"
+    },
+    {
+      "name": "hotSwap.navmeshGenMs.a",
+      "value": 7.6,
+      "unit": "ms"
+    },
+    {
+      "name": "hotSwap.navmeshGenMs.b",
+      "value": 6.9,
+      "unit": "ms"
+    },
+    {
+      "name": "hotSwap.navmeshTriangles.a",
+      "value": 246,
+      "unit": "triangles"
+    },
+    {
+      "name": "hotSwap.navmeshTriangles.b",
+      "value": 252,
+      "unit": "triangles"
+    },
+    {
+      "name": "hotSwap.navmeshWasmHeapDeltaMB.a",
+      "value": 0,
+      "unit": "MB"
+    },
+    {
+      "name": "hotSwap.navmeshWasmHeapDeltaMB.b",
+      "value": 0,
+      "unit": "MB"
+    },
+    {
+      "name": "hotSwap.preloadedNextRegion",
+      "value": 1,
+      "unit": "boolean",
+      "threshold": 1,
+      "comparison": "eq",
+      "passed": true
+    },
+    {
+      "name": "hotSwap.sampledFrames",
+      "value": 230,
+      "unit": "frames"
+    },
+    {
+      "name": "hotSwap.spikeRatio",
+      "value": 0.92,
+      "unit": "ratio"
+    },
+    {
+      "name": "hotSwap.success",
+      "value": 1,
+      "unit": "boolean",
+      "threshold": 1,
+      "comparison": "eq",
+      "passed": true
+    },
+    {
+      "name": "hotSwap.switchAtMs",
+      "value": 3000,
+      "unit": "ms"
+    },
+    {
+      "name": "hotSwap.switchFrameMs",
+      "value": 32,
+      "unit": "ms"
+    },
+    {
+      "name": "hotSwap.switchWorkMs",
+      "value": 2.9,
+      "unit": "ms"
+    },
+    {
+      "name": "hotSwap.updateAvgMs",
+      "value": 0.481,
+      "unit": "ms"
+    },
+    {
+      "name": "hotSwap.updateMaxMs",
+      "value": 1.6,
+      "unit": "ms"
+    }
+  ]
+}

@@ -1,0 +1,218 @@
+{
+  "schemaVersion": 1,
+  "harness": "P0Harness",
+  "scenario": "crowd-nav",
+  "status": "passed",
+  "startedAt": "2026-10-17T04:50:31.715Z",
+  "finishedAt": "2026-10-17T04:50:37.881Z",
+  "durationMs": 6166,
+  "environment": {
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "renderBackend": "webgl2",
+    "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+    "capturedAt": "2026-10-17T04:50:37.881Z",
+    "devicePixelRatio": 2,
+    "hardwareConcurrency": 10
+  },
+  "metrics": [
+    {
+      "name": "crowd.agentCount",
+      "value": 50,
+      "unit": "agents",
+      "threshold": 50,
+      "comparison": "eq",
+      "passed": true
+    },
+    {
+      "name": "crowd.agentsReachedTarget",
+      "value": 28,
+      "unit": "agents"
+    },
+    {
+      "name": "crowd.commandedAgents",
+      "value": 50,
+      "unit": "agents",
+      "threshold": 50,
+      "comparison": "eq",
+      "passed": true
+    },
+    {
+      "name": "crowd.fps",
+      "value": 39.99,
+      "unit": "fps"
+    },
+    {
+      "name": "crowd.frameTimeAvgMs",
+      "value": 25.01,
+      "unit": "ms"
+    },
+    {
+      "name": "crowd.frameTimeMaxMs",
+      "value": 35.3,
+      "unit": "ms"
+    },
+    {
+      "name": "crowd.frameTimeP95Ms",
+      "value": 34.81,
+      "unit": "ms"
+    },
+    {
+      "name": "crowd.longFrames",
+      "value": 53,
+      "unit": "frames"
+    },
+    {
+      "name": "crowd.maxMovingAgents",
+      "value": 50,
+      "unit": "agents"
+    },
+    {
+      "name": "crowd.minSeparation",
+      "value": 0.8,
+      "unit": "units"
+    },
+    {
+      "name": "crowd.overlapPairs",
+      "value": 0,
+      "unit": "pairs"
+    },
+    {
+      "name": "crowd.sampleDurationMs",
+      "value": 5000,
+      "unit": "ms"
+    },
+    {
+      "name": "crowd.sampledFrames",
+      "value": 200,
+      "unit": "frames"
+    },
+    {
+      "name": "crowd.updateAvgMs",
+      "value": 0.353,
+      "unit": "ms"
+    },
+    {
+      "name": "crowd.updateMaxMs",
+      "value": 2,
+      "unit": "ms"
+    },
+    {
+      "name": "navmesh.bytes.100",
+      "value": 16104,
+      "unit": "bytes"
+    },
+    {
+      "name": "navmesh.bytes.200",
+      "value": 45068,
+      "unit": "bytes"
+    },
+    {
+      "name": "navmesh.bytes.300",
+      "value": 89928,
+      "unit": "bytes"
+    },
+    {
+      "name": "navmesh.bytes.50",
+      "value": 6336,
+      "unit": "bytes"
+    },
+    {
+      "name": "navmesh.config.ch",
+      "value": 0.2,
+      "unit": "units"
+    },
+    {
+      "name": "navmesh.config.cs",
+      "value": 0.5,
+      "unit": "units"
+    },
+    {
+      "name": "navmesh.config.walkableRadius",
+      "value": 1,
+      "unit": "voxels"
+    },
+    {
+      "name": "navmesh.genMs.100",
+      "value": 37.3,
+      "unit": "ms"
+    },
+    {
+      "name": "navmesh.genMs.200",
+      "value": 143.1,
+      "unit": "ms"
+    },
+    {
+      "name": "navmesh.genMs.300",
+      "value": 277.7,
+      "unit": "ms"
+    },
+    {
+      "name": "navmesh.genMs.50",
+      "value": 32.9,
+      "unit": "ms"
+    },
+    {
+      "name": "navmesh.generated",
+      "value": 1,
+      "unit": "boolean",
+      "threshold": 1,
+      "comparison": "eq",
+      "passed": true
+    },
+    {
+      "name": "navmesh.jsHeapApiAvailable",
+      "value": 1,
+      "unit": "boolean"
+    },
+    {
+      "name": "navmesh.jsHeapDeltaMB.200",
+      "value": 0.798,
+      "unit": "MB"
+    },
+    {
+      "name": "navmesh.obstacles.100",
+      "value": 10,
+      "unit": "obstacles"
+    },
+    {
+      "name": "navmesh.obstacles.200",
+      "value": 40,
+      "unit": "obstacles"
+    },
+    {
+      "name": "navmesh.obstacles.300",
+      "value": 90,
+      "unit": "obstacles"
+    },
+    {
+      "name": "navmesh.obstacles.50",
+      "value": 4,
+      "unit": "obstacles"
+    },
+    {
+      "name": "navmesh.triangles.100",
+      "value": 183,
+      "unit": "triangles"
+    },
+    {
+      "name": "navmesh.triangles.200",
+      "value": 561,
+      "unit": "triangles"
+    },
+    {
+      "name": "navmesh.triangles.300",
+      "value": 1130,
+      "unit": "triangles"
+    },
+    {
+      "name": "navmesh.triangles.50",
+      "value": 79,
+      "unit": "triangles"
+    },
+    {
+      "name": "navmesh.wasmHeapDeltaMB.200",
+      "value": 0,
+      "unit": "MB"
+    }
+  ]
+}
