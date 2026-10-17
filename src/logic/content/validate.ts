@@ -31,6 +31,9 @@ const KIND_SCHEMA_KEY: Record<ContentKind, Exclude<keyof ContentSchemas, "common
   quest: "quest",
   "character-palette": "characterPalette",
   "level-curve": "levelCurve",
+  chest: "chest",
+  collectible: "collectible",
+  "collect-set": "collectSet",
 };
 
 /** id 前缀必须与文件所在目录对应（enemy-template 目录对应 enemy_template: 前缀）。 */
@@ -43,6 +46,9 @@ const KIND_ID_PREFIX: Record<ContentKind, string> = {
   quest: "quest:",
   "character-palette": "character_palette:",
   "level-curve": "level_curve:",
+  chest: "chest:",
+  collectible: "collectible:",
+  "collect-set": "collect_set:",
 };
 
 type JsonRecord = Record<string, unknown>;
@@ -69,6 +75,9 @@ function emptySets(): Record<ContentKind, Set<string>> {
     quest: new Set(),
     "character-palette": new Set(),
     "level-curve": new Set(),
+    chest: new Set(),
+    collectible: new Set(),
+    "collect-set": new Set(),
   };
 }
 
@@ -366,6 +375,33 @@ export function validateContent(
         break;
       }
       case "item": {
+        break;
+      }
+      case "chest": {
+        requireReference(file, "/regionId", data.regionId, idSets.region, "区域");
+        asArray(data.loot).forEach((entry, index) => {
+          if (!isRecord(entry)) {
+            return;
+          }
+          requireReference(
+            file,
+            pointer("loot", index, "itemId"),
+            entry.itemId,
+            idSets.item,
+            "物品",
+          );
+        });
+        break;
+      }
+      case "collectible": {
+        requireReference(file, "/regionId", data.regionId, idSets.region, "区域");
+        requireReference(file, "/itemId", data.itemId, idSets.item, "物品");
+        // 显式 setId 必须指向已定义的收集集（收集全收集奖励的判定依据）。
+        requireReference(file, "/setId", data.setId, idSets["collect-set"], "收集集");
+        break;
+      }
+      case "collect-set": {
+        requireReference(file, "/rewardItemId", data.rewardItemId, idSets.item, "奖励物品");
         break;
       }
       case "level-curve": {

@@ -1,0 +1,11 @@
+{
+  "id": "chest:market_crate",
+  "displayName": "集市货箱",
+  "regionId": "region:green_hollow",
+  "position": { "x": 11, "y": 0, "z": 2 },
+  "rotation": { "x": 0, "y": -0.4, "z": 0 },
+  "loot": [
+    { "itemId": "item:old_coin", "quantity": 20 },
+    { "itemId": "item:slime_gel", "quantity": 3 }
+  ]
+}

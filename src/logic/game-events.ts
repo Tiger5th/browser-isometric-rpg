@@ -123,6 +123,40 @@ export interface PlayerDeathPenaltyEvent {
   at: number;
 }
 
+/**
+ * 宝箱开启（票 37）：loot 已入包。反馈层据此播开箱闪光与战利品飘字，
+ * 同一 tick 里还会收到每件 loot 的 `item-gained`。
+ */
+export interface ChestOpenedEvent {
+  type: "chest-opened";
+  chestId: string;
+  entityId: string;
+  loot: Array<{ itemId: string; quantity: number }>;
+}
+
+/** 拾取收集品（票 37）：萤光草已进包，计数由 worldState 聚合。 */
+export interface CollectibleCollectedEvent {
+  type: "collectible-collected";
+  collectibleId: string;
+  entityId: string;
+  itemId: string;
+  quantity: number;
+  /** 该收集集当前进度（已收集 / 总数）。 */
+  collected: number;
+  total: number;
+  /** 本次拾取是否让收集集满（满的那一 tick 才为 true）。 */
+  setCompleted: boolean;
+}
+
+/** 收集集全收集：奖励饰品已自动入包（同一 tick 伴随 item-gained）。 */
+export interface CollectSetCompletedEvent {
+  type: "collect-set-completed";
+  setId: string;
+  entityId: string;
+  rewardItemId: string;
+  rewardQuantity: number;
+}
+
 /** 背包获得/失去物品的事实（掉落/任务奖励/购买/死亡惩罚共用）。 */
 export interface ItemLostEvent {
   type: "item-lost";
@@ -163,6 +197,9 @@ export type GameSessionEvent =
   | ProjectileSpawnedEvent
   | ProjectileRemovedEvent
   | PlayerDeathPenaltyEvent
+  | ChestOpenedEvent
+  | CollectibleCollectedEvent
+  | CollectSetCompletedEvent
   | ItemGainedEvent
   | ItemLostEvent
   | PlayerLevelUpEvent

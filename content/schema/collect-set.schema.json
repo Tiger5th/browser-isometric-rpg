@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:content:collect-set",
+  "title": "收集集",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "displayName", "rewardItemId"],
+  "properties": {
+    "id": { "$ref": "urn:content:common#/$defs/collectSetId" },
+    "displayName": { "$ref": "urn:content:common#/$defs/displayName" },
+    "rewardItemId": { "$ref": "urn:content:common#/$defs/itemId" },
+    "rewardQuantity": { "type": "integer", "minimum": 1 }
+  }
+}

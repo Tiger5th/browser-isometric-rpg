@@ -26,6 +26,9 @@ async function loadSchemas() {
     quest: "quest.schema.json",
     characterPalette: "character-palette.schema.json",
     levelCurve: "level-curve.schema.json",
+    chest: "chest.schema.json",
+    collectible: "collectible.schema.json",
+    collectSet: "collect-set.schema.json",
   };
   const schemas = {};
   for (const [key, name] of Object.entries(names)) {
@@ -43,6 +46,9 @@ const KIND_DIRS = [
   { kind: "quest", dir: "quests" },
   { kind: "character-palette", dir: "character-palettes" },
   { kind: "level-curve", dir: "level-curves" },
+  { kind: "chest", dir: "chests" },
+  { kind: "collectible", dir: "collectibles" },
+  { kind: "collect-set", dir: "collect-sets" },
 ];
 
 async function loadFiles() {
@@ -193,6 +199,86 @@ const cases = [];
   });
 }
 
+// 7) 宝箱 loot 引用不存在的物品（票 37）。
+{
+  const files = clone(baseFiles);
+  find(files, "content/chests/hollow_stone.json").data.loot[0].itemId = "item:missing";
+  const result = validateContent(files, schemas, dialogues);
+  cases.push({
+    id: "chest-bad-loot-ref",
+    label: "宝箱 loot 引用不存在的物品",
+    expectation: "reference 错误指向 /loot/0/itemId",
+    status: result.valid ? "passed" : "failed",
+    caught: result.issues.some(
+      (issue) =>
+        issue.file === "content/chests/hollow_stone.json" &&
+        issue.code === "reference" &&
+        issue.path === "/loot/0/itemId",
+    ),
+    issues: result.issues.filter((issue) => issue.file === "content/chests/hollow_stone.json"),
+  });
+}
+
+// 8) 宝箱 loot 为空数组（票 37）：开箱无意义，schema 必须挡住。
+{
+  const files = clone(baseFiles);
+  find(files, "content/chests/market_crate.json").data.loot = [];
+  const result = validateContent(files, schemas, dialogues);
+  cases.push({
+    id: "chest-empty-loot",
+    label: "宝箱 loot 为空数组",
+    expectation: "schema 错误指向 /loot",
+    status: result.valid ? "passed" : "failed",
+    caught: result.issues.some(
+      (issue) =>
+        issue.file === "content/chests/market_crate.json" &&
+        issue.code === "schema" &&
+        issue.path === "/loot",
+    ),
+    issues: result.issues.filter((issue) => issue.file === "content/chests/market_crate.json"),
+  });
+}
+
+// 9) 收集品引用不存在的收集集（票 37）：全收集奖励会查不到集定义。
+{
+  const files = clone(baseFiles);
+  find(files, "content/collectibles/glow_moss_a.json").data.setId = "collect_set:missing";
+  const result = validateContent(files, schemas, dialogues);
+  cases.push({
+    id: "collectible-bad-set-ref",
+    label: "收集品 setId 指向不存在的收集集",
+    expectation: "reference 错误指向 /setId",
+    status: result.valid ? "passed" : "failed",
+    caught: result.issues.some(
+      (issue) =>
+        issue.file === "content/collectibles/glow_moss_a.json" &&
+        issue.code === "reference" &&
+        issue.path === "/setId",
+    ),
+    issues: result.issues.filter((issue) => issue.file === "content/collectibles/glow_moss_a.json"),
+  });
+}
+
+// 10) 收集集奖励物品不存在（票 37）。
+{
+  const files = clone(baseFiles);
+  find(files, "content/collect-sets/glow_moss.json").data.rewardItemId = "item:missing";
+  const result = validateContent(files, schemas, dialogues);
+  cases.push({
+    id: "collect-set-bad-reward-ref",
+    label: "收集集奖励物品不存在",
+    expectation: "reference 错误指向 /rewardItemId",
+    status: result.valid ? "passed" : "failed",
+    caught: result.issues.some(
+      (issue) =>
+        issue.file === "content/collect-sets/glow_moss.json" &&
+        issue.code === "reference" &&
+        issue.path === "/rewardItemId",
+    ),
+    issues: result.issues.filter((issue) => issue.file === "content/collect-sets/glow_moss.json"),
+  });
+}
+
 // 7) 商人价格表引用不存在的物品（票 33）。
 {
   const files = clone(baseFiles);
@@ -336,14 +422,14 @@ const cases = [];
   });
 }
 
-// 14) 对照组：原始内容集必须通过。
+// 15) 对照组：原始内容集必须通过。
 const control = validateContent(clone(baseFiles), schemas, dialogues);
 
 const allCaught = cases.every((entry) => entry.caught) && control.valid;
 const report = {
   schemaVersion: 1,
   purpose:
-    "L2 负向测试：确认色板卡/立绘引用（票 29）、等级曲线（票 34）与村庄经济（票 33：vendor/patrol/reanchors/safeZones）的 schema、引用与结构规则会拦截坏数据",
+    "L2 负向测试：确认色板卡/立绘引用（票 29）、等级曲线（票 34）、村庄经济（票 33：vendor/patrol/reanchors/safeZones）与宝箱/收集品（票 37）的 schema、引用与结构规则会拦截坏数据",
   exitExpectation: "failed",
   status: allCaught ? "passed" : "failed",
   control: { valid: control.valid, issues: control.issues },

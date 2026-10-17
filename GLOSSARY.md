@@ -45,6 +45,10 @@
 - **商人（Vendor）**：带 `npc.vendor` 价格表的 NPC。对话走完自动开摊位；报价算术在 `src/logic/trade.ts`，交易面板（`src/render/ui/trade-panel.ts`）与结算共用同一条报价路径，因此显示价与成交价不会漂移。金币是背包物品 `item:old_coin`，不是独立字段。
 - **巡逻（Patrol）**：每 NPC 一条点位路线，走→停留张望→下一点。逻辑层持有进度事实（进快照的 `patrolIndex`），表现层只做插值与演出。对话中进度冻结、结束继续。解释口在 `src/logic/npc-patrol.ts`。
 - **欣赏模式（Showcase Mode）**：相机自由缩放旋转的状态；一键复位回到出厂等距预设（alpha/beta/radius 常量）。
+- **宝箱（Chest）**：探索回报的载体。content 定义位置与 loot 表，运行时开启 = loot 逐件入包 + worldState 记 `chest:<local>.opened`，一次性（见 `src/logic/exploration.ts`）。
+- **收集品（Collectible）**：拾取即入包的普通物品，**没有新系统**。计数是 worldState 里 `collectible:<local>` 条目的**聚合**，不是另存的计数器——读档因此天然不回退。
+- **收集集（Collect Set）**：一组收集品共用的进度与全收集奖励。集内全收集时把 `collect-sets/` 定义的饰品发进背包一次（记 `collect_reward:<local>`）。
+- **相机预设（Camera Preset）**：一组 alpha/beta/radius/verticalSpan 常量。当前出厂一位（默认等距），`CAMERA_PRESETS` 的结构支持将来多位。复位是按**时长线性插值**回预设，不是指数逼近，因此「回预设值」可断言。
 - **等级曲线（Level Curve）**：累计经验 → 等级的阈值表 + 每级属性加成（票 34）。内容数据（`content/level-curves/*.json`），解释口 `src/logic/leveling.ts`。升级加成走修饰器系统的 `level` 源，按当前等级**整源重算**（不是逐次叠加），因此读档与跨级都不会重复入账。
 - **等级徽标（Level Badge）**：HUD 上的 `Lv.N` 与经验条。显示值由 `src/render/ui/level-hud.ts` 的纯函数 `levelHudView()` 换算，HUD 只搭 DOM。
 - **标题画面（Title Screen）**：打开游戏的正式入口。logo（生成图）+ 氛围背景（游戏画面派生）+ 版本号 + 「继续游戏」/「新游戏」；入场演出 2.4 秒（logo 淡入 + 雾气/粒子）可点击跳过。入口路由判定在 `src/logic/title-menu.ts`（纯函数），DOM 只负责演出与交互；进入游戏复用加载门黑场过场。

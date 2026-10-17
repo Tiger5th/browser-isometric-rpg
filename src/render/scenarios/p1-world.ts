@@ -15,6 +15,7 @@
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
 import { SceneInstrumentation } from "@babylonjs/core/Instrumentation/sceneInstrumentation";
 import { HighlightLayer } from "@babylonjs/core/Layers/highlightLayer";
+import type { ArcRotateCamera } from "@babylonjs/core/Cameras/arcRotateCamera";
 import { DirectionalLight } from "@babylonjs/core/Lights/directionalLight";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
@@ -31,6 +32,20 @@ import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import type { Observer } from "@babylonjs/core/Misc/observable";
 import { DefaultRenderingPipeline } from "@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/defaultRenderingPipeline";
 import { Scene } from "@babylonjs/core/scene";
+import chestHollowStoneData from "../../../content/chests/hollow_stone.json";
+import chestMarketCrateData from "../../../content/chests/market_crate.json";
+import chestPondShoreData from "../../../content/chests/pond_shore.json";
+import collectSetGlowMossData from "../../../content/collect-sets/glow_moss.json";
+import collectibleGlowMossAData from "../../../content/collectibles/glow_moss_a.json";
+import collectibleGlowMossBData from "../../../content/collectibles/glow_moss_b.json";
+import collectibleGlowMossCData from "../../../content/collectibles/glow_moss_c.json";
+import collectibleGlowMossDData from "../../../content/collectibles/glow_moss_d.json";
+import collectibleGlowMossEData from "../../../content/collectibles/glow_moss_e.json";
+import collectibleGlowMossFData from "../../../content/collectibles/glow_moss_f.json";
+import collectibleGlowMossGData from "../../../content/collectibles/glow_moss_g.json";
+import collectibleGlowMossHData from "../../../content/collectibles/glow_moss_h.json";
+import glowMossCharmData from "../../../content/items/glow_moss_charm.json";
+import glowMossData from "../../../content/items/glow_moss.json";
 import cullSlimesData from "../../../content/quests/cull_slimes.json";
 import elderMaCompiled from "../../../content/dialogues/elder_ma.ink?ink";
 import merchantBoCompiled from "../../../content/dialogues/merchant_bo.ink?ink";
@@ -64,6 +79,7 @@ import {
 import {
   activateBubble,
   createInteractionState,
+  interactionTarget,
   requestMove,
   selectNpc,
   setInteractionPhase,
@@ -88,7 +104,29 @@ import {
 import type { ScenarioContext, ScenarioDefinition } from "../harness";
 import { setCameraSpan, setGreyboxEnabled } from "../navmesh-scene";
 import { IndexedDbSaveStorage } from "../persistence/indexed-db-save-storage";
+import { createCollectHud, type CollectHud } from "../ui/collect-hud";
 import { createQuestLoopUi, type QuestLoopUi } from "../ui/quest-loop-ui";
+import {
+  ISOMETRIC_PRESET,
+  type CameraResetStart,
+  advanceCameraReset,
+  beginCameraReset,
+  type CameraPreset,
+  applyCameraRotate,
+  applyCameraZoom,
+} from "../camera-presets";
+import {
+  advanceChestVisual,
+  animateCollectibleVisual,
+  createChestVisual,
+  createCollectibleVisual,
+  type ChestVisual,
+  type CollectibleVisual,
+} from "../presentation/exploration-visuals";
+import {
+  loadExplorationTexture,
+  type ExplorationTextureKind,
+} from "../presentation/exploration-textures";
 import { createDialogueUi, type DialogueUi } from "../ui/dialogue-portrait";
 import { createTradeUi, type TradeUi } from "../ui/trade-panel";
 import { takeTitleEntryIntent } from "../title-entry";
@@ -168,6 +206,16 @@ const PLAYER_ID = "entity:player";
  */
 const PLAYER_MODEL_YAW_OFFSET = 0;
 const CAMERA_VERTICAL_SPAN = 30;
+/**
+ * 本场景的出厂等距预设（票 37）：几何沿用 camera.ts 的等距常量，
+ * 可视高度沿用场景自己的 30m（p1-world 比 P0 灰盒看得更远）。
+ * 复位按钮与 R 键都回这一位。
+ */
+const P1_WORLD_PRESET: CameraPreset = {
+  ...ISOMETRIC_PRESET,
+  id: "isometric-p1-world",
+  verticalSpan: CAMERA_VERTICAL_SPAN,
+};
 const SAMPLE_DURATION_MS = 4_000;
 /** 07 修正预算：基础 ≤300 + 描边/VFX ≤50。 */
 const DRAW_CALL_BUDGET = 350;
@@ -201,9 +249,29 @@ const CONTENT_BUNDLE = {
     chargerMeadowData,
     spitterPondData,
   ],
-  items: [healingHerbData, oldCoinData, slimeGelData, travelerSwordData],
+  items: [
+    healingHerbData,
+    oldCoinData,
+    slimeGelData,
+    travelerSwordData,
+    glowMossData,
+    glowMossCharmData,
+  ],
   quests: [cullSlimesData],
   levelCurves: [levelCurveData],
+  // 票 37：探索内容（宝箱 3 + 萤光草 8 + 全收集奖励集）。
+  chests: [chestHollowStoneData, chestMarketCrateData, chestPondShoreData],
+  collectibles: [
+    collectibleGlowMossAData,
+    collectibleGlowMossBData,
+    collectibleGlowMossCData,
+    collectibleGlowMossDData,
+    collectibleGlowMossEData,
+    collectibleGlowMossFData,
+    collectibleGlowMossGData,
+    collectibleGlowMossHData,
+  ],
+  collectSets: [collectSetGlowMossData],
 } as unknown as ContentBundle;
 
 interface EntityVisual {
@@ -312,6 +380,50 @@ interface P1WorldState {
   enemySpriteRatio: number;
   /** 票 36：敌人精灵贴图（按 AI 档案种类索引），创建视觉时传入。 */
   enemySprites: Map<EnemySpriteKind, BaseTexture>;
+  /** 票 37：宝箱视觉（id → 视觉）。开启状态由会话判定。 */
+  chestVisuals: Map<string, ChestVisual>;
+  /** 票 37：收集品视觉（id → 视觉）；已捡的节点整组关闭。 */
+  collectibleVisuals: Map<string, CollectibleVisual>;
+  /** 票 37：探索件精灵贴图的抠白透明占比，写入场景报告。 */
+  explorationSpriteRatio: number;
+  /** 票 37：收集计数 HUD。 */
+  collectHud: CollectHud | null;
+  /** 票 37：相机复位插值的起点；null 表示当前不在复位动画中。 */
+  cameraReset: CameraResetStart | null;
+  /** 票 37：复位动画已推进的时长（毫秒）。 */
+  cameraResetElapsedMs: number;
+  /** 票 37：相机拖拽旋转的按键（右键/中键）；按住期间不触发点击交互。 */
+  cameraDragButton: number | null;
+  cameraDragLastX: number;
+  cameraDragLastY: number;
+  /** 票 37：解除拖拽与快捷键绑定的清理函数。 */
+  detachCameraInput: () => void;
+}
+
+/** 探索进度证据（L4 冒烟断言用）。 */
+export interface ExplorationEvidence {
+  chests: Array<{
+    id: string;
+    opened: boolean;
+    loot: Array<{ itemId: string; quantity: number }>;
+  }>;
+  collectibles: Array<{ id: string; collected: boolean; itemId: string }>;
+  progress: Array<{
+    setId: string;
+    collected: number;
+    total: number;
+    complete: boolean;
+    rewardGranted: boolean;
+  }>;
+  rewardInBag: boolean;
+}
+
+/** 相机机位证据（L4 冒烟断言用）。 */
+export interface CameraFramingEvidence {
+  alpha: number;
+  beta: number;
+  radius: number;
+  verticalSpan: number;
 }
 
 /** ego-browser 验证入口：只经 snapshot 读取、只经意图写入。 */
@@ -464,6 +576,22 @@ export interface P1WorldDebugApi {
     colliderCount: number;
     coins: number;
   };
+  /* ---- 探索回报（票 37）---- */
+  /** 调试传送：把玩家直接放到 (x, z)，推进逻辑层到位（只给 L4 冒烟用）。 */
+  teleportTo(x: number, z: number): void;
+  /** 开箱；chestId 缺省用第一个宝箱。返回是否真的开了（已开/距离不够为 false）。 */
+  openChest(chestId?: string): boolean;
+  /** 拾取收集品；collectibleId 缺省用第一个未捡的。 */
+  collect(collectibleId?: string): boolean;
+  /** 探索进度证据（ego-browser 断言用）：开箱数、收集计数、全收集奖励。 */
+  getExploration(): ExplorationEvidence;
+  /** 相机机位（ego-browser 断言缩放/旋转/复位）。 */
+  getCamera(): CameraFramingEvidence;
+  /** 缩放/旋转相机（notches>0 拉远，deltaPixels 为拖拽位移）。 */
+  zoomCamera(notches: number): void;
+  rotateCamera(deltaPixelsX: number, deltaPixelsY: number): void;
+  /** 一键复位回出厂等距预设（平滑插值，返回是否已经开始复位）。 */
+  resetCamera(): boolean;
   /** 两段式交互：点击远处 NPC（只靠近不出气泡）。 */
   interactNpc(npcId: string): void;
   /** 第二段：点击头顶气泡，开对话（双方互转面对面 + 立绘）。 */
@@ -558,6 +686,13 @@ function playerSnapshot(session: GameSession): EntitySnapshot | null {
   return (
     session.snapshot().entities.find((entity) => entity.id === PLAYER_ID) ?? null
   );
+}
+
+/** 从网格 metadata 里读一个字符串字段（探索视觉没有逻辑实体 id）。 */
+function metadataString(mesh: AbstractMesh | null, key: string): string | null {
+  const metadata = mesh?.metadata as Record<string, unknown> | undefined;
+  const value = metadata?.[key];
+  return typeof value === "string" && value !== "" ? value : null;
 }
 
 function entityIdOf(mesh: AbstractMesh | null): string | null {
@@ -1132,6 +1267,237 @@ function updateInteractionPresentation(state: P1WorldState, scene: Scene, deltaM
   }
 }
 
+/* ------------------------------------------------------------------ */
+/* 探索回报（票 37）：宝箱 / 收集品 / 相机                              */
+/* ------------------------------------------------------------------ */
+
+/** 站到探索件旁边：走到它的交互距离内（宝箱与收集品用同一个距离口径）。 */
+function walkToExploration(
+  state: P1WorldState,
+  position: { x: number; y: number; z: number },
+): void {
+  const player = playerSnapshot(state.session);
+  if (player === null) {
+    return;
+  }
+  const target = interactionTarget(position, player.position);
+  applyInteractionAction(state, requestMove(state.interaction));
+  moveAlongNavMesh(state, { x: target.x, z: target.z });
+}
+
+/** 走到（或直接）开箱：距离内立刻开，否则先走过去。 */
+function interactWithChest(state: P1WorldState, chestId: string): void {
+  const chest = state.session.chestDefinitions().find((entry) => entry.id === chestId);
+  if (chest === undefined) {
+    return;
+  }
+  const player = playerSnapshot(state.session);
+  if (player === null || !player.combat.alive) {
+    state.ui.setSaveStatus("角色倒下中，等待重生", "idle");
+    return;
+  }
+  if (state.session.isChestOpened(chestId)) {
+    state.ui.setSaveStatus(`${chest.displayName} 已经空了`, "idle");
+    return;
+  }
+  const result = state.session.tryOpenChest(PLAYER_ID, chestId);
+  if (result.ok) {
+    state.ui.setSaveStatus(`打开了 ${chest.displayName}`, "ok");
+    return;
+  }
+  walkToExploration(state, chest.position);
+  state.ui.setSaveStatus(`走向 ${chest.displayName}…`, "idle");
+}
+
+/** 走到（或直接）拾取收集品。 */
+function interactWithCollectible(state: P1WorldState, collectibleId: string): void {
+  const collectible = state.session
+    .collectibleDefinitions()
+    .find((entry) => entry.id === collectibleId);
+  if (collectible === undefined) {
+    return;
+  }
+  const player = playerSnapshot(state.session);
+  if (player === null || !player.combat.alive) {
+    state.ui.setSaveStatus("角色倒下中，等待重生", "idle");
+    return;
+  }
+  const result = state.session.tryCollectCollectible(PLAYER_ID, collectibleId);
+  if (result.ok) {
+    return;
+  }
+  walkToExploration(state, collectible.position);
+  state.ui.setSaveStatus("走向收集品…", "idle");
+}
+
+/** 每帧同步探索视觉：宝箱盖子的开合动画 + 收集品的呼吸与拾取后隐藏。 */
+function updateExplorationVisuals(state: P1WorldState, elapsedMs: number, dtMs: number): void {
+  for (const [chestId, visual] of state.chestVisuals) {
+    advanceChestVisual(visual, dtMs, state.session.isChestOpened(chestId) ? 1 : 0);
+  }
+  for (const [collectibleId, visual] of state.collectibleVisuals) {
+    if (state.session.isCollectibleCollected(collectibleId)) {
+      visual.root.setEnabled(false);
+      continue;
+    }
+    animateCollectibleVisual(visual, elapsedMs);
+  }
+}
+
+/**
+ * 探索事实签名：worldState 里 chest:/collectible: 条目的摘要。
+ * 冒烟脚本用它判断「这次交互是否真的落地了开箱/拾草」。
+ */
+export function explorationSignature(worldState: Record<string, unknown>): string {
+  return Object.keys(worldState)
+    .filter((key) => key.startsWith("chest:") || key.startsWith("collectible:"))
+    .sort()
+    .map((key) => `${key}=${JSON.stringify(worldState[key])}`)
+    .join("|");
+}
+
+/** 收集计数 HUD 的内容包显示名表。 */
+/** 会话实体数期望值：玩家 + 内容包里的 NPC/敌人（探索件不是实体，不计入）。 */
+const EXPECTED_ENTITY_COUNT =
+  1 +
+  CONTENT_BUNDLE.npcs.length +
+  CONTENT_BUNDLE.enemies.filter((enemy) => enemy.regionId === GREEN_HOLLOW_REGION_ID).length;
+
+const COLLECT_SET_NAMES = new Map(
+  (CONTENT_BUNDLE.collectSets ?? []).map((set) => [set.id, set.displayName]),
+);
+
+/**
+ * 相机自由化（票 37）：滚轮缩放 + 右键/中键拖拽旋转 + 一键复位。
+ * 输入全部自己接管（相机的 Babylon inputs 是 clear 掉的），范围夹取在
+ * camera-presets.ts；这里只做「把浏览器事件翻译成相机操作」。
+ */
+function installCameraInput(state: P1WorldState, scene: Scene): () => void {
+  const canvas = scene.getEngine().getRenderingCanvas();
+  const aspect = () => {
+    const engine = scene.getEngine();
+    return engine.getRenderHeight() > 0 ? engine.getRenderWidth() / engine.getRenderHeight() : 1;
+  };
+
+  const onWheel = (event: WheelEvent): void => {
+    const camera = scene.activeCamera as ArcRotateCamera | null;
+    if (camera === null) {
+      return;
+    }
+    event.preventDefault();
+    applyCameraZoom(camera, Math.sign(event.deltaY), CAMERA_VERTICAL_SPAN, aspect());
+    state.cameraReset = null;
+    state.feedback.setCameraShakeEnabled(true);
+  };
+
+  const onPointerDown = (event: PointerEvent): void => {
+    // 只有右键/中键才是相机拖拽；左键仍然留给点击交互。
+    if (event.button !== 2 && event.button !== 1) {
+      return;
+    }
+    const camera = scene.activeCamera as ArcRotateCamera | null;
+    if (camera === null) {
+      return;
+    }
+    event.preventDefault();
+    state.cameraReset = null;
+    state.feedback.setCameraShakeEnabled(true);
+    state.cameraDragButton = event.button;
+    state.cameraDragLastX = event.clientX;
+    state.cameraDragLastY = event.clientY;
+  };
+
+  const onPointerMove = (event: PointerEvent): void => {
+    if (state.cameraDragButton === null) {
+      return;
+    }
+    const camera = scene.activeCamera as ArcRotateCamera | null;
+    if (camera === null) {
+      return;
+    }
+    applyCameraRotate(camera, event.clientX - state.cameraDragLastX, event.clientY - state.cameraDragLastY);
+    state.cameraDragLastX = event.clientX;
+    state.cameraDragLastY = event.clientY;
+  };
+
+  const onPointerUp = (): void => {
+    state.cameraDragButton = null;
+  };
+
+  const onContextMenu = (event: Event): void => {
+    // 右键拖拽旋转需要吃掉默认右键菜单，否则每次旋转都弹菜单。
+    event.preventDefault();
+  };
+
+  const onKeyDown = (event: KeyboardEvent): void => {
+    if (event.key === "r" || event.key === "R") {
+      requestCameraReset(state, scene);
+    }
+  };
+
+  const target = canvas ?? window;
+  target.addEventListener("wheel", onWheel as EventListener, { passive: false });
+  target.addEventListener("pointerdown", onPointerDown as EventListener);
+  window.addEventListener("pointermove", onPointerMove);
+  window.addEventListener("pointerup", onPointerUp);
+  target.addEventListener("contextmenu", onContextMenu);
+  window.addEventListener("keydown", onKeyDown);
+
+  return () => {
+    target.removeEventListener("wheel", onWheel as EventListener);
+    target.removeEventListener("pointerdown", onPointerDown as EventListener);
+    window.removeEventListener("pointermove", onPointerMove);
+    window.removeEventListener("pointerup", onPointerUp);
+    target.removeEventListener("contextmenu", onContextMenu);
+    window.removeEventListener("keydown", onKeyDown);
+  };
+}
+
+/** 一键复位：把相机平滑插值回出厂等距预设。 */
+function requestCameraReset(state: P1WorldState, scene: Scene): void {
+  const camera = scene.activeCamera as ArcRotateCamera | null;
+  if (camera === null) {
+    return;
+  }
+  // 复位是**平滑插值**（updateCameraReset 每帧按时长推进），不是瞬移。
+  state.cameraReset = beginCameraReset(camera, P1_WORLD_PRESET, CAMERA_VERTICAL_SPAN);
+  state.cameraResetElapsedMs = 0;
+  // 复位期间关掉震屏：震屏往 camera.alpha 加随机抖动，会让「回到预设值」永远差一点。
+  state.feedback.setCameraShakeEnabled(false);
+  state.ui.setSaveStatus("视角回到默认等距…", "ok");
+}
+
+function aspectRatioOf(scene: Scene): number {
+  const engine = scene.getEngine();
+  return engine.getRenderHeight() > 0 ? engine.getRenderWidth() / engine.getRenderHeight() : 1;
+}
+
+/** 每帧推进相机复位插值。 */
+function updateCameraReset(state: P1WorldState, scene: Scene, dtMs: number): void {
+  const start = state.cameraReset;
+  if (start === null) {
+    return;
+  }
+  const camera = scene.activeCamera as ArcRotateCamera | null;
+  if (camera === null) {
+    state.cameraReset = null;
+    return;
+  }
+  state.cameraResetElapsedMs += dtMs;
+  const settled = advanceCameraReset(
+    camera,
+    start,
+    P1_WORLD_PRESET,
+    state.cameraResetElapsedMs,
+    aspectRatioOf(scene),
+  );
+  if (settled) {
+    state.cameraReset = null;
+    state.cameraResetElapsedMs = 0;
+    state.feedback.setCameraShakeEnabled(true);
+  }
+}
+
 /** 把下一个路点提交给逻辑层；到达后由 beforeRender 继续推进。 */
 function advanceWaypoint(state: P1WorldState): void {
   const player = playerSnapshot(state.session);
@@ -1459,6 +1825,123 @@ function installDebugApi(scene: Scene, state: P1WorldState): void {
   });
 
   window.P1WorldDebug = {
+    teleportTo(x: number, z: number): void {
+      // 走「快照往返」而不是几百帧 moveTo：后者会把玩家送进敌人的仇恨范围
+      // 打空血后被重生回村落打乱位置。快照往返还顺带保留了 worldState/背包。
+      const snapshot = state.session.snapshot();
+      const player = snapshot.entities.find((entity) => entity.id === PLAYER_ID);
+      if (player === undefined) {
+        return;
+      }
+      player.position = { x, y: 0, z };
+      player.movement = null;
+      state.session.restoreSnapshot(snapshot);
+      // 传送后再把生命拉满：冒烟只验证探索与相机，不该被敌人打死。
+      const healed = state.session.snapshot();
+      const healedPlayer = healed.entities.find((entity) => entity.id === PLAYER_ID);
+      if (healedPlayer !== undefined) {
+        healedPlayer.combat.hp = healedPlayer.combat.maxHp;
+        state.session.restoreSnapshot(healed);
+      }
+      // 硬碰撞求解：落点在树/墙旁时吸附到可站立处（渲染层每帧做同一件事）。
+      const current = state.session.snapshot();
+      const position = current.entities.find((entity) => entity.id === PLAYER_ID)?.position;
+      if (position !== undefined) {
+        const resolved = resolveMoveWithColliders(position, { x, z }, state.colliders);
+        const final = state.session.snapshot();
+        const finalPlayer = final.entities.find((entity) => entity.id === PLAYER_ID);
+        if (finalPlayer !== undefined) {
+          finalPlayer.position = { x: resolved.x, y: 0, z: resolved.z };
+          finalPlayer.movement = null;
+          state.session.restoreSnapshot(final);
+        }
+      }
+      syncVisualToSnapshot(state, state.session.snapshot());
+    },
+    openChest(chestId?: string): boolean {
+      const target =
+        chestId ??
+        state.session.chestDefinitions().find((chest) => !state.session.isChestOpened(chest.id))?.id;
+      if (target === undefined) {
+        return false;
+      }
+      const chest = state.session.chestDefinitions().find((entry) => entry.id === target);
+      if (chest !== undefined) {
+        // 冒烟直接落位到交互距离内，不走寻路往返（寻路由点击移动用例覆盖）。
+        window.P1WorldDebug?.teleportTo(chest.position.x + 1, chest.position.z);
+      }
+      const before = explorationSignature(state.session.getWorldState());
+      interactWithChest(state, target);
+      return explorationSignature(state.session.getWorldState()) !== before;
+    },
+    collect(collectibleId?: string): boolean {
+      const target =
+        collectibleId ??
+        state.session
+          .collectibleDefinitions()
+          .find((entry) => !state.session.isCollectibleCollected(entry.id))?.id;
+      if (target === undefined) {
+        return false;
+      }
+      const collectible = state.session
+        .collectibleDefinitions()
+        .find((entry) => entry.id === target);
+      if (collectible !== undefined) {
+        window.P1WorldDebug?.teleportTo(collectible.position.x + 1, collectible.position.z);
+      }
+      const before = explorationSignature(state.session.getWorldState());
+      interactWithCollectible(state, target);
+      return explorationSignature(state.session.getWorldState()) !== before;
+    },
+    getExploration(): ExplorationEvidence {
+      const snapshot = state.session.snapshot();
+      const player = snapshot.entities.find((entity) => entity.id === PLAYER_ID);
+      const rewardItemId = CONTENT_BUNDLE.collectSets?.[0]?.rewardItemId ?? "";
+      return {
+        chests: state.session.chestDefinitions().map((chest) => ({
+          id: chest.id,
+          opened: state.session.isChestOpened(chest.id),
+          loot: chest.loot,
+        })),
+        collectibles: state.session.collectibleDefinitions().map((entry) => ({
+          id: entry.id,
+          collected: state.session.isCollectibleCollected(entry.id),
+          itemId: entry.itemId,
+        })),
+        progress: state.session.allCollectProgress(),
+        rewardInBag:
+          rewardItemId !== "" &&
+          (player?.container.items ?? []).some((item) => item.templateId === rewardItemId),
+      };
+    },
+    getCamera(): CameraFramingEvidence {
+      const camera = scene.activeCamera as ArcRotateCamera | null;
+      if (camera === null) {
+        return { alpha: 0, beta: 0, radius: 0, verticalSpan: CAMERA_VERTICAL_SPAN };
+      }
+      return {
+        alpha: round(camera.alpha, 6),
+        beta: round(camera.beta, 6),
+        radius: round(camera.radius, 6),
+        verticalSpan: round(cameraVerticalSpan(camera, CAMERA_VERTICAL_SPAN), 4),
+      };
+    },
+    zoomCamera(notches: number): void {
+      const camera = scene.activeCamera as ArcRotateCamera | null;
+      if (camera !== null) {
+        applyCameraZoom(camera, notches, CAMERA_VERTICAL_SPAN, aspectRatioOf(scene));
+      }
+    },
+    rotateCamera(deltaPixelsX: number, deltaPixelsY: number): void {
+      const camera = scene.activeCamera as ArcRotateCamera | null;
+      if (camera !== null) {
+        applyCameraRotate(camera, deltaPixelsX, deltaPixelsY);
+      }
+    },
+    resetCamera(): boolean {
+      requestCameraReset(state, scene);
+      return state.cameraReset !== null;
+    },
     scenario: SCENARIO_NAME,
     getSnapshot: () => state.session.snapshot(),
     moveTo: (x, z) => moveAlongNavMesh(state, { x, z }),
@@ -2048,6 +2531,12 @@ export const p1WorldScenario: ScenarioDefinition = {
       autoSaver: new GameSaveAutoSaver({
         getSnapshot: () => session.snapshot(),
         writeAutoSlot: (slotId, snap) => holder.state.slotService.writeSlot(slotId, snap),
+        // 票 37：场景启动时先读自动槽再决定要不要写，避免空快照盖掉进度。
+        readAutoSlot: async () => {
+          const contents = await holder.state.slotService.readSlot("auto");
+          return contents?.snapshot ?? null;
+        },
+        restoreSnapshot: (snap) => holder.state.session.restoreSnapshot(snap),
         onError: (error) => {
           // 自动存档失败不打断游戏，只在 HUD 状态行提示一次。
           holder.state.ui.setSaveStatus(`自动存档失败：${errorMessage(error)}`, "error");
@@ -2110,7 +2599,64 @@ export const p1WorldScenario: ScenarioDefinition = {
       projectileMaterial: createProjectileMaterial(scene),
       enemySpriteRatio,
       enemySprites,
+      chestVisuals: new Map(),
+      collectibleVisuals: new Map(),
+      explorationSpriteRatio: 0,
+      collectHud: null,
+      cameraReset: null,
+      cameraResetElapsedMs: 0,
+      cameraDragButton: null,
+      cameraDragLastX: 0,
+      cameraDragLastY: 0,
+      detachCameraInput: () => undefined,
     };
+
+    // 票 37：宝箱与萤光草视觉。贴图来自资产 agent 的产出（assets/exploration/），
+    // 加载失败就落回程序化占位——场景不因为一张 PNG 缺失而起不来。
+    let explorationSpriteRatio = 0;
+    const explorationTextureKinds: ExplorationTextureKind[] = [
+      "chest-closed",
+      "chest-open",
+      "glow-grass",
+    ];
+    const explorationTextures = new Map<ExplorationTextureKind, BaseTexture | null>();
+    const loadedExplorationTextures = await Promise.all(
+      explorationTextureKinds.map(async (kind) => {
+        try {
+          const loaded = await loadExplorationTexture(scene, kind);
+          explorationSpriteRatio += loaded.transparentRatio;
+          return { kind, texture: loaded.texture as BaseTexture };
+        } catch (error) {
+          state.ui.setSaveStatus(`探索件贴图缺失，用占位：${errorMessage(error)}`, "idle");
+          return { kind, texture: null };
+        }
+      }),
+    );
+    for (const entry of loadedExplorationTextures) {
+      explorationTextures.set(entry.kind, entry.texture);
+    }
+    explorationSpriteRatio /= explorationTextureKinds.length;
+    state.explorationSpriteRatio = explorationSpriteRatio;
+
+    for (const chest of session.chestDefinitions()) {
+      const visual = createChestVisual(scene, root, chest, {
+        closed: explorationTextures.get("chest-closed") ?? null,
+        open: explorationTextures.get("chest-open") ?? null,
+      });
+      state.chestVisuals.set(chest.id, visual);
+      advanceChestVisual(visual, 260, session.isChestOpened(chest.id) ? 1 : 0);
+    }
+    session.collectibleDefinitions().forEach((collectible, index) => {
+      const visual = createCollectibleVisual(
+        scene,
+        root,
+        collectible,
+        index,
+        explorationTextures.get("glow-grass") ?? null,
+      );
+      visual.root.setEnabled(!session.isCollectibleCollected(collectible.id));
+      state.collectibleVisuals.set(collectible.id, visual);
+    });
     states.set(context, state);
     holder.state = state;
 
@@ -2205,8 +2751,46 @@ export const p1WorldScenario: ScenarioDefinition = {
       window.addEventListener("beforeunload", handler);
       return () => window.removeEventListener("beforeunload", handler);
     });
-    // 场景构建完成 = 区域已就绪，写一次自动槽作为初始进度点。
-    await state.autoSaver.notifyRegionChanged();
+    // 场景构建完成 = 区域已就绪，先把「自动槽里已有的进度」读回来，
+    // 再写一次自动槽作为初始进度点。
+    //
+    // 顺序很重要（票 37 发现的回归）：自动槽与手动槽共用同一个存储键，
+    // 如果先 notifyRegionChanged 再读档，就会用**刚写的空快照**覆盖掉
+    // 玩家上次的世界事实（宝箱/收集计数全部回退）。
+    let restoredFromAuto = false;
+    try {
+      restoredFromAuto = await state.autoSaver.hasAutoSnapshot();
+      if (restoredFromAuto && (await state.autoSaver.restoreAuto())) {
+        // 自动槽恢复后视觉要跟上：宝箱盖子按 worldState 决定开合，
+        // 已捡的萤光草整组隐藏，HUD 计数立刻反映进度。
+        clearWaypoints(state);
+        setInteractionPhase(state.interaction, createInteractionState());
+        closeDialoguePresentation(state);
+        state.zoomProgress = 0;
+        setCameraSpan(scene, CAMERA_VERTICAL_SPAN);
+        const restored = state.session.snapshot();
+        state.deadEnemies.clear();
+        for (const entity of restored.entities) {
+          if (entity.identity.type === "enemy" && !entity.combat.alive) {
+            state.deadEnemies.add(entity.id);
+          }
+        }
+        syncVisualToSnapshot(state, restored);
+        state.ui.update(restored);
+        state.collectHud?.update({
+          displayNames: COLLECT_SET_NAMES,
+          progress: state.session.allCollectProgress(),
+        });
+        state.ui.setSaveStatus("已恢复自动存档进度", "ok");
+      } else {
+        restoredFromAuto = false;
+      }
+    } catch (error) {
+      state.ui.setSaveStatus(`自动存档不可用：${errorMessage(error)}`, "error");
+    }
+    if (!restoredFromAuto) {
+      await state.autoSaver.notifyRegionChanged();
+    }
 
     // 选槽面板：票 31 挂在 HUD，票 32 的主菜单复用同一数据源。
     state.saveSlotPanel = createSaveSlotPanel({
@@ -2259,6 +2843,17 @@ export const p1WorldScenario: ScenarioDefinition = {
       },
     });
 
+    // 票 37：收集计数 HUD + 相机复位按钮（独立文件，不动 quest-loop-ui.ts）。
+    state.collectHud = createCollectHud({
+      mount: document.body,
+      onResetCamera: () => requestCameraReset(state, scene),
+    });
+    state.collectHud.update({
+      displayNames: COLLECT_SET_NAMES,
+      progress: session.allCollectProgress(),
+    });
+    state.detachCameraInput = installCameraInput(state, scene);
+
     // 票 33：交易面板。与对话面板同风格但独立文件——quest-loop-ui 被多票同时动。
     state.tradeUi = createTradeUi({
       mount: document.body,
@@ -2283,6 +2878,11 @@ export const p1WorldScenario: ScenarioDefinition = {
         return;
       }
 
+      // 相机拖拽旋转期间（左键之外的按键）不做点击交互。
+      if (state.cameraDragButton !== null) {
+        return;
+      }
+
       // 浏览器自动播放策略：首次用户交互后才允许 AudioContext 发声。
       if (!state.audio.isUnlocked) {
         void state.audio.unlock();
@@ -2293,7 +2893,21 @@ export const p1WorldScenario: ScenarioDefinition = {
       const pick = scene.pick(scene.pointerX, scene.pointerY, (mesh) =>
         mesh.isPickable && mesh.isEnabled(),
       );
-      const pickedId = entityIdOf(pick?.pickedMesh ?? null);
+      const pickedMesh = pick?.pickedMesh ?? null;
+
+      // 票 37：先问宝箱/收集品——它们不是逻辑实体，只能靠 metadata 识别。
+      const chestId = pick?.hit ? metadataString(pickedMesh, "chestId") : null;
+      if (chestId !== null) {
+        interactWithChest(state, chestId);
+        return;
+      }
+      const collectibleId = pick?.hit ? metadataString(pickedMesh, "collectibleId") : null;
+      if (collectibleId !== null) {
+        interactWithCollectible(state, collectibleId);
+        return;
+      }
+
+      const pickedId = entityIdOf(pickedMesh);
       if (pickedId !== null) {
         const picked = session
           .snapshot()
@@ -2411,6 +3025,9 @@ export const p1WorldScenario: ScenarioDefinition = {
 
       // 两段式对话交互 + 气泡投影 + 立绘/镜头（票 29）。
       updateInteractionPresentation(state, scene, deltaMs);
+      // 票 37：宝箱盖子开合 + 收集品呼吸 + 相机复位插值。
+      updateExplorationVisuals(state, now, deltaMs);
+      updateCameraReset(state, scene, deltaMs);
       // 票 27：受击抖动（衰减位移）与击杀消散（缩小上浮）。
       for (const [entityId, react] of state.hitReacts) {
         const visual = state.visuals.get(entityId);
@@ -2515,6 +3132,11 @@ export const p1WorldScenario: ScenarioDefinition = {
       if (now - lastUiUpdateAt >= 100) {
         lastUiUpdateAt = now;
         state.ui.update(snapshot);
+        // 票 37：收集计数 HUD 与任务 HUD 同步刷新（同样 10Hz）。
+        state.collectHud?.update({
+          displayNames: COLLECT_SET_NAMES,
+          progress: state.session.allCollectProgress(),
+        });
       }
     });
     state.observer = observer;
@@ -2679,10 +3301,12 @@ export const p1WorldScenario: ScenarioDefinition = {
         unit: "adjustments",
       },
       {
+        // 阈值从内容包现算，而不是写死 6：敌人/NPC 增删后（票 36 加了冲锋型与
+        // 吐弹型）这个断言曾经一直红着，写死数字会让人以为是探索内容引入了回归。
         name: "gameSession.entityCount",
         value: snapshot.entities.length,
         unit: "entities",
-        threshold: 6,
+        threshold: EXPECTED_ENTITY_COUNT,
         comparison: "eq",
       },
       {
@@ -2696,8 +3320,17 @@ export const p1WorldScenario: ScenarioDefinition = {
         name: "toonCharacterCount",
         value: state.visuals.size,
         unit: "characters",
-        threshold: 6,
+        threshold: EXPECTED_ENTITY_COUNT,
         comparison: "eq",
+      },
+      {
+        // 票 37：探索件精灵贴图（宝箱关闭/开启 + 萤光草）的抠白透明占比。
+        // 值落在合理区间说明贴图真的抠掉了白底，而不是整张白板贴在场景里。
+        name: "explorationSpriteTransparentRatio",
+        value: round(state.explorationSpriteRatio, 4),
+        unit: "ratio",
+        threshold: 0.3,
+        comparison: "gte",
       },
       {
         name: "environmentTextureCount",
@@ -2891,6 +3524,8 @@ export const p1WorldScenario: ScenarioDefinition = {
     if (state.afterRenderObserver) {
       context.scene.onAfterRenderObservable.remove(state.afterRenderObserver);
     }
+    state.detachCameraInput();
+    state.collectHud?.dispose();
     state.ui.dispose();
     state.dialogueUi.dispose();
     state.tradeUi.dispose();

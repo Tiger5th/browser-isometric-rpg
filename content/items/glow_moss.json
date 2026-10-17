@@ -1,0 +1,8 @@
+{
+  "id": "item:glow_moss",
+  "displayName": "萤光草",
+  "kind": "misc",
+  "description": "夜里会泛起淡青微光的草叶，凑齐一株脉络完整的是好兆头。",
+  "maxStack": 99,
+  "value": 3
+}

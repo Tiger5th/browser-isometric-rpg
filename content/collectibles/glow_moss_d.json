@@ -1,0 +1,9 @@
+{
+  "id": "collectible:glow_moss_d",
+  "displayName": "萤光草",
+  "regionId": "region:green_hollow",
+  "position": { "x": 18.5, "y": 0, "z": 12 },
+  "itemId": "item:glow_moss",
+  "quantity": 1,
+  "setId": "collect_set:glow_moss"
+}

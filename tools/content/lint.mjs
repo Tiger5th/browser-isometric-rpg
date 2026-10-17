@@ -32,6 +32,9 @@ const KIND_DIRS = [
   { kind: "quest", dir: "quests" },
   { kind: "character-palette", dir: "character-palettes" },
   { kind: "level-curve", dir: "level-curves" },
+  { kind: "chest", dir: "chests" },
+  { kind: "collectible", dir: "collectibles" },
+  { kind: "collect-set", dir: "collect-sets" },
 ];
 
 const SCHEMA_FILES = [
@@ -44,6 +47,9 @@ const SCHEMA_FILES = [
   ["quest", "quest.schema.json"],
   ["characterPalette", "character-palette.schema.json"],
   ["levelCurve", "level-curve.schema.json"],
+  ["chest", "chest.schema.json"],
+  ["collectible", "collectible.schema.json"],
+  ["collectSet", "collect-set.schema.json"],
 ];
 
 /** ink 任务标签约定：# quest:offer:<questId> / # quest:turnin:<questId>（独占一行）。 */

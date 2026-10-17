@@ -1,0 +1,11 @@
+{
+  "id": "chest:hollow_stone",
+  "displayName": "谷口石箱",
+  "regionId": "region:green_hollow",
+  "position": { "x": -17, "y": 0, "z": -10 },
+  "rotation": { "x": 0, "y": 0.6, "z": 0 },
+  "loot": [
+    { "itemId": "item:old_coin", "quantity": 12 },
+    { "itemId": "item:healing_herb", "quantity": 2 }
+  ]
+}

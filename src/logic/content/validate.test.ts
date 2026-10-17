@@ -23,6 +23,9 @@ const KIND_DIRS: Array<{ kind: ContentKind; dir: string }> = [
   { kind: "quest", dir: "quests" },
   { kind: "character-palette", dir: "character-palettes" },
   { kind: "level-curve", dir: "level-curves" },
+  { kind: "chest", dir: "chests" },
+  { kind: "collectible", dir: "collectibles" },
+  { kind: "collect-set", dir: "collect-sets" },
 ];
 
 function readJson(relativePath: string): unknown {
@@ -42,6 +45,9 @@ function loadSchemas(): ContentSchemas {
       "content/schema/character-palette.schema.json",
     ) as object,
     levelCurve: readJson("content/schema/level-curve.schema.json") as object,
+    chest: readJson("content/schema/chest.schema.json") as object,
+    collectible: readJson("content/schema/collectible.schema.json") as object,
+    collectSet: readJson("content/schema/collect-set.schema.json") as object,
   };
 }
 
