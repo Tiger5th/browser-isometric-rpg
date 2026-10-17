@@ -3,6 +3,7 @@ import { animePipelineScenario } from "./animePipeline";
 import { assetPipelineScenario } from "./assetPipeline";
 import { charactersScenario } from "./characters";
 import { clickMoveScenario } from "./click-move";
+import { combatLoopScenario } from "./combat-loop";
 import { crowdHotSwapScenario } from "./crowd-hot-swap";
 import { crowdNavScenario } from "./crowd-nav";
 import { helloScenario } from "./hello";
@@ -21,6 +22,7 @@ export function registerBuiltinScenarios(harness: P0Harness): void {
   harness.registerScenario(charactersScenario);
   harness.registerScenario(crowdNavScenario);
   harness.registerScenario(clickMoveScenario);
+  harness.registerScenario(combatLoopScenario);
   harness.registerScenario(crowdHotSwapScenario);
   harness.registerScenario(assetPipelineScenario);
   harness.registerScenario(animePipelineScenario);

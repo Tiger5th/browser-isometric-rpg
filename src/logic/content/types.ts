@@ -76,7 +76,7 @@ export interface DropDefinition {
 export interface EnemyTemplateDefinition {
   id: string;
   displayName: string;
-  /** 敌人 AI 档案 id，由逻辑层解释（P2 行为状态机）。 */
+  /** 敌人 AI 档案 id，由逻辑层解释（P1 = melee_chaser 状态机）。 */
   aiProfileId: string;
   baseAttributes: Record<string, number>;
   drops?: DropDefinition[];
