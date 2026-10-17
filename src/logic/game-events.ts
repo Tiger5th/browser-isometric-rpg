@@ -76,6 +76,61 @@ export interface AttackWindupStartedEvent {
   at: number;
 }
 
+/**
+ * 冲锋被硬碰撞挡停（票 36）。表现层据此播放「撞墙踉跄」而不是被击杀。
+ */
+export interface ChargeBlockedEvent {
+  type: "charge-blocked";
+  attackerId: string;
+  targetId: string;
+  /** 挡停冲锋的障碍 id（对应 world-physics 的 PropCollider）。 */
+  obstacleId: string;
+  at: number;
+}
+
+/**
+ * 发射投射物（票 36）：吐弹型敌人的远程攻击。位置/速度/命中判定都在逻辑层，
+ * 表现层只按 projectile-spawned/projectile-removed 渲染飞行与消失。
+ */
+export interface ProjectileSpawnedEvent {
+  type: "projectile-spawned";
+  projectileId: string;
+  ownerId: string;
+  targetId: string;
+  position: { x: number; y: number; z: number };
+  at: number;
+}
+
+/** 投射物消失（命中 / 撞障碍 / 超时）；命中伤害走 damage-dealt。 */
+export interface ProjectileRemovedEvent {
+  type: "projectile-removed";
+  projectileId: string;
+  ownerId: string;
+  reason: "hit" | "blocked" | "expired";
+  at: number;
+}
+
+/**
+ * 玩家死亡惩罚（票 36）：复活回村出生点并损失向上取整的 10% 金币。
+ * 无金币时 event 为 null（免罚）；金币余额是背包物品，扣减结果自然进快照。
+ */
+export interface PlayerDeathPenaltyEvent {
+  type: "player-death-penalty";
+  entityId: string;
+  itemId: string;
+  lostQuantity: number;
+  remainingQuantity: number;
+  at: number;
+}
+
+/** 背包获得/失去物品的事实（掉落/任务奖励/购买/死亡惩罚共用）。 */
+export interface ItemLostEvent {
+  type: "item-lost";
+  entityId: string;
+  itemId: string;
+  quantity: number;
+}
+
 /** 背包获得物品的事实（掉落/任务奖励/购买共用）。 */
 export interface ItemGainedEvent {
   type: "item-gained";
@@ -104,7 +159,12 @@ export type GameSessionEvent =
   | DamageDealtEvent
   | HealthChangedEvent
   | AttackWindupStartedEvent
+  | ChargeBlockedEvent
+  | ProjectileSpawnedEvent
+  | ProjectileRemovedEvent
+  | PlayerDeathPenaltyEvent
   | ItemGainedEvent
+  | ItemLostEvent
   | PlayerLevelUpEvent
   | { type: "dialogue-started"; npcId: string; dialogueId: string }
   | { type: "dialogue-ended"; npcId: string; dialogueId: string }

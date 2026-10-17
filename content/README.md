@@ -85,6 +85,7 @@ L1 不加属性（基准等级）；`levels[1].xpRequired` 必须为 0。一个�
 | `player.spawn.position` | 是 | 出生点 |
 | `player.spawn.rotation` | 否 | 出生朝向 |
 | `player.baseAttributes` | 是 | 玩家基础属性 |
+| `player.startingItems` | 否 | `[{itemId, quantity(≥1)}]`；`itemId` 必须存在 |
 | `exits` | 否 | `{id, targetRegionId, position, rotation?}`，目标区域必须存在 |
 | `safeZones` | 否 | 安全区（票 33）：`{id, shape:"rect", center, halfExtents:{x,z}}`。敌人 AI 在逻辑层拒止进入；玩家在区内时敌人不追入（即使被点过一次攻击） |
 
@@ -128,9 +129,24 @@ L1 不加属性（基准等级）；`levels[1].xpRequired` 必须为 0。一个�
 |---|---|---|
 | `id` / `displayName` | 是 | 同通用约定 |
 | `aiProfileId` | 是 | AI 档案 id（逻辑层解释；P1 实现 `ai:melee_chaser` 状态机） |
+| `aiProfile` | 否 | 票 36：AI 档案数据，缺省 = 既有 chaser 近战追击。解释见 `src/logic/enemy-ai.ts` 的 `resolveEnemyAiProfile` |
 | `baseAttributes` | 是 | 共享基础属性 |
 | `drops` | 否 | `{itemId, chance(0–1), min, max}`；`itemId` 必须存在，`max ≥ min` |
 | `tags` | 否 | 共享标签 |
+
+#### `aiProfile`（票 36）
+
+只有 `kind` 必填，其余数值字段省略即用档案默认值；同一 kind 的字段混写不合法由 schema 之外的行为测试守（字段全部允许，但只读对应 kind 的键）。
+
+| `kind` | 状态机 | 数值字段 |
+|---|---|---|
+| `chaser` | 既有近战追击（`chase` → 普攻前摇 300ms → 结算） | — |
+| `windup-charge` | `chase` → `windup-charge` → `charge` → `recovery` | `windupMs`(默认 600)、`chargeSpeed`、`chargeDistance`、`recoveryMs`、`triggerRange`、`hitRadius` |
+| `ranged-kite` | `kite`：保持 `preferredRange`，进 `retreatRange` 就后撤，定时发射逻辑层投射物 | `preferredRange`、`retreatRange`、`fireIntervalMs`、`projectileSpeed`、`projectileDamage`、`projectileRadius`、`projectileLifetimeMs` |
+
+冲锋型的 `windupMs` 走 `attack-windup-started` 事件（`heavy: true`），直接复用票 27 的前摇提示；冲锋被硬碰撞挡停发 `charge-blocked`；投射物发 `projectile-spawned` / `projectile-removed`，命中伤害走既有的 `damage-dealt`。
+
+死亡轻惩罚（票 36/37）的金币是 `region.player.startingItems` 里的 `item:old_coin`：玩家死亡时扣掉 `ceil(10% × 金币总量)`，无金币免罚。因为金币就是背包物品，扣减结果随实体背包自然进快照，不需要新快照字段。
 
 ### 敌人实例 `enemies/<local>.json`
 

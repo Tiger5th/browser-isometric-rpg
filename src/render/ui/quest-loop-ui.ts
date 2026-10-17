@@ -49,6 +49,11 @@ export interface QuestLoopUiOptions {
   onLoad?(): void;
   /** 删除存档。 */
   onClearSave?(): void;
+  /**
+   * 票 32：返回标题画面。
+   * HUD 只抛出意图——黑场过场与标题重挂由 main.ts 的标题流程负责。
+   */
+  onBackToTitle?(): void;
 }
 
 export type SaveStatusKind = "idle" | "ok" | "error";
@@ -549,6 +554,16 @@ export function createQuestLoopUi(options: QuestLoopUiOptions): QuestLoopUi {
       addSaveButton("读档", "load", options.onLoad);
       addSaveButton("删除存档", "clear-save", options.onClearSave);
       hud.append(row);
+    }
+
+    // 票 32：返回标题画面（黑场过场由标题流程做，这里只抛意图）。
+    if (options.onBackToTitle !== undefined) {
+      const backButton = button("返回标题", "back-to-title", () => {
+        submit(options.onBackToTitle ?? (() => undefined));
+      });
+      backButton.dataset.testid = "back-to-title-button";
+      backButton.style.cssText += "width:100%;margin-top:8px;background:#233044;";
+      hud.append(backButton);
     }
 
     if (options.onHeavyAttack !== undefined) {

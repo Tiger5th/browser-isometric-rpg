@@ -1,0 +1,24 @@
+{
+  "id": "enemy_template:charger",
+  "displayName": "角冲兽",
+  "aiProfileId": "ai:windup_charge",
+  "aiProfile": {
+    "kind": "windup-charge",
+    "windupMs": 600,
+    "chargeSpeed": 14,
+    "chargeDistance": 8,
+    "recoveryMs": 900,
+    "triggerRange": 6,
+    "hitRadius": 1
+  },
+  "baseAttributes": {
+    "maxHp": 34,
+    "hp": 34,
+    "attack": 9,
+    "defense": 1,
+    "moveSpeed": 4,
+    "xp": 14
+  },
+  "drops": [{ "itemId": "item:slime_gel", "chance": 0.6, "min": 1, "max": 2 }],
+  "tags": ["enemy", "charger"]
+}

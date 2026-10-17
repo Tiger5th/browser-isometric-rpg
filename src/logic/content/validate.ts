@@ -214,6 +214,20 @@ export function validateContent(
           }
           safeZoneIds.add(zone.id);
         });
+        if (isRecord(data.player)) {
+          asArray(data.player.startingItems).forEach((item, index) => {
+            if (!isRecord(item)) {
+              return;
+            }
+            requireReference(
+              file,
+              pointer("player", "startingItems", index, "itemId"),
+              item.itemId,
+              idSets.item,
+              "物品",
+            );
+          });
+        }
         asArray(data.exits).forEach((exit, index) => {
           if (!isRecord(exit)) {
             return;

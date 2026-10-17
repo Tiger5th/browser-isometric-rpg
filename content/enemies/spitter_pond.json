@@ -1,0 +1,8 @@
+{
+  "id": "enemy:spitter_pond",
+  "templateId": "enemy_template:spitter",
+  "displayName": "溪畔孢囊蟾",
+  "regionId": "region:green_hollow",
+  "position": { "x": -14, "y": 0, "z": 6 },
+  "tags": ["spitter"]
+}
