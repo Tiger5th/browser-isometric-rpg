@@ -15,6 +15,15 @@
     "characterPaletteId": { "type": "string", "pattern": "^[a-z0-9_]+:[a-z0-9_]+$" },
     "levelCurveId": { "type": "string", "pattern": "^level_curve:[a-z0-9_]+$" },
     "hexColor": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+    "safeZoneId": { "type": "string", "pattern": "^zone:[a-z0-9_]+$" },
+    "price": { "type": "integer", "minimum": 1, "maximum": 9999 },
+    "priceTable": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "$ref": "urn:content:common#/$defs/itemId" },
+      "additionalProperties": { "$ref": "urn:content:common#/$defs/price" }
+    },
+    "dwellMs": { "type": "integer", "minimum": 0, "maximum": 60000 },
     "templateId": { "type": "string", "pattern": "^[a-z][a-z0-9_]*:[a-z0-9_]+$" },
     "aiProfileId": { "type": "string", "pattern": "^ai:[a-z0-9_]+$" },
     "displayName": { "type": "string", "minLength": 1 },

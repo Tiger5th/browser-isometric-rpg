@@ -50,6 +50,29 @@
           "rotation": { "$ref": "urn:content:common#/$defs/vec3" }
         }
       }
+    },
+    "safeZones": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "shape", "center", "halfExtents"],
+        "properties": {
+          "id": { "$ref": "urn:content:common#/$defs/safeZoneId" },
+          "shape": { "const": "rect" },
+          "center": { "$ref": "urn:content:common#/$defs/vec3" },
+          "halfExtents": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["x", "z"],
+            "properties": {
+              "x": { "type": "number", "exclusiveMinimum": 0 },
+              "z": { "type": "number", "exclusiveMinimum": 0 }
+            }
+          }
+        }
+      }
     }
   }
 }

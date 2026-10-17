@@ -1,0 +1,33 @@
+{
+  "id": "npc:merchant_bo",
+  "displayName": "老陶",
+  "templateId": "npc_template:merchant",
+  "regionId": "region:green_hollow",
+  "position": { "x": -3, "y": 0, "z": 2 },
+  "rotation": { "x": 0, "y": 0.7853981633974483, "z": 0 },
+  "baseAttributes": {
+    "maxHp": 80,
+    "hp": 80,
+    "attack": 2,
+    "defense": 3
+  },
+  "tags": ["npc", "vendor"],
+  "dialogueId": "merchant_bo",
+  "paletteId": "character_palette:merchant_bo",
+  "vendor": {
+    "sell": {
+      "item:slime_gel": 3
+    },
+    "buy": {
+      "item:healing_herb": 15
+    }
+  },
+  "patrol": {
+    "waypoints": [
+      { "x": -3, "y": 0, "z": 2 },
+      { "x": -5, "y": 0, "z": 3 },
+      { "x": -2, "y": 0, "z": 4 }
+    ],
+    "dwellMs": 3200
+  }
+}

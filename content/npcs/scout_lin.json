@@ -16,5 +16,13 @@
   "portrait": {
     "image": "assets/portraits/scout_lin.png",
     "keywords": ["forest scout", "hooded cloak", "green hair"]
+  },
+  "patrol": {
+    "waypoints": [
+      { "x": -6, "y": 0, "z": 3 },
+      { "x": -8, "y": 0, "z": 6 },
+      { "x": -9, "y": 0, "z": -2 }
+    ],
+    "dwellMs": 2400
   }
 }

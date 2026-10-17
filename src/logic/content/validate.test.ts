@@ -65,8 +65,14 @@ function dialogueInputs(): DialogueInput[] {
     {
       id: "elder_ma",
       file: "content/dialogues/elder_ma.ink",
-      questTags: [{ kind: "offer", questId: "quest:cull_slimes" }],
+      questTags: [
+        { kind: "offer", questId: "quest:cull_slimes" },
+        { kind: "turnin", questId: "quest:cull_slimes" },
+      ],
     },
+    // 商人与铁匠的对话没有任务标签，但文件必须登记（否则 NPC 的 dialogueId 会断引用）。
+    { id: "merchant_bo", file: "content/dialogues/merchant_bo.ink", questTags: [] },
+    { id: "smith_qi", file: "content/dialogues/smith_qi.ink", questTags: [] },
   ];
 }
 
@@ -186,13 +192,14 @@ describe("content 数据 L2 校验", () => {
   it("ink 对话标签引用不存在的任务被拒绝", () => {
     const brokenDialogues = structuredClone(dialogueInputs());
     brokenDialogues[0].questTags.push({ kind: "turnin", questId: "quest:missing" });
+    const badTagIndex = brokenDialogues[0].questTags.length - 1;
 
     const result = validateContent(files, schemas, brokenDialogues);
     expect(result.valid).toBe(false);
     const issue = result.issues.find((entry) => entry.code === "dialogue-reference");
     expect(issue).toBeDefined();
     expect(issue!.file).toBe("content/dialogues/elder_ma.ink");
-    expect(issue!.path).toBe("/questTags/1");
+    expect(issue!.path).toBe(`/questTags/${badTagIndex}`);
   });
 });
 
@@ -208,14 +215,17 @@ describe("角色色板卡 L2 校验（票 29）", () => {
 
   it("每个主要角色各有一张色板卡（含玩家与 NPC）", () => {
     const palettes = paletteFiles.filter((file) => file.kind === "character-palette");
+    // 票 33 新增商人老陶与铁七：村庄凑齐 4 个 NPC（马婆婆/林斥候/老陶/铁七）+ 玩家。
     expect(palettes.map((file) => file.file).sort()).toEqual([
       "content/character-palettes/elder_ma.json",
+      "content/character-palettes/merchant_bo.json",
       "content/character-palettes/player_hero.json",
       "content/character-palettes/scout_lin.json",
+      "content/character-palettes/smith_qi.json",
     ]);
     // NPC 全部登记 paletteId，引用完整。
     const npcs = paletteFiles.filter((file) => file.kind === "npc");
-    expect(npcs).toHaveLength(2);
+    expect(npcs).toHaveLength(4);
     for (const npc of npcs) {
       expect((npc.data as { paletteId?: string }).paletteId).toBeDefined();
     }

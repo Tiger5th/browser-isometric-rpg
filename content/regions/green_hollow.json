@@ -20,5 +20,13 @@
       "moveSpeed": 5.5,
       "xpToNext": 100
     }
-  }
+  },
+  "safeZones": [
+    {
+      "id": "zone:green_hollow_village",
+      "shape": "rect",
+      "center": { "x": 0, "y": 0, "z": 0 },
+      "halfExtents": { "x": 9, "z": 9 }
+    }
+  ]
 }
