@@ -11,5 +11,10 @@
     "attack": 5,
     "defense": 3
   },
-  "tags": ["npc", "watcher"]
+  "tags": ["npc", "watcher"],
+  "paletteId": "character_palette:scout_lin",
+  "portrait": {
+    "image": "assets/portraits/scout_lin.png",
+    "keywords": ["forest scout", "hooded cloak", "green hair"]
+  }
 }

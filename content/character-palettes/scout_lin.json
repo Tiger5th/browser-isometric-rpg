@@ -1,0 +1,11 @@
+{
+  "id": "character_palette:scout_lin",
+  "displayName": "林斥候",
+  "role": "翠谷外围斥候，守望溪边动向；干练、警觉、语速快",
+  "primary": "#a3e635",
+  "secondary": "#14532d",
+  "accent": "#bef264",
+  "hairKeywords": "dark green short hair, side sweep bangs",
+  "costumeKeywords": "hooded forest cloak, leather belt, travel boots",
+  "status": "generated"
+}

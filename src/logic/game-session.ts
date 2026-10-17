@@ -48,6 +48,7 @@ import type {
   ItemDefinition,
   QuestDefinition,
 } from "./content/types";
+import { interactionTarget } from "./interaction";
 import {
   createModifiers,
   effectiveAttributes,
@@ -273,6 +274,14 @@ function assertFiniteVec3(value: Vec3, label: string): void {
 
 function cloneVec3(value: Vec3): Vec3 {
   return { x: value.x, y: value.y, z: value.z };
+}
+
+/**
+ * 面向目标点所需的 rotation.y（与 moveEntities 的朝向约定一致：
+ * +Z 为 0，朝 +X 为 π/2，即 atan2(dx, dz)）。
+ */
+function facingYaw(from: Vec3, to: Vec3): number {
+  return Math.atan2(to.x - from.x, to.z - from.z);
 }
 
 function cloneModifier(modifier: Modifier): Modifier {
@@ -509,6 +518,10 @@ export class GameSession implements GameSessionIntents {
         runtime.idleMs = 0;
       }
     }
+    // 两段式对话（票 29）：玩家的移动意图随时结束对话，玩家不会被对话锁死。
+    if (this.dialogue !== null && this.playerId !== null && id === this.playerId) {
+      this.endDialogue();
+    }
     // 与攻击自动接近一致：点击移动也使用修饰器后的有效移动速度。
     this.movements.set(id, {
       target: cloneVec3(target),
@@ -562,6 +575,46 @@ export class GameSession implements GameSessionIntents {
   /** 无异常版本的 talkTo；无对话/未知实体返回 ok=false。 */
   tryTalkTo(entityId: EntityId | string): IntentResult {
     return this.runIntent(() => this.talkTo(entityId));
+  }
+
+  /**
+   * 两段式对话第一段（票 29）：靠近 NPC 到对话距离。
+   * 只是普通移动意图——可被任何新移动打断，也不会开启对话。
+   */
+  approachNpc(entityId: EntityId | string, npcId: EntityId | string): void {
+    const entity = this.requireEntity(entityId);
+    const npc = this.requireEntity(npcId);
+    if (entity.id === npc.id) {
+      throw new Error("不能与自己对话");
+    }
+    const target = interactionTarget(npc.state.position, entity.state.position);
+    this.moveTo(entity.id, target);
+  }
+
+  /**
+   * 两段式对话第二段：双方互转面对面（演出常识）。
+   * 只改朝向，不改变位置与任何状态。
+   */
+  faceNpc(entityId: EntityId | string, npcId: EntityId | string): void {
+    const entity = this.requireEntity(entityId);
+    const npc = this.requireEntity(npcId);
+    // facingYaw(from, to)：各自看向对方。
+    entity.state.rotation.y = facingYaw(entity.state.position, npc.state.position);
+    npc.state.rotation.y = facingYaw(npc.state.position, entity.state.position);
+  }
+
+  /** 立即结束当前对话（移动打断/走开都走这里）；没有对话时静默返回。 */
+  endDialogue(): void {
+    const dialogue = this.dialogue;
+    if (dialogue === null) {
+      return;
+    }
+    this.dialogue = null;
+    this.publish({
+      type: "dialogue-ended",
+      npcId: dialogue.npcId,
+      dialogueId: dialogue.dialogueId,
+    });
   }
 
   /** 无异常版本的 useItem；过期实例等可预期失败返回 ok=false。 */

@@ -12,6 +12,8 @@
     "objectiveId": { "type": "string", "pattern": "^objective:[a-z0-9_]+$" },
     "entityId": { "type": "string", "pattern": "^entity:[a-z0-9_]+$" },
     "dialogueId": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+    "characterPaletteId": { "type": "string", "pattern": "^[a-z0-9_]+:[a-z0-9_]+$" },
+    "hexColor": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
     "templateId": { "type": "string", "pattern": "^[a-z][a-z0-9_]*:[a-z0-9_]+$" },
     "aiProfileId": { "type": "string", "pattern": "^ai:[a-z0-9_]+$" },
     "displayName": { "type": "string", "minLength": 1 },
