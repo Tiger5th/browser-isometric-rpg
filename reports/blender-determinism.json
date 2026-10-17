@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "status": "blocked",
+  "reason": "本机 PATH 中无 blender 可执行文件",
+  "script": "tools/pipeline/blender/export_test_asset.py"
+}

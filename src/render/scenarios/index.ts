@@ -1,9 +1,12 @@
 import type { P0Harness } from "../harness";
+import { assetPipelineScenario } from "./assetPipeline";
 import { charactersScenario } from "./characters";
 import { crowdHotSwapScenario } from "./crowd-hot-swap";
 import { crowdNavScenario } from "./crowd-nav";
 import { helloScenario } from "./hello";
 import { occlusionOutlineScenario } from "./occlusion-outline";
+import { regionGateScenario } from "./regionGate";
+import { regionLoadingScenario } from "./regionLoading";
 
 /**
  * 内置 scenario 注册表。
@@ -11,8 +14,11 @@ import { occlusionOutlineScenario } from "./occlusion-outline";
  */
 export function registerBuiltinScenarios(harness: P0Harness): void {
   harness.registerScenario(helloScenario);
+  harness.registerScenario(regionLoadingScenario);
+  harness.registerScenario(regionGateScenario);
   harness.registerScenario(charactersScenario);
   harness.registerScenario(crowdNavScenario);
   harness.registerScenario(crowdHotSwapScenario);
+  harness.registerScenario(assetPipelineScenario);
   harness.registerScenario(occlusionOutlineScenario);
 }

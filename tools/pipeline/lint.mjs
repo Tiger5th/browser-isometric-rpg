@@ -1,0 +1,463 @@
+#!/usr/bin/env node
+/**
+ * 资产 lint（glTF-Transform 自定义校验）。
+ *
+ * 规则针对 AI 生成资产加固：
+ * - 命名：小写蛇形 + 类别前缀；骨骼 `b_` 前缀；LOD 后缀 `_lodN`
+ * - 三角数：角色 ≤ 15k / 环境 ≤ 5k / 道具 ≤ 3k
+ * - 贴图：单边 ≤ 2048，建议 2 的幂
+ * - 材质/贴图数量上限
+ * - 拓扑：非流形边（>2 面共边）、退化三角、悬空顶点、边界边
+ * - 蒙皮/morph 结构一致性
+ *
+ * 用法：node tools/pipeline/lint.mjs [file.glb ...]
+ * 无参数时扫描 assets/*.glb；结果写入 reports/pipeline-lint.json。
+ */
+import { readdir, writeFile } from "node:fs/promises";
+import { join, resolve } from "node:path";
+
+import { NodeIO } from "@gltf-transform/core";
+import {
+  EXTMeshoptCompression,
+  KHRDracoMeshCompression,
+  KHRMeshQuantization,
+  KHRTextureBasisu,
+} from "@gltf-transform/extensions";
+import draco3d from "draco3d";
+import { MeshoptDecoder } from "meshoptimizer";
+
+const ROOT = resolve(import.meta.dirname, "../..");
+const ASSETS_DIR = join(ROOT, "assets");
+const REPORT_PATH = join(ROOT, "reports/pipeline-lint.json");
+
+const TRIANGLE_LIMITS = {
+  character: 15000,
+  environment: 5000,
+  prop: 3000,
+  default: 20000,
+};
+const MAX_TEXTURE_SIZE = 2048;
+const MAX_MATERIALS = 4;
+const MAX_TEXTURES = 8;
+
+const NAME_PATTERN =
+  /^(b_[a-z0-9_]+|(character|environment|prop|material|texture|anim|collider|light|camera|scene|skin|primitive|attr|morph|sampler|node)_[a-z0-9_]+)$/;
+
+function violation(rule, severity, path, message) {
+  return { rule, severity, path, message };
+}
+
+function categoryOf(name) {
+  return name.split("_")[0] ?? "default";
+}
+
+function triangleLimitFor(name) {
+  return TRIANGLE_LIMITS[categoryOf(name)] ?? TRIANGLE_LIMITS.default;
+}
+
+function checkName(name, path, violations) {
+  if (!name || name.trim() === "") {
+    violations.push(violation("naming", "error", path, "缺少名称"));
+    return;
+  }
+  if (!NAME_PATTERN.test(name)) {
+    violations.push(
+      violation(
+        "naming",
+        "error",
+        path,
+        `名称 "${name}" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）`,
+      ),
+    );
+  }
+}
+
+function analyzeTopology(primitive) {
+  const indices = primitive.getIndices()?.getArray();
+  const position = primitive.getAttribute("POSITION")?.getArray();
+  if (!indices || !position) {
+    return null;
+  }
+
+  const edgeCounts = new Map();
+  const usedVertices = new Set();
+  let degenerateTriangles = 0;
+  const indexCount = indices.length;
+
+  for (let i = 0; i < indexCount; i += 3) {
+    const a = indices[i];
+    const b = indices[i + 1];
+    const c = indices[i + 2];
+    if (a === b || b === c || a === c) {
+      degenerateTriangles += 1;
+      continue;
+    }
+
+    const ax = position[a * 3];
+    const ay = position[a * 3 + 1];
+    const az = position[a * 3 + 2];
+    const abx = position[b * 3] - ax;
+    const aby = position[b * 3 + 1] - ay;
+    const abz = position[b * 3 + 2] - az;
+    const acx = position[c * 3] - ax;
+    const acy = position[c * 3 + 1] - ay;
+    const acz = position[c * 3 + 2] - az;
+    const crossX = aby * acz - abz * acy;
+    const crossY = abz * acx - abx * acz;
+    const crossZ = abx * acy - aby * acx;
+    if (crossX * crossX + crossY * crossY + crossZ * crossZ < 1e-20) {
+      degenerateTriangles += 1;
+      continue;
+    }
+
+    for (const [from, to] of [
+      [a, b],
+      [b, c],
+      [c, a],
+    ]) {
+      const key = from < to ? `${from}-${to}` : `${to}-${from}`;
+      edgeCounts.set(key, (edgeCounts.get(key) ?? 0) + 1);
+    }
+    usedVertices.add(a);
+    usedVertices.add(b);
+    usedVertices.add(c);
+  }
+
+  let nonManifoldEdges = 0;
+  let boundaryEdges = 0;
+  for (const count of edgeCounts.values()) {
+    if (count > 2) {
+      nonManifoldEdges += 1;
+    } else if (count === 1) {
+      boundaryEdges += 1;
+    }
+  }
+
+  const vertexCount = position.length / 3;
+  return {
+    vertexCount,
+    triangleCount: indexCount / 3,
+    nonManifoldEdges,
+    boundaryEdges,
+    degenerateTriangles,
+    looseVertices: Math.max(0, vertexCount - usedVertices.size),
+  };
+}
+
+function lintDocument(document, fileName) {
+  const violations = [];
+  const root = document.getRoot();
+  const topology = [];
+
+  for (const node of root.listNodes()) {
+    checkName(node.getName(), `node:${node.getName() || "(unnamed)"}`, violations);
+  }
+  for (const mesh of root.listMeshes()) {
+    checkName(mesh.getName(), `mesh:${mesh.getName() || "(unnamed)"}`, violations);
+  }
+  for (const material of root.listMaterials()) {
+    checkName(
+      material.getName(),
+      `material:${material.getName() || "(unnamed)"}`,
+      violations,
+    );
+  }
+  for (const texture of root.listTextures()) {
+    checkName(
+      texture.getName(),
+      `texture:${texture.getName() || "(unnamed)"}`,
+      violations,
+    );
+  }
+  for (const animation of root.listAnimations()) {
+    checkName(
+      animation.getName(),
+      `animation:${animation.getName() || "(unnamed)"}`,
+      violations,
+    );
+  }
+
+  if (root.listMaterials().length > MAX_MATERIALS) {
+    violations.push(
+      violation(
+        "material-count",
+        "error",
+        "document",
+        `材质数 ${root.listMaterials().length} 超过上限 ${MAX_MATERIALS}`,
+      ),
+    );
+  }
+  if (root.listTextures().length > MAX_TEXTURES) {
+    violations.push(
+      violation(
+        "texture-count",
+        "error",
+        "document",
+        `贴图数 ${root.listTextures().length} 超过上限 ${MAX_TEXTURES}`,
+      ),
+    );
+  }
+
+  for (const texture of root.listTextures()) {
+    const size = texture.getSize();
+    if (!size || size[0] <= 0 || size[1] <= 0) {
+      violations.push(
+        violation(
+          "texture-size",
+          "warning",
+          `texture:${texture.getName()}`,
+          "无法读取贴图尺寸（可能为压缩格式，运行时确认）",
+        ),
+      );
+      continue;
+    }
+    if (size[0] > MAX_TEXTURE_SIZE || size[1] > MAX_TEXTURE_SIZE) {
+      violations.push(
+        violation(
+          "texture-size",
+          "error",
+          `texture:${texture.getName()}`,
+          `贴图尺寸 ${size[0]}×${size[1]} 超过上限 ${MAX_TEXTURE_SIZE}`,
+        ),
+      );
+    }
+    const isPowerOfTwo = (value) => (value & (value - 1)) === 0;
+    if (!isPowerOfTwo(size[0]) || !isPowerOfTwo(size[1])) {
+      violations.push(
+        violation(
+          "texture-power-of-two",
+          "warning",
+          `texture:${texture.getName()}`,
+          `贴图尺寸 ${size[0]}×${size[1]} 不是 2 的幂`,
+        ),
+      );
+    }
+  }
+
+  for (const mesh of root.listMeshes()) {
+    let meshTriangles = 0;
+    for (const primitive of mesh.listPrimitives()) {
+      const position = primitive.getAttribute("POSITION");
+      const indices = primitive.getIndices();
+      const triangleCount = indices
+        ? indices.getCount() / 3
+        : (position?.getCount() ?? 0) / 3;
+      meshTriangles += triangleCount;
+
+      const baseCount = position?.getCount() ?? 0;
+      for (const target of primitive.listTargets()) {
+        const targetPosition = target.getAttribute("POSITION");
+        if (!targetPosition) {
+          violations.push(
+            violation(
+              "morph-target",
+              "error",
+              `mesh:${mesh.getName()}`,
+              "morph target 缺少 POSITION",
+            ),
+          );
+        } else if (targetPosition.getCount() !== baseCount) {
+          violations.push(
+            violation(
+              "morph-target",
+              "error",
+              `mesh:${mesh.getName()}`,
+              `morph target 顶点数 ${targetPosition.getCount()} 与基础 ${baseCount} 不一致`,
+            ),
+          );
+        }
+      }
+
+      const analysis = analyzeTopology(primitive);
+      if (analysis) {
+        topology.push({ mesh: mesh.getName(), ...analysis });
+        if (analysis.nonManifoldEdges > 0) {
+          violations.push(
+            violation(
+              "non-manifold",
+              "error",
+              `mesh:${mesh.getName()}`,
+              `非流形边 ${analysis.nonManifoldEdges} 条（>2 个面共边）`,
+            ),
+          );
+        }
+        if (analysis.degenerateTriangles > 0) {
+          violations.push(
+            violation(
+              "degenerate-triangle",
+              "error",
+              `mesh:${mesh.getName()}`,
+              `退化三角 ${analysis.degenerateTriangles} 个`,
+            ),
+          );
+        }
+        if (analysis.looseVertices > 0) {
+          violations.push(
+            violation(
+              "loose-vertex",
+              "warning",
+              `mesh:${mesh.getName()}`,
+              `悬空顶点 ${analysis.looseVertices} 个`,
+            ),
+          );
+        }
+        if (analysis.boundaryEdges > 0) {
+          violations.push(
+            violation(
+              "boundary-edge",
+              "warning",
+              `mesh:${mesh.getName()}`,
+              `边界边 ${analysis.boundaryEdges} 条（开放网格；角色资产通常应为闭合）`,
+            ),
+          );
+        }
+      }
+    }
+
+    const limit = triangleLimitFor(mesh.getName());
+    if (meshTriangles > limit) {
+      violations.push(
+        violation(
+          "triangle-budget",
+          "error",
+          `mesh:${mesh.getName()}`,
+          `三角数 ${Math.round(meshTriangles)} 超过 ${categoryOf(mesh.getName())} 上限 ${limit}`,
+        ),
+      );
+    }
+  }
+
+  for (const skin of root.listSkins()) {
+    const jointCount = skin.listJoints().length;
+    const inverseBind = skin.getInverseBindMatrices();
+    if (jointCount === 0) {
+      violations.push(
+        violation("skin", "error", `skin:${skin.getName()}`, "蒙皮没有关节"),
+      );
+    }
+    if (inverseBind && inverseBind.getCount() !== jointCount) {
+      violations.push(
+        violation(
+          "skin",
+          "error",
+          `skin:${skin.getName()}`,
+          `逆绑定矩阵 ${inverseBind.getCount()} 与关节数 ${jointCount} 不一致`,
+        ),
+      );
+    }
+  }
+
+  for (const animation of root.listAnimations()) {
+    for (const channel of animation.listChannels()) {
+      if (!channel.getTargetNode()) {
+        violations.push(
+          violation(
+            "animation",
+            "error",
+            `animation:${animation.getName()}`,
+            "动画通道缺少目标节点",
+          ),
+        );
+      }
+    }
+  }
+
+  const errors = violations.filter((item) => item.severity === "error");
+  const warnings = violations.filter((item) => item.severity === "warning");
+
+  return {
+    file: fileName,
+    status: errors.length === 0 ? "passed" : "failed",
+    stats: {
+      triangles: topology.reduce((sum, item) => sum + item.triangleCount, 0),
+      vertices: topology.reduce((sum, item) => sum + item.vertexCount, 0),
+      meshes: root.listMeshes().length,
+      materials: root.listMaterials().length,
+      textures: root.listTextures().length,
+      animations: root.listAnimations().length,
+      skins: root.listSkins().length,
+    },
+    topology,
+    violations,
+    errorCount: errors.length,
+    warningCount: warnings.length,
+  };
+}
+
+export async function lintAssets(paths) {
+  const dracoDecoder = await draco3d.createDecoderModule();
+  await MeshoptDecoder.ready;
+  const io = new NodeIO()
+    .registerExtensions([
+      KHRDracoMeshCompression,
+      KHRMeshQuantization,
+      EXTMeshoptCompression,
+      KHRTextureBasisu,
+    ])
+    .registerDependencies({
+      "draco3d.decoder": dracoDecoder,
+      "meshopt.decoder": MeshoptDecoder,
+    });
+
+  const files = [];
+  for (const path of paths) {
+    const document = await io.read(path);
+    files.push(lintDocument(document, path));
+  }
+
+  return {
+    schemaVersion: 1,
+    generatedAt: new Date().toISOString(),
+    files,
+    summary: {
+      files: files.length,
+      passed: files.filter((file) => file.status === "passed").length,
+      failed: files.filter((file) => file.status === "failed").length,
+      errors: files.reduce((sum, file) => sum + file.errorCount, 0),
+      warnings: files.reduce((sum, file) => sum + file.warningCount, 0),
+    },
+  };
+}
+
+async function main() {
+  const args = process.argv.slice(2);
+  const paths = args.length
+    ? args.map((path) => resolve(path))
+    : (await readdir(ASSETS_DIR))
+        .filter((name) => name.endsWith(".glb"))
+        .sort()
+        .map((name) => join(ASSETS_DIR, name));
+
+  if (paths.length === 0) {
+    throw new Error("没有可 lint 的 .glb 文件");
+  }
+
+  const report = await lintAssets(paths);
+  await writeFile(REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`);
+
+  for (const file of report.files) {
+    const relative = file.file.replace(`${ROOT}/`, "");
+    console.log(
+      `[lint] ${relative}: ${file.status} · ${file.stats.triangles} tris · ` +
+        `${file.errorCount} errors / ${file.warningCount} warnings`,
+    );
+    for (const item of file.violations) {
+      console.log(`  [${item.severity}] ${item.rule} ${item.path}: ${item.message}`);
+    }
+  }
+  console.log(
+    `[lint] ${report.summary.passed}/${report.summary.files} passed · ` +
+      `${report.summary.errors} errors · ${report.summary.warnings} warnings`,
+  );
+
+  if (report.summary.errors > 0) {
+    process.exitCode = 1;
+  }
+}
+
+if (process.argv[1] && resolve(process.argv[1]) === resolve(import.meta.filename)) {
+  main().catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+}

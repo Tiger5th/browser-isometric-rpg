@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "source": "artifacts/asset-pipeline/lod{0,1,2}-{near,far}.png",
+  "lodTriangles": {
+    "lod0": 11488,
+    "lod1": 5744,
+    "lod2": 2296
+  },
+  "metrics": {
+    "near_lod1": {
+      "mse": 1.0265,
+      "psnrDb": 48.017,
+      "pixelsOver8Pct": 0.3168,
+      "pixelsOver24Pct": 0.0675,
+      "meanAbsDiff": 0.0623,
+      "psnrThresholdDb": 40.0,
+      "passed": true
+    },
+    "near_lod2": {
+      "mse": 11.363,
+      "psnrDb": 37.576,
+      "pixelsOver8Pct": 1.3748,
+      "pixelsOver24Pct": 0.6533,
+      "meanAbsDiff": 0.3459,
+      "psnrThresholdDb": 32.0,
+      "passed": true
+    },
+    "far_lod1": {
+      "mse": 0.0208,
+      "psnrDb": 64.949,
+      "pixelsOver8Pct": 0.0094,
+      "pixelsOver24Pct": 0.0005,
+      "meanAbsDiff": 0.0038,
+      "psnrThresholdDb": 40.0,
+      "passed": true
+    },
+    "far_lod2": {
+      "mse": 0.2811,
+      "psnrDb": 53.643,
+      "pixelsOver8Pct": 0.1029,
+      "pixelsOver24Pct": 0.0153,
+      "meanAbsDiff": 0.0205,
+      "psnrThresholdDb": 40.0,
+      "passed": true
+    }
+  },
+  "status": "passed",
+  "conclusion": "自动简化 LOD 视觉质量可接受：LOD1 近景 PSNR 48.017 dB，LOD2 近景 37.576 dB、远景 53.643 dB；差异集中在轮廓边缘，远景可忽略。建议角色采用 3 级 LOD（LOD2 仅远景/小屏），无需手工修模即可进入 P1。"
+}

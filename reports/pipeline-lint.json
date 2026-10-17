@@ -1,0 +1,202 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-17T04:58:02.456Z",
+  "files": [
+    {
+      "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a3dc6eec502545a32/assets/character_test_draco.glb",
+      "status": "passed",
+      "stats": {
+        "triangles": 11488,
+        "vertices": 5756,
+        "meshes": 1,
+        "materials": 1,
+        "textures": 1,
+        "animations": 1,
+        "skins": 1
+      },
+      "topology": [
+        {
+          "mesh": "character_test_lod0",
+          "vertexCount": 5756,
+          "triangleCount": 11488,
+          "nonManifoldEdges": 0,
+          "boundaryEdges": 0,
+          "degenerateTriangles": 0,
+          "looseVertices": 0
+        }
+      ],
+      "violations": [],
+      "errorCount": 0,
+      "warningCount": 0
+    },
+    {
+      "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a3dc6eec502545a32/assets/character_test_ktx2.glb",
+      "status": "passed",
+      "stats": {
+        "triangles": 11488,
+        "vertices": 5756,
+        "meshes": 1,
+        "materials": 1,
+        "textures": 1,
+        "animations": 1,
+        "skins": 1
+      },
+      "topology": [
+        {
+          "mesh": "character_test_lod0",
+          "vertexCount": 5756,
+          "triangleCount": 11488,
+          "nonManifoldEdges": 0,
+          "boundaryEdges": 0,
+          "degenerateTriangles": 0,
+          "looseVertices": 0
+        }
+      ],
+      "violations": [],
+      "errorCount": 0,
+      "warningCount": 0
+    },
+    {
+      "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a3dc6eec502545a32/assets/character_test_lod0.glb",
+      "status": "passed",
+      "stats": {
+        "triangles": 11488,
+        "vertices": 5756,
+        "meshes": 1,
+        "materials": 1,
+        "textures": 1,
+        "animations": 1,
+        "skins": 1
+      },
+      "topology": [
+        {
+          "mesh": "character_test_lod0",
+          "vertexCount": 5756,
+          "triangleCount": 11488,
+          "nonManifoldEdges": 0,
+          "boundaryEdges": 0,
+          "degenerateTriangles": 0,
+          "looseVertices": 0
+        }
+      ],
+      "violations": [],
+      "errorCount": 0,
+      "warningCount": 0
+    },
+    {
+      "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a3dc6eec502545a32/assets/character_test_lod1.glb",
+      "status": "passed",
+      "stats": {
+        "triangles": 5744,
+        "vertices": 2884,
+        "meshes": 1,
+        "materials": 1,
+        "textures": 1,
+        "animations": 1,
+        "skins": 1
+      },
+      "topology": [
+        {
+          "mesh": "character_test_lod0",
+          "vertexCount": 2884,
+          "triangleCount": 5744,
+          "nonManifoldEdges": 0,
+          "boundaryEdges": 0,
+          "degenerateTriangles": 0,
+          "looseVertices": 0
+        }
+      ],
+      "violations": [],
+      "errorCount": 0,
+      "warningCount": 0
+    },
+    {
+      "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a3dc6eec502545a32/assets/character_test_lod2.glb",
+      "status": "passed",
+      "stats": {
+        "triangles": 2296,
+        "vertices": 1160,
+        "meshes": 1,
+        "materials": 1,
+        "textures": 1,
+        "animations": 1,
+        "skins": 1
+      },
+      "topology": [
+        {
+          "mesh": "character_test_lod0",
+          "vertexCount": 1160,
+          "triangleCount": 2296,
+          "nonManifoldEdges": 0,
+          "boundaryEdges": 0,
+          "degenerateTriangles": 0,
+          "looseVertices": 0
+        }
+      ],
+      "violations": [],
+      "errorCount": 0,
+      "warningCount": 0
+    },
+    {
+      "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a3dc6eec502545a32/assets/character_test_meshopt.glb",
+      "status": "passed",
+      "stats": {
+        "triangles": 11488,
+        "vertices": 5756,
+        "meshes": 1,
+        "materials": 1,
+        "textures": 1,
+        "animations": 1,
+        "skins": 1
+      },
+      "topology": [
+        {
+          "mesh": "character_test_lod0",
+          "vertexCount": 5756,
+          "triangleCount": 11488,
+          "nonManifoldEdges": 0,
+          "boundaryEdges": 0,
+          "degenerateTriangles": 0,
+          "looseVertices": 0
+        }
+      ],
+      "violations": [],
+      "errorCount": 0,
+      "warningCount": 0
+    },
+    {
+      "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a3dc6eec502545a32/assets/character_test_meshopt_ktx2.glb",
+      "status": "passed",
+      "stats": {
+        "triangles": 11488,
+        "vertices": 5756,
+        "meshes": 1,
+        "materials": 1,
+        "textures": 1,
+        "animations": 1,
+        "skins": 1
+      },
+      "topology": [
+        {
+          "mesh": "character_test_lod0",
+          "vertexCount": 5756,
+          "triangleCount": 11488,
+          "nonManifoldEdges": 0,
+          "boundaryEdges": 0,
+          "degenerateTriangles": 0,
+          "looseVertices": 0
+        }
+      ],
+      "violations": [],
+      "errorCount": 0,
+      "warningCount": 0
+    }
+  ],
+  "summary": {
+    "files": 7,
+    "passed": 7,
+    "failed": 0,
+    "errors": 0,
+    "warnings": 0
+  }
+}

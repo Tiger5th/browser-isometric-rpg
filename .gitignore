@@ -3,3 +3,12 @@ dist/
 coverage/
 .DS_Store
 .claude/
+
+# 运行时解码器由 tools/pipeline/vendor-decoders.mjs 本地化，不入库
+public/vendor/
+
+# Blender 导出时生成的中间贴图
+assets/*.png
+
+# Editor 实验：完整工程（含 node_modules 与二进制资产）不入库，仅保留 artifacts/editor-experiment/ 下的样本与 reports/ 结论。
+artifacts/editor-experiment/project/
