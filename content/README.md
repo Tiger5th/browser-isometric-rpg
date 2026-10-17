@@ -85,7 +85,7 @@ content/
 | 字段 | 必填 | 含义 |
 |---|---|---|
 | `id` / `displayName` | 是 | 同通用约定 |
-| `aiProfileId` | 是 | AI 档案 id（逻辑层解释，P2 行为状态机） |
+| `aiProfileId` | 是 | AI 档案 id（逻辑层解释；P1 实现 `ai:melee_chaser` 状态机） |
 | `baseAttributes` | 是 | 共享基础属性 |
 | `drops` | 否 | `{itemId, chance(0–1), min, max}`；`itemId` 必须存在，`max ≥ min` |
 | `tags` | 否 | 共享标签 |
@@ -157,6 +157,34 @@ P1 任务：`quest:cull_slimes`（杀 3 只 `enemy_template:slime` → 物品 + 
 
 `GameSession.loadRegion(bundle, regionId)` 调用上述函数并注册实体；P1 只支持单区域会话。
 实例化顺序确定：玩家 → NPC（按 id）→ 敌人（按 id）。
+
+## 战斗运行时约定（GameSession，票 21）
+
+战斗规则全部在 `src/logic/game-session.ts`，content/ 只提供数值与掉落表：
+
+- **属性来源**：命中/伤害/射程/速度都取修饰器后的有效属性
+  `(base + Σadd) × (1 + Σmultiply)`；当前生命单独存于会话运行时，快照字段为 `combat.hp`。
+- **回合制时间步进**：攻击是意图（`attack(attacker, target)`）。射程内立即结算一轮，
+  之后按 `attackIntervalMs`（缺省 1000ms）冷却；时间由 `advance(deltaMs)` 手动推进。
+- **命中与伤害**：
+  - 命中率 = `clamp(0.9 + (accuracy - evasion) / 100, 0.05, 1)`（缺省 0.9）；
+  - 伤害 = `max(1, round(attack - defense))`；
+  - `accuracy`/`evasion`/`attackRange`/`attackIntervalMs` 可在属性表按需覆盖。
+- **敌人状态机**（`ai:melee_chaser`，P1 唯一档案；未知档案回退到该档案）：
+  `idle → patrol → chase → attack → dead`。玩家进入 `aggroRadius`（缺省 8）或被攻击即仇恨；
+  进入 `attackRange`（缺省 2）后停下攻击；距离超过 `aggroRadius × 2` 脱战回 idle。
+  `patrolRadius`（缺省 4，绕出生点四点巡逻）、`idleMs`（缺省 2000）可覆盖。
+- **击杀奖励**：经验 = 模板 `xp` 属性，累加到玩家 `baseAttributes.xp`；
+  掉落按模板 `drops` 的 `chance` / `min..max` 掷点，按物品 `maxStack` 合并进背包。
+- **玩家死亡与重生**（P1 默认设计）：
+  - 死亡后等待 `respawnDelayMs`（缺省 1000ms，构造参数可覆盖）回到**区域出生点**；
+  - 生命恢复为修饰器后的 `maxHp`；攻击目标、移动意图、冷却全部清空；
+  - 活着的敌人重置到各自出生点并回满血（避免蹲尸），**已死亡的敌人不刷新**；
+  - 重生后敌人获得一个完整攻击间隔的冷却缓冲，避免同一帧再次击杀玩家。
+- **事件流**：`drainEvents()` 返回 `attack`（含 hit/damage/剩余生命）、`death`、
+  `xp`、`loot`、`respawn`。渲染层只消费事件与 `snapshot()`，不读内部状态。
+- **快照版本**：`GAME_SESSION_SNAPSHOT_VERSION = 2`（新增 `attributes` / `combat` /
+  `container` 字段）。票 23 的存档以快照为准。
 
 ## 引用完整性（L2 强制）
 

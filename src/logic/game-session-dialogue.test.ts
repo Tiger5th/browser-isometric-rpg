@@ -294,7 +294,7 @@ describe("GameSession 对话与任务闭环", () => {
       },
     ]);
     expect(player.baseAttributes.maxHp).toBe(100);
-    expect(player.effectiveAttributes.maxHp).toBe(110);
+    expect(player.attributes.maxHp).toBe(110);
     expect(player.claimedRewardIds).toEqual(["quest:cull_slimes"]);
 
     // 再次交谈：已完成分支直接结束且不再出现复命选项，奖励不会重复发放。

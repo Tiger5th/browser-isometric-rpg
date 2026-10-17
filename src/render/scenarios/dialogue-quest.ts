@@ -4,8 +4,9 @@
  * 点击 NPC 开始 ink 对话，选项推进；offer 标签接取任务；击杀事件推进目标；
  * 任务可交后 NPC 对话出现复命选项，回报后物品入背包、修饰器生效。
  *
- * 战斗系统归票 21；本场景只通过 `session.emitCombatEvent` 消费其事件形状。
- * 票 21 合并前，HUD 上的调试按钮用于手动制造「击杀一只史莱姆」事件。
+ * 战斗系统归票 21：敌人死亡由 GameSession 的战斗结算触发，任务进度经
+ * `onEnemyKilled` 自动推进；HUD 上的调试按钮只是发起一次真实攻击，
+ * 方便在不开背包/装备 UI 的情况下手动走完任务闭环。
  */
 
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
@@ -84,7 +85,8 @@ export interface DialogueQuestDebugApi {
   moveTo(x: number, z: number): void;
   talkTo(npcId: string): void;
   chooseDialogueOption(index: number): void;
-  killEnemy(enemyId: string): void;
+  /** 发起攻击；伤害/死亡结算仍由票 21 的战斗逻辑完成。 */
+  attackEnemy(enemyId: string): void;
   getPlayer(): EntitySnapshot | null;
 }
 
@@ -176,24 +178,15 @@ function createEntityMesh(
 }
 
 function installDebugApi(state: DialogueQuestState): void {
-  const killEnemy = (enemyId: string): void => {
-    if (state.deadEnemies.has(enemyId)) {
-      return;
-    }
+  const attackEnemy = (enemyId: string): void => {
     const enemy = state.session
       .snapshot()
       .entities.find((entity) => entity.id === enemyId);
     if (!enemy || enemy.identity.type !== "enemy") {
       throw new Error(`未知敌人：${enemyId}`);
     }
-    state.deadEnemies.add(enemyId);
-    state.meshes.get(enemyId)?.setEnabled(false);
-    state.session.emitCombatEvent({
-      type: "enemy-killed",
-      enemyId,
-      enemyTemplateId: enemy.identity.templateId,
-      killerId: PLAYER_ID,
-    });
+    // 走票 21 的真实战斗：伤害、死亡与击杀事件都由 GameSession 结算。
+    state.session.attack(PLAYER_ID, enemyId);
   };
 
   state.session.subscribe((event) => {
@@ -209,7 +202,7 @@ function installDebugApi(state: DialogueQuestState): void {
     moveTo: (x, z) => state.session.moveTo(PLAYER_ID, { x, y: 0, z }),
     talkTo: (npcId) => state.session.talkTo(npcId),
     chooseDialogueOption: (index) => state.session.chooseDialogueOption(index),
-    killEnemy,
+    attackEnemy,
     getPlayer: () => playerSnapshot(state.session),
   };
 }
@@ -269,11 +262,13 @@ export const dialogueQuestScenario: ScenarioDefinition = {
         .snapshot()
         .entities.filter(
           (entity) =>
-            entity.identity.type === "enemy" && !state.deadEnemies.has(entity.id),
+            entity.identity.type === "enemy" &&
+            entity.combat.alive &&
+            !state.deadEnemies.has(entity.id),
         );
       const next = remaining[0];
       if (next !== undefined) {
-        window.P1DialogueQuestDebug?.killEnemy(next.id);
+        window.P1DialogueQuestDebug?.attackEnemy(next.id);
       }
     };
 
@@ -384,11 +379,10 @@ export const dialogueQuestScenario: ScenarioDefinition = {
         comparison: "eq",
       },
       {
+        // 交互式场景允许在 measure 前就开始操作；这里只报告，不断言。
         name: "quest.available",
         value: quests.filter((quest) => quest.status === "available").length,
         unit: "quests",
-        threshold: 1,
-        comparison: "eq",
       },
       {
         name: "dialogue.open",

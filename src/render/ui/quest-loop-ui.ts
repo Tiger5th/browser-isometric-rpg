@@ -14,7 +14,7 @@ export interface QuestLoopUiOptions {
   bundle: ContentBundle;
   /** 玩家点击对话选项。 */
   onChoose(choiceIndex: number): void;
-  /** 票 21 合并前的临时战斗入口；未提供时不渲染调试按钮。 */
+  /** 调试战斗入口：用真实战斗攻击最近的敌人（方便手动验证任务进度）。 */
   onDebugKill?(): void;
 }
 
@@ -166,7 +166,7 @@ export function createQuestLoopUi(options: QuestLoopUiOptions): QuestLoopUi {
           "color:#e6e9ef;border:1px solid rgba(148,163,184,0.35);border-radius:8px",
           "background:#1a2230;padding:6px 8px;",
         ].join(";"),
-        "调试：击杀一只史莱姆（票 21 合并前的临时入口）",
+        "调试：攻击最近的史莱姆（走真实战斗）",
       );
       button.type = "button";
       button.addEventListener("click", () => options.onDebugKill?.());

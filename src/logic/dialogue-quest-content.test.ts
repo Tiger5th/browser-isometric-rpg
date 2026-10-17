@@ -76,7 +76,7 @@ describe("示例内容：马婆婆的清理史莱姆任务", () => {
       ["item:traveler_sword", 1],
       ["item:healing_herb", 2],
     ]);
-    expect(player!.effectiveAttributes.maxHp).toBe(110);
+    expect(player!.attributes.maxHp).toBe(110);
     expect(player!.modifiers).toEqual([
       expect.objectContaining({
         attribute: "maxHp",
@@ -85,5 +85,32 @@ describe("示例内容：马婆婆的清理史莱姆任务", () => {
         source: { kind: "quest", id: "quest:cull_slimes" },
       }),
     ]);
+  });
+
+  it("会话内战斗击杀自动推进任务进度（票 21 合流后的真实路径）", () => {
+    const session = new GameSession();
+    session.registerDialogue("elder_ma", elderMaCompiled);
+    session.loadRegion(BUNDLE, "region:green_hollow");
+    session.talkTo("npc:elder_ma");
+    session.chooseDialogueOption(1);
+    expect(session.snapshot().quests[0].status).toBe("active");
+
+    const events: string[] = [];
+    session.subscribe((event) => events.push(event.type));
+
+    session.attack("entity:player", "enemy:slime_meadow");
+    let objective = session.snapshot().quests[0].objectives[0];
+    for (let index = 0; index < 20 && objective.current === 0; index += 1) {
+      session.advance(1000);
+      objective = session.snapshot().quests[0].objectives[0];
+    }
+
+    expect(objective.current).toBe(1);
+    expect(events.filter((type) => type === "enemy-killed")).toHaveLength(1);
+    expect(
+      session.drainEvents().some(
+        (event) => event.type === "death" && event.kind === "enemy",
+      ),
+    ).toBe(true);
   });
 });
