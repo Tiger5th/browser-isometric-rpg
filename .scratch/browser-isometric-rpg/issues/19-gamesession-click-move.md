@@ -4,10 +4,10 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** resolved (分支 worktree-agent-a312606604c8cf863: 17a7f0f，测试 49/49，build 通过)
 
-- [ ] 页面中点击地面，玩家角色（P0 角色工厂）经 Crowd V2 走到目标点
-- [ ] GameSession 可在 node/vitest 中纯逻辑驱动（时间步进手动推进，无引擎依赖）
-- [ ] L1：移动意图 → 位置变化 → 快照可序列化，测试全绿
-- [ ] 渲染层只读快照 + 提交意图，不直接改逻辑状态（代码结构可审查）
-- [ ] P0 Harness 保持可用（不回归）
+- [x] 页面中点击地面，玩家角色（P0 角色工厂）经 Crowd V2 走到目标点
+- [x] GameSession 可在 node/vitest 中纯逻辑驱动（时间步进手动推进，无引擎依赖）
+- [x] L1：移动意图 → 位置变化 → 快照可序列化，测试全绿
+- [x] 渲染层只读快照 + 提交意图，不直接改逻辑状态（代码结构可审查）
+- [x] P0 Harness 保持可用（不回归）
