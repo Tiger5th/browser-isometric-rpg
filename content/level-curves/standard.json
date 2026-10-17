@@ -1,0 +1,17 @@
+{
+  "id": "level_curve:standard",
+  "displayName": "标准曲线",
+  "defaultModifiers": [
+    { "attribute": "attack", "operation": "add", "value": 2 },
+    { "attribute": "defense", "operation": "add", "value": 2 },
+    { "attribute": "maxHp", "operation": "add", "value": 10 }
+  ],
+  "levels": [
+    { "level": 1, "xpRequired": 0 },
+    { "level": 2, "xpRequired": 100 },
+    { "level": 3, "xpRequired": 250 },
+    { "level": 4, "xpRequired": 450 },
+    { "level": 5, "xpRequired": 700 },
+    { "level": 6, "xpRequired": 1000 }
+  ]
+}

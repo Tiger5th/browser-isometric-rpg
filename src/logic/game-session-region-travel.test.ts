@@ -77,12 +77,33 @@ describe("区域联动（票 35）：路口触发区域切换", () => {
     const session = sessionInHollow();
     session.tryTravelToRegion(BUNDLE, CAVE_MOUTH);
 
+    // 巢穴 = 3 只巢穴史莱姆 + 票 36 的两种新敌人（混编，见 spec「区域 2 敌人配置」）。
     const ids = session.snapshot().entities.map((entity) => entity.id).sort();
     expect(ids).toEqual([
+      "enemy:den_charger",
+      "enemy:den_spitter",
       "enemy:slime_den_brood",
       "enemy:slime_den_core",
       "enemy:slime_den_watcher",
       "entity:player",
+    ]);
+  });
+
+  it("区域 2 混编了票 36 的两种新敌人 + 史莱姆（spec 约定）", () => {
+    const session = sessionInHollow();
+    session.tryTravelToRegion(BUNDLE, CAVE_MOUTH);
+
+    const templates = session
+      .snapshot()
+      .entities.filter((entity) => entity.identity.type === "enemy")
+      .map((entity) => entity.identity.templateId)
+      .sort();
+    expect(templates).toEqual([
+      "enemy_template:charger",
+      "enemy_template:slime_den",
+      "enemy_template:slime_den",
+      "enemy_template:slime_den",
+      "enemy_template:spitter",
     ]);
   });
 
@@ -96,9 +117,11 @@ describe("区域联动（票 35）：路口触发区域切换", () => {
 
     const ids = session.snapshot().entities.map((entity) => entity.id).sort();
     expect(ids).toEqual([
+      "enemy:charger_meadow",
       "enemy:slime_blue",
       "enemy:slime_elder",
       "enemy:slime_meadow",
+      "enemy:spitter_pond",
       "entity:player",
       "npc:elder_ma",
       "npc:scout_lin",
@@ -170,6 +193,8 @@ describe("区域联动（票 35）：路口触发区域切换", () => {
     expect(
       player?.container.items.map((item) => [item.templateId, item.quantity]),
     ).toEqual([
+      // 起始金币（票 36 死亡轻惩罚）在最前。
+      ["item:old_coin", 25],
       ["item:healing_herb", 3],
       ["item:old_coin", 20],
     ]);

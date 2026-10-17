@@ -44,14 +44,32 @@ content/
   | 任务目标 | `objective:` | `objective:kill_slimes` |
   | 玩家实体 | `entity:` | `entity:player` |
   | 角色色板卡 | `character_palette:` | `character_palette:elder_ma` |
+  | 等级曲线 | `level_curve:` | `level_curve:standard` |
 
 - 坐标：世界坐标，单位米，Y 轴向上；`position`/`rotation` 均为 `{x,y,z}`，旋转单位为弧度（`Entity.state.rotation` 同一约定）。
-- `attributes` 是**开放数值表**：`maxHp`/`hp`/`attack`/`defense`/`moveSpeed`/`xp`/`xpToNext` 是 P1 识别的一组键（`xpToNext` 供 HUD 经验条计算比例），其余键原样保留。新增键不需要改 schema。
+- `attributes` 是**开放数值表**：`maxHp`/`hp`/`attack`/`defense`/`moveSpeed`/`xp`/`xpToNext` 是 P1 识别的一组键，其余键原样保留。新增键不需要改 schema。
+  - `xp`：累计经验，由击杀奖励累积（`GameSession.grantExperience` 是唯一的入账口）。
+  - `level`：玩家等级，由 `level-curves/` 的曲线在经验入账时结算（票 34）。
+  - `xpToNext`：**旧内容口径**，只在没有等级曲线时供 HUD 算经验条。接了等级曲线后由 `levels[]` 决定，别再手填。
 - 修饰器（装备/任务奖励共用）字段与 `src/logic/modifier.ts` 完全一致：
   `{ attribute, operation: "add" | "multiply", value }`；
   最终属性 = `(base + Σadd) × (1 + Σmultiply)`。
 
 ## 各类型字段
+
+### 等级曲线 `level-curves/<local>.json`
+
+经验阈值表 + 每级属性加成。运行时解释口是 `src/logic/leveling.ts`；L2 校验除 schema 外还查阈值严格递增、等级序号从 1 连续。
+
+| 字段 | 必填 | 含义 |
+|---|---|---|
+| `id` | 是 | `level_curve:` + 文件名 |
+| `displayName` | 是 | 显示名 |
+| `defaultModifiers` | 是 | 每升一级的默认加成（形状同修饰器模板） |
+| `levels[]` | 是 | 按 `level` 升序、从 1 连续；`xpRequired` 是**累计**经验阈值 |
+| `levels[].modifiers` | 否 | 覆盖该级的默认加成 |
+
+L1 不加属性（基准等级）；`levels[1].xpRequired` 必须为 0。一个内容包目前只支持一条曲线（`ContentBundle.levelCurves`）。
 
 ### 区域 `regions/<local>.json`
 
@@ -67,6 +85,7 @@ content/
 | `player.spawn.position` | 是 | 出生点 |
 | `player.spawn.rotation` | 否 | 出生朝向 |
 | `player.baseAttributes` | 是 | 玩家基础属性 |
+| `player.startingItems` | 否 | `[{itemId, quantity(≥1)}]`；`itemId` 必须存在 |
 | `exits` | 否 | `{id, targetRegionId, position, rotation?}`，目标区域必须存在 |
 
 ### NPC `npcs/<local>.json`
@@ -106,9 +125,24 @@ content/
 |---|---|---|
 | `id` / `displayName` | 是 | 同通用约定 |
 | `aiProfileId` | 是 | AI 档案 id（逻辑层解释；P1 实现 `ai:melee_chaser` 状态机） |
+| `aiProfile` | 否 | 票 36：AI 档案数据，缺省 = 既有 chaser 近战追击。解释见 `src/logic/enemy-ai.ts` 的 `resolveEnemyAiProfile` |
 | `baseAttributes` | 是 | 共享基础属性 |
 | `drops` | 否 | `{itemId, chance(0–1), min, max}`；`itemId` 必须存在，`max ≥ min` |
 | `tags` | 否 | 共享标签 |
+
+#### `aiProfile`（票 36）
+
+只有 `kind` 必填，其余数值字段省略即用档案默认值；同一 kind 的字段混写不合法由 schema 之外的行为测试守（字段全部允许，但只读对应 kind 的键）。
+
+| `kind` | 状态机 | 数值字段 |
+|---|---|---|
+| `chaser` | 既有近战追击（`chase` → 普攻前摇 300ms → 结算） | — |
+| `windup-charge` | `chase` → `windup-charge` → `charge` → `recovery` | `windupMs`(默认 600)、`chargeSpeed`、`chargeDistance`、`recoveryMs`、`triggerRange`、`hitRadius` |
+| `ranged-kite` | `kite`：保持 `preferredRange`，进 `retreatRange` 就后撤，定时发射逻辑层投射物 | `preferredRange`、`retreatRange`、`fireIntervalMs`、`projectileSpeed`、`projectileDamage`、`projectileRadius`、`projectileLifetimeMs` |
+
+冲锋型的 `windupMs` 走 `attack-windup-started` 事件（`heavy: true`），直接复用票 27 的前摇提示；冲锋被硬碰撞挡停发 `charge-blocked`；投射物发 `projectile-spawned` / `projectile-removed`，命中伤害走既有的 `damage-dealt`。
+
+死亡轻惩罚（票 36/37）的金币是 `region.player.startingItems` 里的 `item:old_coin`：玩家死亡时扣掉 `ceil(10% × 金币总量)`，无金币免罚。因为金币就是背包物品，扣减结果随实体背包自然进快照，不需要新快照字段。
 
 ### 敌人实例 `enemies/<local>.json`
 

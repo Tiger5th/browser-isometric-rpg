@@ -36,13 +36,11 @@ describe("史莱姆巢穴（slime_den）布局数据", () => {
     expect(area / hollowArea).toBeLessThan(0.45);
   });
 
-  it("巢穴比主区域暗（复用主区域贴图时的调暗占位，资产 agent 产出后替换）", () => {
+  it("巢穴地面用专用暗色调瓦片（artifacts/region2/），其余贴图复用主区域", () => {
     expect(SLIME_DEN_TINT.r).toBeLessThan(1);
     expect(SLIME_DEN_TINT.b).toBeGreaterThan(SLIME_DEN_TINT.r * 0.8);
-    for (const patch of SLIME_DEN_GROUND_PATCHES) {
-      // 贴图 id 全部来自主区域资源；artifacts/region2/ 到位后换 asset 字段。
-      expect(["grass", "stone-path", "dirt-path", "water"]).toContain(patch.texture);
-    }
+    const base = SLIME_DEN_GROUND_PATCHES.find((patch) => patch.id === "den.ground.cave-floor");
+    expect(base?.texture).toBe("cave-floor");
   });
 
   it("北缘留出返回翠谷的出口，且与 content 的 exits 坐标一致", () => {
@@ -88,12 +86,19 @@ describe("史莱姆巢穴（slime_den）布局数据", () => {
     expect(SLIME_DEN_TREES.length).toBeGreaterThanOrEqual(12);
   });
 
-  it("地面贴片全部复用主区域的贴图 id（暗色调由材质 tint 承担）", () => {
+  it("除巢穴地面外，其余贴片复用主区域的贴图 id", () => {
     const denTextures = new Set(SLIME_DEN_GROUND_PATCHES.map((patch) => patch.texture));
+    denTextures.delete("cave-floor");
     for (const texture of denTextures) {
-      expect(
-        GROUND_PATCHES.some((patch) => patch.texture === texture),
-      ).toBe(true);
+      expect(GROUND_PATCHES.some((patch) => patch.texture === texture)).toBe(true);
     }
+    expect(denTextures.size).toBeGreaterThan(0);
+  });
+
+  it("巢穴带晶簇/茧/蛋三类巢穴件（artifacts/region2/ 的贴图已接入）", () => {
+    const kinds = new Set(SLIME_DEN_PROPS.map((prop) => prop.kind));
+    expect(kinds.has("den-crystal")).toBe(true);
+    expect(kinds.has("den-cocoon")).toBe(true);
+    expect(kinds.has("den-eggs")).toBe(true);
   });
 });

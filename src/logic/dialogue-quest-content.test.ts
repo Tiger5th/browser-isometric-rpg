@@ -59,6 +59,8 @@ describe("示例内容：马婆婆的清理史莱姆任务", () => {
     expect(
       player!.container.items.map((item) => [item.templateId, item.quantity]),
     ).toEqual([
+      // 起始金币（票 36：死亡轻惩罚的扣币对象）排在最前。
+      ["item:old_coin", 25],
       ["item:traveler_sword", 1],
       ["item:healing_herb", 2],
     ]);

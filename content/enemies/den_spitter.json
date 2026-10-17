@@ -1,0 +1,15 @@
+{
+  "id": "enemy:den_spitter",
+  "templateId": "enemy_template:spitter",
+  "displayName": "巢穴孢囊蟾",
+  "regionId": "region:slime_den",
+  "position": { "x": 7, "y": 0, "z": 4 },
+  "overrides": {
+    "baseAttributes": {
+      "maxHp": 32,
+      "hp": 32,
+      "attack": 6
+    }
+  },
+  "tags": ["den-guard"]
+}

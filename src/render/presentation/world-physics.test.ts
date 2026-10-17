@@ -36,6 +36,7 @@ import {
   validateLandscape,
   type NpcIdleState,
 } from "./world-physics";
+import { SLIME_DEN_PROPS } from "./slime-den-layout";
 import {
   GREEN_HOLLOW_BOUNDS,
   PROP_DIMENSIONS,
@@ -76,16 +77,32 @@ describe("硬碰撞环境件（user story 15）", () => {
     );
   });
 
-  it("硬碰撞种类与可穿种类互斥且覆盖全部道具种类", () => {
-    const all = new Set(PROPS.map((item) => item.kind));
+  it("硬碰撞种类与可穿种类互斥", () => {
     for (const kind of HARD_COLLIDER_KINDS) {
       expect(PASSABLE_KINDS).not.toContain(kind);
-      expect(all.has(kind)).toBe(true);
     }
     for (const kind of PASSABLE_KINDS) {
       expect(HARD_COLLIDER_KINDS).not.toContain(kind);
-      expect(all.has(kind)).toBe(true);
     }
+  });
+
+  it("每个区域布局都覆盖了共享的硬碰撞件与可穿件", () => {
+    // 巢穴件（票 35）只出现在区域 2，因此「共享种类」是两区域的交集：
+    // 任一区域缺少其中一种就说明该区域的件被漏配。
+    const sharedHardKinds = HARD_COLLIDER_KINDS.filter((kind) =>
+      kind.startsWith("den-") ? false : true,
+    );
+    for (const props of [PROPS, SLIME_DEN_PROPS]) {
+      const all = new Set(props.map((item) => item.kind));
+      for (const kind of sharedHardKinds) {
+        expect(all.has(kind)).toBe(true);
+      }
+      for (const kind of PASSABLE_KINDS) {
+        expect(all.has(kind)).toBe(true);
+      }
+    }
+    // 区域 2 额外带上巢穴件（否则「晶簇/茧/蛋」那一档等于没接管线）。
+    expect(new Set(SLIME_DEN_PROPS.map((item) => item.kind)).has("den-crystal")).toBe(true);
   });
 
   it("碰撞半径含角色半径后不会小于一个身位（树/桶/箱都挡得住）", () => {
@@ -479,15 +496,21 @@ describe("布局常量与碰撞的关系（不变量）", () => {
     }
   });
 
-  it("硬碰撞件数量与布局里的对应件数量一致", () => {
-    const counts = new Map<string, number>();
-    for (const item of PROPS) {
-      counts.set(item.kind, (counts.get(item.kind) ?? 0) + 1);
+  it("硬碰撞件数量与布局里的对应件数量一致（两区域分别断言）", () => {
+    // 巢穴件（den-*）只在区域 2 的布局里，单独断言。
+    expect(
+      SLIME_DEN_PROPS.filter((item) => item.kind.startsWith("den-")).length,
+    ).toBeGreaterThan(0);
+    for (const props of [PROPS, SLIME_DEN_PROPS]) {
+      const counts = new Map<string, number>();
+      for (const item of props) {
+        counts.set(item.kind, (counts.get(item.kind) ?? 0) + 1);
+      }
+      for (const kind of HARD_COLLIDER_KINDS.filter((entry) => !entry.startsWith("den-"))) {
+        expect(counts.get(kind) ?? 0).toBeGreaterThan(0);
+      }
+      // 灌木不进入碰撞列表，但每个区域都要有。
+      expect(counts.get("bush") ?? 0).toBeGreaterThan(0);
     }
-    for (const kind of HARD_COLLIDER_KINDS) {
-      expect(counts.get(kind) ?? 0).toBeGreaterThan(0);
-    }
-    // 灌木不进入碰撞列表。
-    expect(counts.get("bush") ?? 0).toBeGreaterThan(0);
   });
 });

@@ -69,7 +69,8 @@ export const SLIME_DEN_PLAYER_SPAWN = { x: 0, y: 0, z: -6 } as const;
 export const SLIME_DEN_GROUND_PATCHES: readonly GroundPatch[] = [
   {
     id: "den.ground.cave-floor",
-    texture: "grass" as GroundTextureId,
+    // 巢穴专用暗色调瓦片（artifacts/region2/ground-c1 → assets/textures/region2_ground_tile.png）。
+    texture: "cave-floor" as GroundTextureId,
     x: 0,
     z: 0,
     width: SLIME_DEN_BOUNDS.maxX - SLIME_DEN_BOUNDS.minX,
@@ -136,7 +137,18 @@ export const SLIME_DEN_PROPS: readonly PropPlacement[] = [
   // 巢穴残骸
   { id: "den.prop.crate.core-west", kind: "crate", x: -3, z: 5.5, scale: 0.9, occluder: true, zone: "deep" },
   { id: "den.prop.crate.core-east", kind: "crate", x: 3, z: 5.5, scale: 0.95, occluder: true, zone: "deep" },
-  { id: "den.prop.barrel.mouth", kind: "barrel", x: -2.6, z: -9, scale: 0.9, occluder: true, zone: "cave-mouth" },
+  { id: "den.prop.barrel.mouth", kind: "barrel", x: -2.4, z: -9.4, scale: 0.9, occluder: true, zone: "cave-mouth" },
+
+  // 巢穴件（artifacts/region2/ 的晶簇/茧/蛋贴图，票 35）：
+  // 深处围住核心台地，洞口两侧各一丛晶簇，茧与蛋沿路分布。
+  { id: "den.prop.crystal.mouth-west", kind: "den-crystal", x: -3.2, z: -7.2, scale: 1.0, occluder: true, zone: "cave-mouth" },
+  { id: "den.prop.crystal.mouth-east", kind: "den-crystal", x: 2.6, z: -8.6, scale: 1.0, occluder: true, zone: "cave-mouth" },
+  { id: "den.prop.crystal.core-north", kind: "den-crystal", x: -2.6, z: 4.2, scale: 0.95, occluder: true, zone: "deep" },
+  { id: "den.prop.crystal.core-south", kind: "den-crystal", x: 4.6, z: 10.4, scale: 1.05, occluder: true, zone: "deep" },
+  { id: "den.prop.cocoon.tunnel", kind: "den-cocoon", x: -2.6, z: -2.5, scale: 1.0, occluder: true, zone: "tunnel" },
+  { id: "den.prop.cocoon.deep-west", kind: "den-cocoon", x: -6.8, z: 6.5, scale: 0.95, occluder: true, zone: "deep" },
+  { id: "den.prop.eggs.tunnel", kind: "den-eggs", x: 3.8, z: -3.5, scale: 0.95, occluder: true, zone: "tunnel" },
+  { id: "den.prop.eggs.deep-east", kind: "den-eggs", x: 6.5, z: 1.5, scale: 1.0, occluder: true, zone: "deep" },
 ];
 
 /** 与 content/enemies/*.json 的坐标一致（巢穴 3 只史莱姆 + 玩家出生点）。 */
@@ -145,6 +157,8 @@ export const SLIME_DEN_ENTITY_ANCHORS = {
   "enemy:slime_den_watcher": { x: 3.5, y: 0, z: -1 },
   "enemy:slime_den_brood": { x: -4, y: 0, z: 2 },
   "enemy:slime_den_core": { x: 0, y: 0, z: 6 },
+  "enemy:den_charger": { x: -5, y: 0, z: -3 },
+  "enemy:den_spitter": { x: 7, y: 0, z: 4 },
 } as const;
 
 /**

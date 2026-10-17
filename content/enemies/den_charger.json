@@ -1,0 +1,15 @@
+{
+  "id": "enemy:den_charger",
+  "templateId": "enemy_template:charger",
+  "displayName": "巢穴角冲兽",
+  "regionId": "region:slime_den",
+  "position": { "x": -5, "y": 0, "z": -3 },
+  "overrides": {
+    "baseAttributes": {
+      "maxHp": 42,
+      "hp": 42,
+      "attack": 11
+    }
+  },
+  "tags": ["den-guard"]
+}
