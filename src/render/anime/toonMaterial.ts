@@ -3,9 +3,13 @@ import type { BaseTexture } from "@babylonjs/core/Materials/Textures/baseTexture
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { Scene } from "@babylonjs/core/scene";
-// 注册 Babylon 骨骼 shader include（ShaderStore 副作用导入）。
+// 注册 Babylon 骨骼 / morph shader include（ShaderStore 副作用导入）。
 import "@babylonjs/core/Shaders/ShadersInclude/bonesDeclaration";
 import "@babylonjs/core/Shaders/ShadersInclude/bonesVertex";
+import "@babylonjs/core/Shaders/ShadersInclude/morphTargetsVertexGlobalDeclaration";
+import "@babylonjs/core/Shaders/ShadersInclude/morphTargetsVertexDeclaration";
+import "@babylonjs/core/Shaders/ShadersInclude/morphTargetsVertexGlobal";
+import "@babylonjs/core/Shaders/ShadersInclude/morphTargetsVertex";
 
 /**
  * 自定义二次元 Toon Shader。
@@ -15,12 +19,20 @@ import "@babylonjs/core/Shaders/ShadersInclude/bonesVertex";
  * ShaderMaterial 实现等价效果：
  * - 三阶明暗分层（硬边 + 窄过渡）
  * - 高光/边缘光（rim light）
- * - 顶点色 × baseColor 贴图
+ * - 顶点色 × baseColor 贴图 × tint
  * - 通过 Babylon 的 bonesDeclaration/bonesVertex include 支持蒙皮
+ * - 通过 morphTargets* include 支持表情/眨眼 morph（票 25 清账项）
+ * - ALPHATEST：环境 billboard 的白底抠图后做 alpha 裁剪，避免透明排序
+ * - UNLIT：环境贴图保留手绘明暗，不再叠加光照
  *
- * 描边由 Mesh.renderOutline 提供，色彩分级由 DefaultRenderingPipeline 提供。
+ * 描边由 Mesh.renderOutline 提供（角色）或 HighlightLayer（被遮挡时），
+ * 色彩分级由 DefaultRenderingPipeline 提供。
+ *
+ * morph 说明：ShaderMaterial 会按 mesh.morphTargetManager 自动补齐
+ * `MORPHTARGETS_POSITION` / `NUM_MORPH_INFLUENCERS` 定义、`position0..N`
+ * 属性和 `morphTargetInfluences` uniform；shader 只需引用 include 链。
  */
-const VERTEX_SHADER = `
+export const TOON_VERTEX_SHADER = `
 precision highp float;
 
 attribute vec3 position;
@@ -34,6 +46,8 @@ uniform mat4 world;
 uniform mat4 viewProjection;
 
 #include<bonesDeclaration>
+#include<morphTargetsVertexGlobalDeclaration>
+#include<morphTargetsVertexDeclaration>[0..maxSimultaneousMorphTargets]
 
 varying vec2 vUV;
 varying vec3 vNormalW;
@@ -43,12 +57,18 @@ varying vec4 vColor;
 #endif
 
 void main() {
+  vec3 positionUpdated = position;
+  vec3 normalUpdated = normal;
+
+  #include<morphTargetsVertexGlobal>
+  #include<morphTargetsVertex>[0..maxSimultaneousMorphTargets]
+
   mat4 finalWorld = world;
   #include<bonesVertex>
 
-  vec4 worldPos = finalWorld * vec4(position, 1.0);
+  vec4 worldPos = finalWorld * vec4(positionUpdated, 1.0);
   vPositionW = worldPos.xyz;
-  vNormalW = normalize(mat3(finalWorld) * normal);
+  vNormalW = normalize(mat3(finalWorld) * normalUpdated);
   vUV = uv;
 #ifdef USE_VERTEX_COLOR
   vColor = color;
@@ -57,7 +77,7 @@ void main() {
 }
 `;
 
-const FRAGMENT_SHADER = `
+export const TOON_FRAGMENT_SHADER = `
 precision highp float;
 
 varying vec2 vUV;
@@ -68,6 +88,8 @@ varying vec4 vColor;
 #endif
 
 uniform sampler2D baseColorTexture;
+uniform vec3 tintColor;
+uniform float alphaCutoff;
 uniform vec3 lightDirection;
 uniform vec3 lightColor;
 uniform vec3 ambientColor;
@@ -77,13 +99,23 @@ uniform float shadowFloor;
 uniform float rimStrength;
 
 void main() {
+  vec4 texel = texture2D(baseColorTexture, vUV);
+  if (texel.a < alphaCutoff) {
+    discard;
+  }
+
 #ifdef USE_VERTEX_COLOR
-  vec3 base = texture2D(baseColorTexture, vUV).rgb * vColor.rgb;
+  vec3 base = texel.rgb * vColor.rgb * tintColor;
 #else
   // COLOR_0 是可选属性：缺失时 Babylon 会提供 generic attribute (0,0,0,1)，
   // 若无条件相乘会把整个资产乘黑，因此无顶点色时回退为贴图原色。
-  vec3 base = texture2D(baseColorTexture, vUV).rgb;
+  vec3 base = texel.rgb * tintColor;
 #endif
+
+#ifdef UNLIT
+  // 环境 billboard 使用手绘贴图的自带明暗，保留原始色相。
+  gl_FragColor = vec4(base, 1.0);
+#else
   vec3 normal = normalize(vNormalW);
   vec3 lightDir = normalize(lightDirection);
   float ndl = max(dot(normal, lightDir), 0.0);
@@ -105,12 +137,15 @@ void main() {
 
   lit = max(lit, base * shadowFloor);
   gl_FragColor = vec4(lit, 1.0);
+#endif
 }
 `;
 
 export interface ToonMaterialOptions {
   /** mesh 是否带 COLOR_0。缺省属性时不能乘 vColor（generic attribute 为 (0,0,0,1)）。 */
   useVertexColors?: boolean;
+  /** 基础色乘数；用于给占位角色/NPC/敌人换色。 */
+  tint?: Color3;
   /** 主光方向（指向光源的世界空间单位向量）。 */
   lightDirection?: Vector3;
   lightColor?: Color3;
@@ -118,6 +153,10 @@ export interface ToonMaterialOptions {
   rimColor?: Color3;
   shadowFloor?: number;
   rimStrength?: number;
+  /** 透明度裁剪阈值；billboard 白底抠图后必须 > 0 才会丢弃透明像素。 */
+  alphaCutoff?: number;
+  /** 不参与光照（环境贴图 billboard / 地面平铺）。 */
+  unlit?: boolean;
 }
 
 export function createToonMaterial(
@@ -129,13 +168,15 @@ export function createToonMaterial(
   const material = new ShaderMaterial(
     name,
     scene,
-    { vertexSource: VERTEX_SHADER, fragmentSource: FRAGMENT_SHADER },
+    { vertexSource: TOON_VERTEX_SHADER, fragmentSource: TOON_FRAGMENT_SHADER },
     {
       attributes: ["position", "normal", "uv", "color"],
       uniforms: [
         "world",
         "viewProjection",
         "cameraPosition",
+        "tintColor",
+        "alphaCutoff",
         "lightDirection",
         "lightColor",
         "ambientColor",
@@ -145,15 +186,22 @@ export function createToonMaterial(
       ],
       samplers: ["baseColorTexture"],
       needAlphaBlending: false,
+      // 裁剪完全由 shader 内 discard 完成；不要打开 Babylon 的 ALPHATEST，
+      // 否则会自动追加重复的 #define ALPHATEST 并与自定义定义冲突。
       needAlphaTesting: false,
     },
   );
 
   material.backFaceCulling = true;
   material.setDefine("USE_VERTEX_COLOR", options.useVertexColors ?? true);
+  if (options.unlit) {
+    material.setDefine("UNLIT", true);
+  }
   if (baseColorTexture) {
     material.setTexture("baseColorTexture", baseColorTexture);
   }
+  material.setColor3("tintColor", options.tint ?? Color3.White());
+  material.setFloat("alphaCutoff", options.alphaCutoff ?? 0);
   material.setVector3(
     "lightDirection",
     options.lightDirection ?? new Vector3(0.7, 1, 0.45).normalize(),

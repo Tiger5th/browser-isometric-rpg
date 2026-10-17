@@ -1,0 +1,304 @@
+{
+  "saved": {
+    "version": 2,
+    "elapsedMs": 40740.89999985695
+  },
+  "loaded": true,
+  "steps": [
+    {
+      "label": "initial",
+      "dialogue": null,
+      "quests": [
+        {
+          "id": "quest:cull_slimes",
+          "status": "available",
+          "objectives": [
+            "0/3"
+          ]
+        }
+      ],
+      "player": {
+        "hp": 100,
+        "maxHp": 100,
+        "attack": 12,
+        "inventory": []
+      },
+      "aliveEnemies": [
+        {
+          "id": "enemy:slime_blue",
+          "x": 13.9452270159926,
+          "z": -2.1532557135352137
+        },
+        {
+          "id": "enemy:slime_elder",
+          "x": 15.9452270159926,
+          "z": -6.1532557135352155
+        },
+        {
+          "id": "enemy:slime_meadow",
+          "x": 11.9452270159926,
+          "z": -0.15325571353520592
+        }
+      ]
+    },
+    {
+      "label": "dialogue",
+      "dialogue": {
+        "npcId": "npc:elder_ma",
+        "choices": [
+          "发生了什么？",
+          "我这就去。"
+        ]
+      },
+      "quests": [
+        {
+          "id": "quest:cull_slimes",
+          "status": "available",
+          "objectives": [
+            "0/3"
+          ]
+        }
+      ],
+      "player": {
+        "hp": 100,
+        "maxHp": 100,
+        "attack": 12,
+        "inventory": []
+      },
+      "aliveEnemies": [
+        {
+          "id": "enemy:slime_blue",
+          "x": 13.623140390325098,
+          "z": -2.4673022517979746
+        },
+        {
+          "id": "enemy:slime_elder",
+          "x": 15.623140390325098,
+          "z": -6.467302251797976
+        },
+        {
+          "id": "enemy:slime_meadow",
+          "x": 11.6231403903251,
+          "z": -0.46730225179796686
+        }
+      ]
+    },
+    {
+      "label": "accepted",
+      "dialogue": null,
+      "quests": [
+        {
+          "id": "quest:cull_slimes",
+          "status": "active",
+          "objectives": [
+            "0/3"
+          ]
+        }
+      ],
+      "player": {
+        "hp": 100,
+        "maxHp": 100,
+        "attack": 12,
+        "inventory": []
+      },
+      "aliveEnemies": [
+        {
+          "id": "enemy:slime_blue",
+          "x": 13.283118297550208,
+          "z": -2.7988365430698083
+        },
+        {
+          "id": "enemy:slime_elder",
+          "x": 15.283118297550208,
+          "z": -6.798836543069811
+        },
+        {
+          "id": "enemy:slime_meadow",
+          "x": 11.28311829755021,
+          "z": -0.7988365430697998
+        }
+      ]
+    },
+    {
+      "label": "after-kills",
+      "dialogue": null,
+      "quests": [
+        {
+          "id": "quest:cull_slimes",
+          "status": "ready_to_turn_in",
+          "objectives": [
+            "3/3"
+          ]
+        }
+      ],
+      "player": {
+        "hp": 5,
+        "maxHp": 100,
+        "attack": 12,
+        "inventory": [
+          {
+            "id": "item:slime_gel",
+            "instanceId": "item:slime_gel@1",
+            "qty": 4,
+            "equipped": false
+          }
+        ],
+        "xp": 30
+      },
+      "aliveEnemies": []
+    },
+    {
+      "label": "turn-in-dialogue",
+      "dialogue": {
+        "npcId": "npc:elder_ma",
+        "choices": [
+          "（复命）史莱姆已经清理完了。"
+        ]
+      },
+      "quests": [
+        {
+          "id": "quest:cull_slimes",
+          "status": "ready_to_turn_in",
+          "objectives": [
+            "3/3"
+          ]
+        }
+      ],
+      "player": {
+        "hp": 5,
+        "maxHp": 100,
+        "attack": 12,
+        "inventory": [
+          {
+            "id": "item:slime_gel",
+            "instanceId": "item:slime_gel@1",
+            "qty": 4,
+            "equipped": false
+          }
+        ],
+        "xp": 30
+      },
+      "aliveEnemies": []
+    },
+    {
+      "label": "completed",
+      "dialogue": null,
+      "quests": [
+        {
+          "id": "quest:cull_slimes",
+          "status": "completed",
+          "objectives": [
+            "3/3"
+          ]
+        }
+      ],
+      "player": {
+        "hp": 5,
+        "maxHp": 110,
+        "attack": 12,
+        "inventory": [
+          {
+            "id": "item:slime_gel",
+            "instanceId": "item:slime_gel@1",
+            "qty": 4,
+            "equipped": false
+          },
+          {
+            "id": "item:traveler_sword",
+            "instanceId": "quest:cull_slimes:item:traveler_sword:0",
+            "qty": 1,
+            "equipped": false
+          },
+          {
+            "id": "item:healing_herb",
+            "instanceId": "quest:cull_slimes:item:healing_herb:0",
+            "qty": 2,
+            "equipped": false
+          }
+        ],
+        "xp": 30
+      },
+      "aliveEnemies": []
+    },
+    {
+      "label": "equipped",
+      "dialogue": null,
+      "quests": [
+        {
+          "id": "quest:cull_slimes",
+          "status": "completed",
+          "objectives": [
+            "3/3"
+          ]
+        }
+      ],
+      "player": {
+        "hp": 5,
+        "maxHp": 110,
+        "attack": 17,
+        "inventory": [
+          {
+            "id": "item:slime_gel",
+            "instanceId": "item:slime_gel@1",
+            "qty": 4,
+            "equipped": false
+          },
+          {
+            "id": "item:traveler_sword",
+            "instanceId": "quest:cull_slimes:item:traveler_sword:0",
+            "qty": 1,
+            "equipped": true
+          },
+          {
+            "id": "item:healing_herb",
+            "instanceId": "quest:cull_slimes:item:healing_herb:0",
+            "qty": 2,
+            "equipped": false
+          }
+        ],
+        "xp": 30
+      },
+      "aliveEnemies": []
+    },
+    {
+      "label": "after-load",
+      "dialogue": null,
+      "quests": [
+        {
+          "id": "quest:cull_slimes",
+          "status": "completed",
+          "objectives": [
+            "3/3"
+          ]
+        }
+      ],
+      "player": {
+        "hp": 5,
+        "maxHp": 110,
+        "attack": 17,
+        "inventory": [
+          {
+            "id": "item:slime_gel",
+            "instanceId": "item:slime_gel@1",
+            "qty": 4,
+            "equipped": false
+          },
+          {
+            "id": "item:traveler_sword",
+            "instanceId": "quest:cull_slimes:item:traveler_sword:0",
+            "qty": 1,
+            "equipped": true
+          },
+          {
+            "id": "item:healing_herb",
+            "instanceId": "quest:cull_slimes:item:healing_herb:0",
+            "qty": 2,
+            "equipped": false
+          }
+        ],
+        "xp": 30
+      },
+      "aliveEnemies": []
+    }
+  ]
+}

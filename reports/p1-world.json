@@ -1,0 +1,215 @@
+{
+  "schemaVersion": 1,
+  "harness": "P0Harness",
+  "scenario": "p1-world",
+  "status": "passed",
+  "startedAt": "2026-10-17T07:53:09.721Z",
+  "finishedAt": "2026-10-17T07:53:16.538Z",
+  "durationMs": 6817,
+  "environment": {
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "renderBackend": "webgl2",
+    "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+    "capturedAt": "2026-10-17T07:53:16.538Z",
+    "devicePixelRatio": 1,
+    "hardwareConcurrency": 10
+  },
+  "metrics": [
+    {
+      "name": "fpsAverage",
+      "value": 60.01,
+      "unit": "fps",
+      "threshold": 59.5,
+      "comparison": "gte",
+      "passed": true
+    },
+    {
+      "name": "fpsMin",
+      "value": 54.64,
+      "unit": "fps"
+    },
+    {
+      "name": "frameTimeP95Ms",
+      "value": 17.9,
+      "unit": "ms"
+    },
+    {
+      "name": "drawCallsAverage",
+      "value": 38,
+      "unit": "calls"
+    },
+    {
+      "name": "drawCallsMax",
+      "value": 38,
+      "unit": "calls",
+      "threshold": 350,
+      "comparison": "lte",
+      "passed": true
+    },
+    {
+      "name": "renderWidth",
+      "value": 1920,
+      "unit": "px"
+    },
+    {
+      "name": "renderHeight",
+      "value": 1080,
+      "unit": "px"
+    },
+    {
+      "name": "renderPixelsMP",
+      "value": 2.07,
+      "unit": "MP"
+    },
+    {
+      "name": "renderScale",
+      "value": 1,
+      "unit": "ratio"
+    },
+    {
+      "name": "dynamicResolutionAuto",
+      "value": 1,
+      "unit": "boolean"
+    },
+    {
+      "name": "dynamicResolutionAdjustments",
+      "value": 0,
+      "unit": "adjustments"
+    },
+    {
+      "name": "gameSession.entityCount",
+      "value": 6,
+      "unit": "entities",
+      "threshold": 6,
+      "comparison": "eq",
+      "passed": true
+    },
+    {
+      "name": "quest.total",
+      "value": 1,
+      "unit": "quests",
+      "threshold": 1,
+      "comparison": "eq",
+      "passed": true
+    },
+    {
+      "name": "toonCharacterCount",
+      "value": 6,
+      "unit": "characters",
+      "threshold": 6,
+      "comparison": "eq",
+      "passed": true
+    },
+    {
+      "name": "environmentTextureCount",
+      "value": 9,
+      "unit": "textures",
+      "threshold": 9,
+      "comparison": "eq",
+      "passed": true
+    },
+    {
+      "name": "environmentKeyedTransparentRatio",
+      "value": 0.6849,
+      "unit": "ratio",
+      "threshold": 0.3,
+      "comparison": "gte",
+      "passed": true
+    },
+    {
+      "name": "occluderCount",
+      "value": 23,
+      "unit": "occluders",
+      "threshold": 20,
+      "comparison": "gte",
+      "passed": true
+    },
+    {
+      "name": "occlusionOutlined",
+      "value": 0,
+      "unit": "meshes"
+    },
+    {
+      "name": "occlusionDetectionMsAverage",
+      "value": 0.0079,
+      "unit": "ms/frame",
+      "threshold": 0.05,
+      "comparison": "lte",
+      "passed": true
+    },
+    {
+      "name": "occlusionDetectionMsMax",
+      "value": 0.1,
+      "unit": "ms",
+      "threshold": 0.1,
+      "comparison": "lte",
+      "passed": true
+    },
+    {
+      "name": "occlusionProbeOutlined",
+      "value": 1,
+      "unit": "meshes",
+      "threshold": 1,
+      "comparison": "gte",
+      "passed": true
+    },
+    {
+      "name": "morphTargetCount",
+      "value": 1,
+      "unit": "targets",
+      "threshold": 1,
+      "comparison": "gte",
+      "passed": true
+    },
+    {
+      "name": "morphInfluenceMax",
+      "value": 1,
+      "unit": "influence",
+      "threshold": 0.9,
+      "comparison": "gte",
+      "passed": true
+    },
+    {
+      "name": "morphShaderReady",
+      "value": 1,
+      "unit": "boolean",
+      "threshold": 1,
+      "comparison": "eq",
+      "passed": true
+    },
+    {
+      "name": "toonPlayerMaterialActive",
+      "value": 1,
+      "unit": "boolean",
+      "threshold": 1,
+      "comparison": "eq",
+      "passed": true
+    },
+    {
+      "name": "imageProcessingEnabled",
+      "value": 1,
+      "unit": "boolean",
+      "threshold": 1,
+      "comparison": "eq",
+      "passed": true
+    },
+    {
+      "name": "sampledFrames",
+      "value": 241,
+      "unit": "frames"
+    },
+    {
+      "name": "longFrames",
+      "value": 0,
+      "unit": "frames"
+    },
+    {
+      "name": "jsHeapUsedMB",
+      "value": 256.54,
+      "unit": "MB",
+      "threshold": 1500,
+      "comparison": "lte",
+      "passed": true
+    }
+  ]
+}

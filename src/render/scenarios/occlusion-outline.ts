@@ -4,6 +4,10 @@ import { HighlightLayer } from "@babylonjs/core/Layers/highlightLayer";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
+import {
+  rayIntersectsOccluder,
+  type OccluderBox,
+} from "../occlusion/ray-obb";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import type { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
@@ -81,16 +85,6 @@ interface CharacterEntry {
   skeleton: ReturnType<typeof createCharacterSkeleton>;
 }
 
-/** 墙体 OBB：用于零分配的射线-包围盒遮挡判定。 */
-interface OccluderBox {
-  center: Vector3;
-  axisX: Vector3;
-  axisY: Vector3;
-  axisZ: Vector3;
-  halfX: number;
-  halfY: number;
-  halfZ: number;
-}
 
 interface OccluderEntry {
   mesh: Mesh;
@@ -302,107 +296,6 @@ function createTower(
   // 纯背景装饰：不可拾取，避免影响遮挡射线成本。
   tower.isPickable = false;
   return tower;
-}
-
-/**
- * 射线-OBB 相交（slab 法），标量实现、零对象分配。
- * 返回射线在 [0, maxDistance] 内是否穿过盒子。
- */
-function rayIntersectsOccluder(
-  originX: number,
-  originY: number,
-  originZ: number,
-  dirX: number,
-  dirY: number,
-  dirZ: number,
-  maxDistance: number,
-  box: OccluderBox,
-): boolean {
-  const offsetX = originX - box.center.x;
-  const offsetY = originY - box.center.y;
-  const offsetZ = originZ - box.center.z;
-  let tMin = 0;
-  let tMax = maxDistance;
-
-  let axis = box.axisX;
-  let offset = offsetX * axis.x + offsetY * axis.y + offsetZ * axis.z;
-  let direction = dirX * axis.x + dirY * axis.y + dirZ * axis.z;
-  if (Math.abs(direction) < 1e-8) {
-    if (Math.abs(offset) > box.halfX) {
-      return false;
-    }
-  } else {
-    let t1 = (-box.halfX - offset) / direction;
-    let t2 = (box.halfX - offset) / direction;
-    if (t1 > t2) {
-      const swap = t1;
-      t1 = t2;
-      t2 = swap;
-    }
-    if (t1 > tMin) {
-      tMin = t1;
-    }
-    if (t2 < tMax) {
-      tMax = t2;
-    }
-    if (tMin > tMax) {
-      return false;
-    }
-  }
-
-  axis = box.axisY;
-  offset = offsetX * axis.x + offsetY * axis.y + offsetZ * axis.z;
-  direction = dirX * axis.x + dirY * axis.y + dirZ * axis.z;
-  if (Math.abs(direction) < 1e-8) {
-    if (Math.abs(offset) > box.halfY) {
-      return false;
-    }
-  } else {
-    let t1 = (-box.halfY - offset) / direction;
-    let t2 = (box.halfY - offset) / direction;
-    if (t1 > t2) {
-      const swap = t1;
-      t1 = t2;
-      t2 = swap;
-    }
-    if (t1 > tMin) {
-      tMin = t1;
-    }
-    if (t2 < tMax) {
-      tMax = t2;
-    }
-    if (tMin > tMax) {
-      return false;
-    }
-  }
-
-  axis = box.axisZ;
-  offset = offsetX * axis.x + offsetY * axis.y + offsetZ * axis.z;
-  direction = dirX * axis.x + dirY * axis.y + dirZ * axis.z;
-  if (Math.abs(direction) < 1e-8) {
-    if (Math.abs(offset) > box.halfZ) {
-      return false;
-    }
-  } else {
-    let t1 = (-box.halfZ - offset) / direction;
-    let t2 = (box.halfZ - offset) / direction;
-    if (t1 > t2) {
-      const swap = t1;
-      t1 = t2;
-      t2 = swap;
-    }
-    if (t1 > tMin) {
-      tMin = t1;
-    }
-    if (t2 < tMax) {
-      tMax = t2;
-    }
-    if (tMin > tMax) {
-      return false;
-    }
-  }
-
-  return true;
 }
 
 function hideBaseScene(scene: Scene): void {

@@ -8,6 +8,7 @@ import { crowdHotSwapScenario } from "./crowd-hot-swap";
 import { crowdNavScenario } from "./crowd-nav";
 import { dialogueQuestScenario } from "./dialogue-quest";
 import { helloScenario } from "./hello";
+import { p1WorldScenario } from "./p1-world";
 import { occlusionOutlineScenario } from "./occlusion-outline";
 import { regionGateScenario } from "./regionGate";
 import { regionLoadingScenario } from "./regionLoading";
@@ -29,4 +30,5 @@ export function registerBuiltinScenarios(harness: P0Harness): void {
   harness.registerScenario(assetPipelineScenario);
   harness.registerScenario(animePipelineScenario);
   harness.registerScenario(occlusionOutlineScenario);
+  harness.registerScenario(p1WorldScenario);
 }

@@ -52,6 +52,8 @@
 
 - **24 号票已完成**（HUD/背包/装备 UI：`useItem`/`equip`/`unequip` 意图 + 修饰器即时生效；HUD 显示 HP/经验条（`xpToNext` 内容属性）/攻击/防御/任务；背包面板支持使用消耗品、装备/卸下、装备栏三槽位与 I 键开关；UI 只读快照、只提交意图；L1 126/126、build 与 content:lint 通过；L4 ego-browser HP 51→81、攻击 12→17→12 断言通过（reports/p1-hud-inventory-smoke.json、artifacts/p1-hud-inventory.png））。
 
+- **25 号票已完成**（正式表现层组装：`p1-world` 场景——Gemini 环境贴图平铺地面 + 白底运行时抠图的树/石墙/灌木/木桶/木箱 billboard + 占位角色 glb/NPC/敌人统一 toon；P0 射线-OBB 遮挡描边提取为共享模块并在正式区域生效；动态分辨率默认 auto + high/medium/low 档位；toon shader 补齐 morph include，眨眼在 toon 下可见；`assets:lint` 扩展 PNG 贴图检查。L1 166/166、build/content:lint/assets:lint 通过；L4 p1-world 报告 passed：60.01fps / drawCallsMax 38 / jsHeap 256.5MB @1920×1080；完整闭环与存读档冒烟通过；回归 dialogue-quest/anime-pipeline/occlusion-outline 全 passed。关键决策：布局暂存渲染层常量（P2 再进 content）；fps 阈值按 P0 建议 59.5；共享浏览器下 p95/fpsMin 只报告不阻塞；HighlightLayer 排除自绘 alpha-test 环境网格以修复黑色高亮。报告 `reports/p1-world.json`，截图 `artifacts/p1-world-*.png`）。
+
 ## Fog
 
 **八大主题全部解决（2026-10-17）。** 路线图与风险清单见 issues/08-scaling-roadmap.md。

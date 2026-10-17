@@ -11,9 +11,9 @@
  * - 蒙皮/morph 结构一致性
  *
  * 用法：node tools/pipeline/lint.mjs [file.glb ...]
- * 无参数时扫描 assets/*.glb；结果写入 reports/pipeline-lint.json。
+ * 无参数时扫描 assets/*.glb 与 assets/textures/*.png；结果写入 reports/pipeline-lint.json。
  */
-import { readdir, writeFile } from "node:fs/promises";
+import { readFile, readdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
 import { NodeIO } from "@gltf-transform/core";
@@ -28,6 +28,7 @@ import { MeshoptDecoder } from "meshoptimizer";
 
 const ROOT = resolve(import.meta.dirname, "../..");
 const ASSETS_DIR = join(ROOT, "assets");
+const TEXTURES_DIR = join(ASSETS_DIR, "textures");
 const REPORT_PATH = join(ROOT, "reports/pipeline-lint.json");
 
 const TRIANGLE_LIMITS = {
@@ -419,20 +420,173 @@ export async function lintAssets(paths) {
   };
 }
 
+const TEXTURE_FILE_PATTERN =
+  /^(environment|prop|texture)_[a-z0-9_]+\.png$/;
+const MAX_TEXTURE_FILE_BYTES = 2.5 * 1024 * 1024;
+
+/** 读取 PNG IHDR（不依赖图像解码库）。非 PNG 返回 null。 */
+export function parsePngHeader(buffer) {
+  const signature = [137, 80, 78, 71, 13, 10, 26, 10];
+  if (buffer.length < 26) {
+    return null;
+  }
+  for (let index = 0; index < signature.length; index += 1) {
+    if (buffer[index] !== signature[index]) {
+      return null;
+    }
+  }
+  const chunkType = buffer.subarray(12, 16).toString("ascii");
+  if (chunkType !== "IHDR") {
+    return null;
+  }
+  return {
+    width: buffer.readUInt32BE(16),
+    height: buffer.readUInt32BE(20),
+    bitDepth: buffer[24],
+    colorType: buffer[25],
+  };
+}
+
+/**
+ * 环境贴图 lint：命名规范、尺寸上限、平铺贴图必须正方形/2 的幂、
+ * billboard 贴图必须带 alpha 通道（RGBA）。
+ */
+export async function lintTextures(paths) {
+  const files = [];
+  for (const path of paths) {
+    const violations = [];
+    const buffer = await readFile(path);
+    const fileName = path.split("/").pop() ?? path;
+    const header = parsePngHeader(buffer);
+    if (!header) {
+      violations.push(violation("format", "error", fileName, "不是可解析的 PNG"));
+    } else {
+      if (!TEXTURE_FILE_PATTERN.test(fileName)) {
+        violations.push(
+          violation(
+            "naming",
+            "error",
+            fileName,
+            "贴图文件名必须为 environment_/prop_/texture_ 前缀 + 小写蛇形",
+          ),
+        );
+      }
+      if (header.width > MAX_TEXTURE_SIZE || header.height > MAX_TEXTURE_SIZE) {
+        violations.push(
+          violation(
+            "texture-size",
+            "error",
+            fileName,
+            `尺寸 ${header.width}×${header.height} 超过上限 ${MAX_TEXTURE_SIZE}`,
+          ),
+        );
+      }
+      const isTile = /^environment_.*_tile\.png$/.test(fileName);
+      if (isTile) {
+        if (header.width !== header.height) {
+          violations.push(
+            violation("tile-square", "error", fileName, "平铺地面贴图必须正方形"),
+          );
+        }
+        const isPowerOfTwo = (value) => (value & (value - 1)) === 0;
+        if (!isPowerOfTwo(header.width) || !isPowerOfTwo(header.height)) {
+          violations.push(
+            violation(
+              "tile-power-of-two",
+              "warning",
+              fileName,
+              "平铺贴图建议为 2 的幂，避免 mipmap/寻址问题",
+            ),
+          );
+        }
+      }
+      if (fileName.startsWith("prop_") && header.colorType !== 6) {
+        violations.push(
+          violation(
+            "alpha-channel",
+            "error",
+            fileName,
+            "立面 billboard 贴图必须是 RGBA（运行时按白底抠图生成 alpha）",
+          ),
+        );
+      }
+      if (buffer.length > MAX_TEXTURE_FILE_BYTES) {
+        violations.push(
+          violation(
+            "file-size",
+            "warning",
+            fileName,
+            `文件 ${(buffer.length / 1024 / 1024).toFixed(2)}MB 超过 2.5MB，建议后续转 WebP/KTX2`,
+          ),
+        );
+      }
+    }
+
+    const errors = violations.filter((item) => item.severity === "error");
+    const warnings = violations.filter((item) => item.severity === "warning");
+    files.push({
+      file: path,
+      status: errors.length === 0 ? "passed" : "failed",
+      stats: header
+        ? {
+            width: header.width,
+            height: header.height,
+            bitDepth: header.bitDepth,
+            colorType: header.colorType,
+            bytes: buffer.length,
+          }
+        : { bytes: buffer.length },
+      violations,
+      errorCount: errors.length,
+      warningCount: warnings.length,
+    });
+  }
+
+  return {
+    schemaVersion: 1,
+    generatedAt: new Date().toISOString(),
+    files,
+    summary: {
+      files: files.length,
+      passed: files.filter((file) => file.status === "passed").length,
+      failed: files.filter((file) => file.status === "failed").length,
+      errors: files.reduce((sum, file) => sum + file.errorCount, 0),
+      warnings: files.reduce((sum, file) => sum + file.warningCount, 0),
+    },
+  };
+}
+
 async function main() {
   const args = process.argv.slice(2);
-  const paths = args.length
-    ? args.map((path) => resolve(path))
+  const explicit = args.map((path) => resolve(path));
+  const glbPaths = explicit.length
+    ? explicit.filter((path) => path.endsWith(".glb"))
     : (await readdir(ASSETS_DIR))
         .filter((name) => name.endsWith(".glb"))
         .sort()
         .map((name) => join(ASSETS_DIR, name));
+  const texturePaths = explicit.length
+    ? explicit.filter((path) => path.endsWith(".png"))
+    : (await readdir(TEXTURES_DIR))
+        .filter((name) => name.endsWith(".png"))
+        .sort()
+        .map((name) => join(TEXTURES_DIR, name));
 
-  if (paths.length === 0) {
-    throw new Error("没有可 lint 的 .glb 文件");
+  if (glbPaths.length === 0 && texturePaths.length === 0) {
+    throw new Error("没有可 lint 的 .glb / .png 文件");
   }
 
-  const report = await lintAssets(paths);
+  const report = {
+    ...(glbPaths.length > 0
+      ? await lintAssets(glbPaths)
+      : {
+          schemaVersion: 1,
+          generatedAt: new Date().toISOString(),
+          files: [],
+          summary: { files: 0, passed: 0, failed: 0, errors: 0, warnings: 0 },
+        }),
+    textures: texturePaths.length > 0 ? await lintTextures(texturePaths) : null,
+  };
   await writeFile(REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`);
 
   for (const file of report.files) {
@@ -446,11 +600,32 @@ async function main() {
     }
   }
   console.log(
-    `[lint] ${report.summary.passed}/${report.summary.files} passed · ` +
+    `[lint] glb ${report.summary.passed}/${report.summary.files} passed · ` +
       `${report.summary.errors} errors · ${report.summary.warnings} warnings`,
   );
+  if (report.textures) {
+    for (const file of report.textures.files) {
+      const relative = file.file.replace(`${ROOT}/`, "");
+      const size = file.stats.width
+        ? `${file.stats.width}×${file.stats.height}`
+        : "?";
+      console.log(
+        `[lint] ${relative}: ${file.status} · ${size} · ` +
+          `${file.errorCount} errors / ${file.warningCount} warnings`,
+      );
+      for (const item of file.violations) {
+        console.log(`  [${item.severity}] ${item.rule} ${item.path}: ${item.message}`);
+      }
+    }
+    console.log(
+      `[lint] textures ${report.textures.summary.passed}/${report.textures.summary.files} passed · ` +
+        `${report.textures.summary.errors} errors · ${report.textures.summary.warnings} warnings`,
+    );
+  }
 
-  if (report.summary.errors > 0) {
+  const totalErrors =
+    report.summary.errors + (report.textures?.summary.errors ?? 0);
+  if (totalErrors > 0) {
     process.exitCode = 1;
   }
 }
