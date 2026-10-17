@@ -21,6 +21,8 @@ const KIND_DIRS: Array<{ kind: ContentKind; dir: string }> = [
   { kind: "enemy", dir: "enemies" },
   { kind: "item", dir: "items" },
   { kind: "quest", dir: "quests" },
+  { kind: "character-palette", dir: "character-palettes" },
+  { kind: "level-curve", dir: "level-curves" },
 ];
 
 function readJson(relativePath: string): unknown {
@@ -36,6 +38,10 @@ function loadSchemas(): ContentSchemas {
     enemy: readJson("content/schema/enemy.schema.json") as object,
     item: readJson("content/schema/item.schema.json") as object,
     quest: readJson("content/schema/quest.schema.json") as object,
+    characterPalette: readJson(
+      "content/schema/character-palette.schema.json",
+    ) as object,
+    levelCurve: readJson("content/schema/level-curve.schema.json") as object,
   };
 }
 
@@ -284,4 +290,123 @@ describe("content L2：aiProfile 与出生物品（票 36）", () => {
       ),
     ).toBe(true);
   });
+});
+
+describe("角色色板卡 L2 校验（票 29）", () => {
+  const paletteSchemas = loadSchemas();
+  const paletteFiles = loadContentFiles();
+
+  it("色板卡与立绘引用进入最小内容集后整体通过", () => {
+    const result = validateContent(paletteFiles, paletteSchemas, dialogueInputs());
+    expect(result.issues).toEqual([]);
+    expect(result.valid).toBe(true);
+  });
+
+  it("每个主要角色各有一张色板卡（含玩家与 NPC）", () => {
+    const palettes = paletteFiles.filter((file) => file.kind === "character-palette");
+    expect(palettes.map((file) => file.file).sort()).toEqual([
+      "content/character-palettes/elder_ma.json",
+      "content/character-palettes/player_hero.json",
+      "content/character-palettes/scout_lin.json",
+    ]);
+    // NPC 全部登记 paletteId，引用完整。
+    const npcs = paletteFiles.filter((file) => file.kind === "npc");
+    expect(npcs).toHaveLength(2);
+    for (const npc of npcs) {
+      expect((npc.data as { paletteId?: string }).paletteId).toBeDefined();
+    }
+  });
+
+  it("颜色字段必须是 #rrggbb，中文/无 #/三位缩写都被拒绝", () => {
+    for (const bad of ["#f0abf", "f0abfc", "red", "#GGGGGG"]) {
+      const broken = structuredClone(paletteFiles);
+      const card = fileOf(broken, "content/character-palettes/elder_ma.json");
+      (card.data as { primary: string }).primary = bad;
+      const result = validateContent(broken, paletteSchemas, dialogueInputs());
+      expect(result.valid, `primary=${bad}`).toBe(false);
+      const issue = result.issues.find(
+        (entry) => entry.file === card.file && entry.code === "schema",
+      );
+      expect(issue, `primary=${bad}`).toBeDefined();
+      expect(issue!.path).toBe("/primary");
+    }
+  });
+
+  it("缺少必填关键词字段被拒绝并指出路径", () => {
+    const broken = structuredClone(paletteFiles);
+    const card = fileOf(broken, "content/character-palettes/scout_lin.json");
+    delete (card.data as { costumeKeywords?: string }).costumeKeywords;
+
+    const result = validateContent(broken, paletteSchemas, dialogueInputs());
+    expect(result.valid).toBe(false);
+    const issue = result.issues.find(
+      (entry) => entry.file === card.file && entry.code === "schema",
+    );
+    expect(issue).toBeDefined();
+    expect(issue!.message).toContain("costumeKeywords");
+  });
+
+  it("未知字段被拒绝（additionalProperties: false）", () => {
+    const broken = structuredClone(paletteFiles);
+    const card = fileOf(broken, "content/character-palettes/elder_ma.json");
+    (card.data as Record<string, unknown>).favoriteFood = "rice";
+
+    const result = validateContent(broken, paletteSchemas, dialogueInputs());
+    expect(result.valid).toBe(false);
+    expect(
+      result.issues.some((entry) => entry.file === card.file && entry.code === "schema"),
+    ).toBe(true);
+  });
+
+  it("NPC 引用不存在的色板卡被拒绝并指出 /paletteId", () => {
+    const broken = structuredClone(paletteFiles);
+    const npc = fileOf(broken, "content/npcs/elder_ma.json");
+    (npc.data as { paletteId: string }).paletteId = "character_palette:missing";
+
+    const result = validateContent(broken, paletteSchemas, dialogueInputs());
+    expect(result.valid).toBe(false);
+    const issue = result.issues.find(
+      (entry) => entry.file === npc.file && entry.code === "reference",
+    );
+    expect(issue).toBeDefined();
+    expect(issue!.path).toBe("/paletteId");
+    expect(issue!.message).toContain("色板卡");
+  });
+
+  it("立绘引用缺少 image 字段被拒绝", () => {
+    const broken = structuredClone(paletteFiles);
+    const npc = fileOf(broken, "content/npcs/scout_lin.json");
+    (npc.data as { portrait: unknown }).portrait = { keywords: ["scout"] };
+
+    const result = validateContent(broken, paletteSchemas, dialogueInputs());
+    expect(result.valid).toBe(false);
+    expect(
+      result.issues.some(
+        (entry) => entry.file === npc.file && entry.code === "schema" && entry.path === "/portrait",
+      ),
+    ).toBe(true);
+  });
+
+  it("色板卡 id 前缀与文件名必须一致", () => {
+    const broken = structuredClone(paletteFiles);
+    const card = fileOf(broken, "content/character-palettes/elder_ma.json");
+    (card.data as { id: string }).id = "character_palette:someone_else";
+
+    const result = validateContent(broken, paletteSchemas, dialogueInputs());
+    expect(result.valid).toBe(false);
+    expect(
+      result.issues.some((entry) => entry.file === card.file && entry.code === "file-name"),
+    ).toBe(true);
+  });
+
+  it("同一角色不能有两张色板卡（重复 id 被拒绝）", () => {
+    const broken = structuredClone(paletteFiles);
+    const card = fileOf(broken, "content/character-palettes/elder_ma.json");
+    broken.push({ ...structuredClone(card), file: "content/character-palettes/elder_ma_copy.json" });
+
+    const result = validateContent(broken, paletteSchemas, dialogueInputs());
+    expect(result.valid).toBe(false);
+    expect(result.issues.some((entry) => entry.code === "duplicate-id")).toBe(true);
+  });
+
 });

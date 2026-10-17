@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:content:character-palette",
+  "title": "角色色板卡",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "displayName", "role", "primary", "secondary", "accent", "hairKeywords", "costumeKeywords"],
+  "properties": {
+    "id": { "$ref": "urn:content:common#/$defs/characterPaletteId" },
+    "displayName": { "$ref": "urn:content:common#/$defs/displayName" },
+    "role": { "$ref": "urn:content:common#/$defs/description" },
+    "primary": { "$ref": "urn:content:common#/$defs/hexColor" },
+    "secondary": { "$ref": "urn:content:common#/$defs/hexColor" },
+    "accent": { "$ref": "urn:content:common#/$defs/hexColor" },
+    "hairKeywords": { "type": "string", "minLength": 1 },
+    "costumeKeywords": { "type": "string", "minLength": 1 },
+    "status": { "enum": ["pending", "generated"] }
+  }
+}

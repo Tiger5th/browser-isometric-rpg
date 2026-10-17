@@ -15,6 +15,20 @@
     "baseAttributes": { "$ref": "urn:content:common#/$defs/attributes" },
     "tags": { "$ref": "urn:content:common#/$defs/tags" },
     "dialogueId": { "$ref": "urn:content:common#/$defs/dialogueId" },
+    "paletteId": { "$ref": "urn:content:common#/$defs/characterPaletteId" },
+    "portrait": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["image"],
+      "properties": {
+        "image": { "type": "string", "minLength": 1 },
+        "keywords": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
+      }
+    },
     "questIds": {
       "type": "array",
       "items": { "$ref": "urn:content:common#/$defs/questId" },

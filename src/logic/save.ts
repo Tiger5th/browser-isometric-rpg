@@ -197,6 +197,18 @@ export function readSessionSnapshot(save: SaveFile): GameSessionSnapshot {
   ) {
     throw new SaveMigrationError("sections.session.nextItemInstanceId 必须是正整数");
   }
+  if (!Number.isInteger(session.playerLevel) || (session.playerLevel as number) < 1) {
+    throw new SaveMigrationError("sections.session.playerLevel 必须是大于 0 的整数");
+  }
+  if (!Number.isInteger(session.cumulativeXp) || (session.cumulativeXp as number) < 0) {
+    throw new SaveMigrationError("sections.session.cumulativeXp 必须是非负整数");
+  }
+  if (
+    !isRecord(session.worldState) ||
+    Array.isArray(session.worldState)
+  ) {
+    throw new SaveMigrationError("sections.session.worldState 必须是对象");
+  }
   return cloneJson(session) as unknown as GameSessionSnapshot;
 }
 
@@ -303,6 +315,9 @@ function migrateV1ToV2(save: SaveFile): SaveFile {
 
   const session: GameSessionSnapshot = {
     version: 2,
+    playerLevel: 1,
+    cumulativeXp: 0,
+    worldState: {},
     regionId: (worldSection.regionId as string | undefined) ?? null,
     elapsedMs: elapsedMs as number,
     nextItemInstanceId: 1,
@@ -359,9 +374,14 @@ function migrateV1ToV2(save: SaveFile): SaveFile {
 }
 
 /**
- * v3（票 27）：实体 combat 新增 heavyCooldownMs（重击独立冷却剩余）。
- * 旧存档没有这个字段 → 统一补 0（读档后重击处于就绪态，与「存档时没放过重击」
- * 的语义一致；已放过重击的 v3 存档本身带真实剩余）。
+ * v3（票 27 + 票 31 合流为同一次升版）：
+ * - 实体 combat 新增 heavyCooldownMs（重击独立冷却剩余）；
+ * - 顶层新增 playerLevel / cumulativeXp（等级与经验入档）；
+ * - 顶层新增 worldState 通用容器（`Record<string, JsonValue>`，只透传）。
+ *
+ * 旧存档没有这些字段 → 统一补默认值（等级 1 / 经验 0 / 空容器）；
+ * 这样以后新增的系统字段也能只改迁移函数，不动老档本身。
+ * worldState 若已存在则原样保留（内容已写进去的世界事实不该被迁移抹掉）。
  */
 function migrateV2ToV3(save: SaveFile): SaveFile {
   const session = save.sections.session;
@@ -380,6 +400,13 @@ function migrateV2ToV3(save: SaveFile): SaveFile {
       throw new SaveMigrationError(`v2 存档 entities[${index}].combat 必须是对象`);
     }
     combat.heavyCooldownMs = 0;
+  }
+  session.playerLevel = 1;
+  session.cumulativeXp = 0;
+  if (session.worldState === undefined) {
+    session.worldState = {};
+  } else if (!isRecord(session.worldState) || Array.isArray(session.worldState)) {
+    throw new SaveMigrationError("v2 存档 sections.session.worldState 必须是对象");
   }
   // 会话快照内层版本与存档外层版本同步抬升，readSessionSnapshot 才认。
   session.version = 3;

@@ -9,7 +9,15 @@ import type { Vec3 } from "../entity";
 import type { ModifierTemplate } from "../modifier";
 
 /** 内容文件类别，与 content/ 下的目录一一对应。 */
-export type ContentKind = "region" | "npc" | "enemy-template" | "enemy" | "item" | "quest";
+export type ContentKind =
+  | "region"
+  | "npc"
+  | "enemy-template"
+  | "enemy"
+  | "item"
+  | "quest"
+  | "character-palette"
+  | "level-curve";
 
 export interface ContentFileInput {
   kind: ContentKind;
@@ -65,6 +73,18 @@ export interface NpcDefinition {
   /** 对话 id = content/dialogues/<dialogueId>.ink 的文件名（不含扩展名）。 */
   dialogueId?: string;
   questIds?: string[];
+  /** 角色色板卡 id；3D 贴图与立绘按同一张卡生成（票 29）。 */
+  paletteId?: string;
+  /** 立绘资源引用（表现层解释）；未生成时可缺省，UI 用程序化占位。 */
+  portrait?: PortraitReference;
+}
+
+/** 立绘引用：资源路径 + 画面锚点（说话方/站位由表现层排布）。 */
+export interface PortraitReference {
+  /** 图片资源路径，如 assets/portraits/elder_ma.png。 */
+  image: string;
+  /** 生图提示词关键词留档，便于同卡重新生成时复用。 */
+  keywords?: string[];
 }
 
 export interface DropDefinition {
@@ -212,6 +232,45 @@ export interface QuestDefinition {
   rewards: QuestRewardDefinition;
 }
 
+/**
+ * 角色色板卡（票 29）：每个主要角色一张。
+ * 主色/辅色/点缀色 + 发色服装关键词；3D 贴图、立绘、头像同卡生成，
+ * 保证资产之间配色不漂移（见 GLOSSARY「角色色板卡」）。
+ */
+export interface CharacterPaletteDefinition {
+  id: string;
+  displayName: string;
+  /** 角色定位说明（村民/斥候/主角…），供生图时统一风格。 */
+  role: string;
+  /** 主色（对话框边、名字牌、3D tint 的主基调）。 */
+  primary: string;
+  /** 辅色（服装大面积）。 */
+  secondary: string;
+  /** 点缀色（装饰/高光）。 */
+  accent: string;
+  /** 发色关键词，如 "silver hair, long"。 */
+  hairKeywords: string;
+  /** 服装关键词，如 "linen robe, straw sandals"。 */
+  costumeKeywords: string;
+  /** 生成状态：pending 表示立绘/贴图尚未出图，允许使用程序化占位。 */
+  status?: "pending" | "generated";
+}
+
+/**
+ * 等级曲线（票 34）：累计经验 → 等级的阈值表；每级属性加成走修饰器模板。
+ * 运行时解释口是 src/logic/leveling.ts。
+ */
+export interface LevelCurveFileDefinition {
+  id: string;
+  displayName: string;
+  defaultModifiers: ModifierTemplate[];
+  levels: Array<{
+    level: number;
+    xpRequired: number;
+    modifiers?: ModifierTemplate[];
+  }>;
+}
+
 /** 一个章节/切片的全量内容数据。 */
 export interface ContentBundle {
   regions: RegionDefinition[];
@@ -220,6 +279,10 @@ export interface ContentBundle {
   enemies: EnemyDefinition[];
   items: ItemDefinition[];
   quests: QuestDefinition[];
+  /** 角色色板卡（票 29）；缺省视为空集。 */
+  characterPalettes?: CharacterPaletteDefinition[];
+  /** 等级曲线（票 34）；缺省视为无成长系统。 */
+  levelCurves?: LevelCurveFileDefinition[];
 }
 
 /** 工具链扫描 ink 文件后交给校验器的对话元数据。 */
@@ -244,6 +307,8 @@ export interface ContentSchemas {
   enemy: object;
   item: object;
   quest: object;
+  characterPalette: object;
+  levelCurve: object;
 }
 
 export type ContentIssueCode =
@@ -252,6 +317,7 @@ export type ContentIssueCode =
   | "duplicate-id"
   | "file-name"
   | "range"
+  | "level-curve"
   | "dialogue-reference"
   | "json"
   | "ink";

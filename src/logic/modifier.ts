@@ -11,7 +11,11 @@ import type { Entity } from "./entity";
 import type { ItemInstance } from "./entity";
 
 export type ModifierOperation = "add" | "multiply";
-export type ModifierSourceKind = "equipment" | "buff" | "quest";
+/**
+ * 修饰器来源类别。`level`（票 34）是成长系统的永久加成：
+ * 它按等级整体重算，而不是逐次叠加，因此移除方式是整源替换。
+ */
+export type ModifierSourceKind = "equipment" | "buff" | "quest" | "level";
 
 export interface ModifierTemplate {
   attribute: string;

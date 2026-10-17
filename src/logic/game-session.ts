@@ -68,16 +68,28 @@ import type {
   ItemDefinition,
   QuestDefinition,
 } from "./content/types";
+import { interactionTarget } from "./interaction";
 import {
+  levelForXp,
+  modifiersForLevel,
+  xpToNextLevel,
+  type LevelCurveDefinition,
+} from "./leveling";
+import {
+  appendModifiers,
   createModifiers,
   effectiveAttributes,
   grantQuestReward,
+  removeModifiersBySource,
   type Modifier,
 } from "./modifier";
 import { QuestLog, type QuestSnapshot } from "./quest";
 
 /** 与 Crowd V2 的 maxSpeed 对齐，逻辑与表现的速度感一致。 */
 export const DEFAULT_MOVE_SPEED = 5.5;
+
+/** 等级加成的修饰器来源（票 34）：整源替换，不逐级叠加。 */
+const LEVEL_MODIFIER_SOURCE = { kind: "level" as const, id: "growth" };
 /**
  * 快照版本。
  * v2（票 22）：实体快照补充属性/背包/修饰器/战斗状态，顶层新增 dialogue 与 quests。
@@ -158,6 +170,11 @@ export interface GameSessionIntents {
   equip(entityId: EntityId | string, instanceId: string): void;
   /** 卸下已装备的物品并移除其修饰器。 */
   unequip(entityId: EntityId | string, instanceId: string): void;
+  /**
+   * 直接发放经验并结算升级（票 34）。击杀奖励已内部走同一路径，
+   * 这个入口给的是「非击杀来源的经验」（任务发奖、调试造经验）。
+   */
+  grantExperience(entityId: EntityId | string, amount: number): void;
 }
 
 /**
@@ -274,12 +291,30 @@ export type CombatEvent =
       position: Vec3;
     };
 
+/** 可 JSON 序列化的任意值（世界状态容器的内容类型）。 */
+export type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonValue[]
+  | { [key: string]: JsonValue };
+
 /** 可 JSON 序列化的完整游戏状态。 */
 export interface GameSessionSnapshot {
   version: number;
   /** 已加载区域；会话尚未加载区域时为 null。 */
   regionId: string | null;
   elapsedMs: number;
+  /** 玩家当前等级（票 31 入档；升级结算本体在成长系统）。 */
+  playerLevel: number;
+  /** 玩家累计经验（读档后成长进度连续，不回退）。 */
+  cumulativeXp: number;
+  /**
+   * 世界状态通用容器（票 31）：宝箱开启、收集计数、门机关等一切
+   * 「世界事实」挂这里，逻辑层只透传不解释结构。
+   */
+  worldState: Record<string, JsonValue>;
   /** 下一个自动生成的物品实例序号；读档后继续保证实例 id 唯一。 */
   nextItemInstanceId: number;
   /** 玩家死亡后的重生时刻；无待重生时为 null。 */
@@ -365,6 +400,51 @@ function cloneVec3(value: Vec3): Vec3 {
   return { x: value.x, y: value.y, z: value.z };
 }
 
+/**
+ * 深拷贝世界状态容器。JSON 往返保证会话内部不持有调用方的可变引用；
+ * 值域已由 assertJsonValue 校验为合法 JSON 值。
+ */
+function cloneJsonValue(value: Record<string, JsonValue>): Record<string, JsonValue> {
+  return JSON.parse(JSON.stringify(value)) as Record<string, JsonValue>;
+}
+
+/** 世界状态只透传不解释：这里只保证「可 JSON 序列化」这一条契约。 */
+function assertJsonValue(value: unknown, path: string): asserts value is JsonValue {
+  if (value === null || typeof value === "string" || typeof value === "boolean") {
+    return;
+  }
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) {
+      throw new Error(`worldState.${path} 必须是有限数值`);
+    }
+    return;
+  }
+  if (Array.isArray(value)) {
+    value.forEach((entry, index) => {
+      assertJsonValue(entry, `${path}[${index}]`);
+    });
+    return;
+  }
+  if (typeof value === "object") {
+    for (const [key, entry] of Object.entries(value)) {
+      if (entry === undefined) {
+        throw new Error(`worldState.${path}.${key} 必须是可 JSON 序列化的值`);
+      }
+      assertJsonValue(entry, `${path}.${key}`);
+    }
+    return;
+  }
+  throw new Error(`worldState.${path} 必须是可 JSON 序列化的值`);
+}
+
+/**
+ * 面向目标点所需的 rotation.y（与 moveEntities 的朝向约定一致：
+ * +Z 为 0，朝 +X 为 π/2，即 atan2(dx, dz)）。
+ */
+function facingYaw(from: Vec3, to: Vec3): number {
+  return Math.atan2(to.x - from.x, to.z - from.z);
+}
+
 function cloneModifier(modifier: Modifier): Modifier {
   return { ...modifier, source: { ...modifier.source } };
 }
@@ -412,7 +492,8 @@ function assertModifierShape(value: unknown, label: string): asserts value is Mo
   if (
     source.kind !== "equipment" &&
     source.kind !== "buff" &&
-    source.kind !== "quest"
+    source.kind !== "quest" &&
+    source.kind !== "level"
   ) {
     throw new Error(`${label} 的 source.kind 非法：${String(source.kind)}`);
   }
@@ -480,6 +561,21 @@ export class GameSession implements GameSessionIntents {
   private playerId: EntityId | null = null;
   private respawnAtMs: number | null = null;
   private nextItemInstanceId = 1;
+  /** 票 34：等级曲线（内容包可选提供）；缺省时 xp 只累积、不升级。 */
+  private levelCurve: LevelCurveDefinition | null = null;
+  /**
+   * 票 31 声明的快照字段，票 34 的升级结算是它们的写入方：
+   * `playerLevel` 与 `cumulativeXp` 每次经验入账后同步，存档/选槽直接读这里。
+   * 实体属性上的 `level`/`xp` 是同一事实的逻辑视图，两者由同一处写入。
+   */
+  private playerLevel = 1;
+  private cumulativeXp = 0;
+  private worldState: Record<string, JsonValue> = {};
+
+  /** 世界状态容器的当前值（深拷贝，调用方改动不穿透会话状态）。 */
+  getWorldState(): Record<string, JsonValue> {
+    return cloneJsonValue(this.worldState) as Record<string, JsonValue>;
+  }
 
   constructor(options: GameSessionOptions = {}) {
     this.random = options.random ?? createSeededRandom(0x5eed);
@@ -522,6 +618,11 @@ export class GameSession implements GameSessionIntents {
     });
     if (cloned.identity.type === "player" && this.playerId === null) {
       this.playerId = cloned.id;
+    }
+
+    if (cloned.identity.type === "player") {
+      // 等级是成长系统的锚点，缺省 L1；快照往返时由 baseAttributes 带回来。
+      cloned.baseAttributes.level = Math.max(1, Math.round(cloned.baseAttributes.level ?? 1));
     }
 
     const attributes = effectiveAttributes(cloned, this.elapsedMs);
@@ -614,7 +715,29 @@ export class GameSession implements GameSessionIntents {
       });
     }
 
+    const curves = bundle.levelCurves ?? [];
+    if (curves.length > 1) {
+      throw new Error(`内容包提供了 ${curves.length} 条等级曲线，P2 只支持一条`);
+    }
+    this.levelCurve = curves[0] === undefined ? null : { ...curves[0] };
+
     this.regionId = regionId;
+  }
+
+  /**
+   * 玩家的等级进度（票 34）：等级/累计经验/距下一级。
+   * 快照结构归票 31，本会话只按累计经验现算；HUD 与存档槽都用它展示等级。
+   */
+  playerLevelProgress(): { level: number; cumulativeXp: number; xpToNext: number | null } {
+    if (this.levelCurve === null) {
+      return { level: this.playerLevel, cumulativeXp: this.cumulativeXp, xpToNext: null };
+    }
+    const level = levelForXp(this.levelCurve, this.cumulativeXp);
+    return {
+      level,
+      cumulativeXp: this.cumulativeXp,
+      xpToNext: xpToNextLevel(this.levelCurve, level, this.cumulativeXp),
+    };
   }
 
   /** 当前已加载的区域 id；未加载时为 null。 */
@@ -641,6 +764,10 @@ export class GameSession implements GameSessionIntents {
         runtime.aiState = "idle";
         runtime.idleMs = 0;
       }
+    }
+    // 两段式对话（票 29）：玩家的移动意图随时结束对话，玩家不会被对话锁死。
+    if (this.dialogue !== null && this.playerId !== null && id === this.playerId) {
+      this.endDialogue();
     }
     // 与攻击自动接近一致：点击移动也使用修饰器后的有效移动速度。
     this.movements.set(id, {
@@ -695,6 +822,46 @@ export class GameSession implements GameSessionIntents {
   /** 无异常版本的 talkTo；无对话/未知实体返回 ok=false。 */
   tryTalkTo(entityId: EntityId | string): IntentResult {
     return this.runIntent(() => this.talkTo(entityId));
+  }
+
+  /**
+   * 两段式对话第一段（票 29）：靠近 NPC 到对话距离。
+   * 只是普通移动意图——可被任何新移动打断，也不会开启对话。
+   */
+  approachNpc(entityId: EntityId | string, npcId: EntityId | string): void {
+    const entity = this.requireEntity(entityId);
+    const npc = this.requireEntity(npcId);
+    if (entity.id === npc.id) {
+      throw new Error("不能与自己对话");
+    }
+    const target = interactionTarget(npc.state.position, entity.state.position);
+    this.moveTo(entity.id, target);
+  }
+
+  /**
+   * 两段式对话第二段：双方互转面对面（演出常识）。
+   * 只改朝向，不改变位置与任何状态。
+   */
+  faceNpc(entityId: EntityId | string, npcId: EntityId | string): void {
+    const entity = this.requireEntity(entityId);
+    const npc = this.requireEntity(npcId);
+    // facingYaw(from, to)：各自看向对方。
+    entity.state.rotation.y = facingYaw(entity.state.position, npc.state.position);
+    npc.state.rotation.y = facingYaw(npc.state.position, entity.state.position);
+  }
+
+  /** 立即结束当前对话（移动打断/走开都走这里）；没有对话时静默返回。 */
+  endDialogue(): void {
+    const dialogue = this.dialogue;
+    if (dialogue === null) {
+      return;
+    }
+    this.dialogue = null;
+    this.publish({
+      type: "dialogue-ended",
+      npcId: dialogue.npcId,
+      dialogueId: dialogue.dialogueId,
+    });
   }
 
   /** 无异常版本的 useItem；过期实例等可预期失败返回 ok=false。 */
@@ -2080,20 +2247,47 @@ export class GameSession implements GameSessionIntents {
     return left;
   }
 
+  /**
+   * 经验入账并结算升级（票 34）。
+   *
+   * 击杀奖励、任务/调试发奖都走这一条路径：经验事件 + 逐级升级只写一处。
+   * 负数与非有限数值按 0 处理，调用方不必自己夹逼。
+   */
+  grantExperience(entityId: EntityId | string, amount: number): void {
+    const entity = this.requireEntity(entityId);
+    if (entity.identity.type !== "player") {
+      throw new Error(`经验只能发给玩家：${entityId}`);
+    }
+    const xp = Number.isFinite(amount) ? Math.max(0, Math.round(amount)) : 0;
+    if (xp === 0) {
+      return;
+    }
+    this.cumulativeXp += xp;
+    this.creditExperience(entity, xp);
+  }
+
+  private creditExperience(player: Entity, xp: number): void {
+    const total = (player.baseAttributes.xp ?? 0) + xp;
+    player.baseAttributes.xp = total;
+    // 累计经验以 this.cumulativeXp 为准（快照字段）；实体属性是同一事实的镜像。
+    this.cumulativeXp = Math.max(0, Math.round(total));
+    this.events.push({
+      type: "xp",
+      at: this.elapsedMs,
+      entityId: player.id,
+      amount: xp,
+      total,
+    });
+    this.settleLevelUps(player, total);
+
+  }
+
   /** 击杀奖励：经验进玩家属性，掉落按模板概率/区间进背包。 */
   private grantKillRewards(enemy: Entity, player: Entity): void {
     const enemyAttributes = this.attributesOf(enemy);
     const xp = Math.max(0, Math.round(enemyAttributes.xp ?? 0));
     if (xp > 0) {
-      const total = (player.baseAttributes.xp ?? 0) + xp;
-      player.baseAttributes.xp = total;
-      this.events.push({
-        type: "xp",
-        at: this.elapsedMs,
-        entityId: player.id,
-        amount: xp,
-        total,
-      });
+      this.creditExperience(player, xp);
     }
 
     const profile = this.enemyProfiles.get(enemy.id);
@@ -2123,6 +2317,66 @@ export class GameSession implements GameSessionIntents {
         entityId: player.id,
         itemId: drop.itemId,
         quantity,
+      });
+    }
+  }
+
+  /**
+   * 经验入账后的升级结算（票 34）。
+   *
+   * 跨过多个阈值时逐级结算，每级一个 `player-level-up` 事件，属性变化按
+   * 「该级相对上一级」的增量给出，HUD 飘字直接消费。
+   * 等级加成走修饰器系统的 `level` 源：每次按当前等级整体重算，
+   * 因此读档重算、跨级与撤销都不会重复入账。
+   */
+  private settleLevelUps(player: Entity, cumulativeXp: number): void {
+    const curve = this.levelCurve;
+    if (curve === null) {
+      // 没接曲线：xp 只累积，等级停在快照入档时的值（老档默认 L1）。
+      return;
+    }
+    // 等级只有一个真相来源：this.playerLevel（票 31 的快照字段）。
+    // 实体属性上的 level 是给渲染层/HUD 读的同一事实的镜像，随之更新。
+    const previousLevel = Math.max(1, this.playerLevel);
+    const currentLevel = levelForXp(curve, cumulativeXp);
+    player.baseAttributes.level = currentLevel;
+    this.playerLevel = currentLevel;
+    if (currentLevel <= previousLevel) {
+      return;
+    }
+
+    // 升级先长属性：maxHp 变大后按差额补当前生命，避免升级反而「变脆」。
+    const before = this.attributesOf(player);
+    const leveled: Entity = appendModifiers(
+      removeModifiersBySource(player, LEVEL_MODIFIER_SOURCE),
+      createModifiers(modifiersForLevel(curve, currentLevel), LEVEL_MODIFIER_SOURCE),
+    );
+    this.entities.set(leveled.id, leveled);
+
+    const after = this.attributesOf(leveled);
+    const runtime = this.combat.get(leveled.id);
+    if (runtime !== undefined) {
+      const grownMaxHp = after.maxHp ?? before.maxHp ?? runtime.hp;
+      runtime.hp = Math.min(grownMaxHp, runtime.hp + Math.max(0, grownMaxHp - (before.maxHp ?? grownMaxHp)));
+    }
+
+    const gained = new Map<string, number>();
+    for (const attribute of new Set([
+      ...Object.keys(before),
+      ...Object.keys(after),
+    ])) {
+      const delta = (after[attribute] ?? 0) - (before[attribute] ?? 0);
+      if (delta !== 0) {
+        gained.set(attribute, delta);
+      }
+    }
+
+    for (let level = previousLevel + 1; level <= currentLevel; level += 1) {
+      this.publish({
+        type: "player-level-up",
+        entityId: leveled.id,
+        level,
+        attributesGained: [...gained].map(([attribute, delta]) => ({ attribute, delta })),
       });
     }
   }
@@ -2206,6 +2460,9 @@ export class GameSession implements GameSessionIntents {
       version: GAME_SESSION_SNAPSHOT_VERSION,
       regionId: this.regionId,
       elapsedMs: this.elapsedMs,
+      playerLevel: this.playerLevel,
+      cumulativeXp: this.cumulativeXp,
+      worldState: cloneJsonValue(this.worldState),
       nextItemInstanceId: this.nextItemInstanceId,
       respawnAtMs: this.respawnAtMs,
       entities,
@@ -2277,6 +2534,16 @@ export class GameSession implements GameSessionIntents {
     ) {
       throw new Error("快照 nextItemInstanceId 必须是正整数");
     }
+    if (!Number.isInteger(snapshot.playerLevel) || snapshot.playerLevel < 1) {
+      throw new Error("快照 playerLevel 必须是大于 0 的整数");
+    }
+    if (!Number.isInteger(snapshot.cumulativeXp) || snapshot.cumulativeXp < 0) {
+      throw new Error("快照 cumulativeXp 必须是非负整数");
+    }
+    if (typeof snapshot.worldState !== "object" || snapshot.worldState === null || Array.isArray(snapshot.worldState)) {
+      throw new Error("快照 worldState 必须是对象");
+    }
+    assertJsonValue(snapshot.worldState, "");
 
     if (!Array.isArray(snapshot.entities)) {
       throw new Error("快照 entities 必须是数组");
@@ -2406,6 +2673,9 @@ export class GameSession implements GameSessionIntents {
     this.elapsedMs = snapshot.elapsedMs;
     this.respawnAtMs = snapshot.respawnAtMs;
     this.nextItemInstanceId = snapshot.nextItemInstanceId;
+    this.playerLevel = snapshot.playerLevel;
+    this.cumulativeXp = snapshot.cumulativeXp;
+    this.worldState = cloneJsonValue(snapshot.worldState);
 
     for (const entitySnapshot of snapshot.entities) {
       const entity = this.entities.get(entitySnapshot.id);

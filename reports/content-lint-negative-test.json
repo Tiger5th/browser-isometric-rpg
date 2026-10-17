@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "purpose": "L2 负向测试：确认色板卡/立绘引用（票 29）与等级曲线（票 34）的 schema、引用与结构规则会拦截坏数据",
+  "exitExpectation": "failed",
+  "status": "passed",
+  "control": {
+    "valid": true,
+    "issues": []
+  },
+  "cases": [
+    {
+      "id": "bad-palette-color",
+      "label": "色板卡 primary 不是 #rrggbb",
+      "expectation": "schema 错误指向 /primary",
+      "status": "failed",
+      "issues": [
+        {
+          "code": "schema",
+          "file": "content/character-palettes/elder_ma.json",
+          "path": "/primary",
+          "message": "must match pattern \"^#[0-9a-fA-F]{6}$\""
+        }
+      ],
+      "caught": true
+    },
+    {
+      "id": "missing-palette-keywords",
+      "label": "色板卡缺少 hairKeywords",
+      "expectation": "schema 错误",
+      "status": "failed",
+      "caught": true,
+      "issues": [
+        {
+          "code": "schema",
+          "file": "content/character-palettes/scout_lin.json",
+          "path": "/",
+          "message": "must have required property 'hairKeywords'"
+        },
+        {
+          "code": "reference",
+          "file": "content/npcs/scout_lin.json",
+          "path": "/paletteId",
+          "message": "色板卡不存在：character_palette:scout_lin"
+        }
+      ]
+    },
+    {
+      "id": "npc-bad-palette-ref",
+      "label": "NPC paletteId 指向不存在的色板卡",
+      "expectation": "reference 错误指向 /paletteId",
+      "status": "failed",
+      "caught": true,
+      "issues": [
+        {
+          "code": "reference",
+          "file": "content/npcs/elder_ma.json",
+          "path": "/paletteId",
+          "message": "色板卡不存在：character_palette:missing"
+        }
+      ]
+    },
+    {
+      "id": "portrait-missing-image",
+      "label": "portrait 缺少 image 字段",
+      "expectation": "schema 错误指向 /portrait",
+      "status": "failed",
+      "caught": true,
+      "issues": [
+        {
+          "code": "schema",
+          "file": "content/npcs/scout_lin.json",
+          "path": "/portrait",
+          "message": "must have required property 'image'"
+        }
+      ]
+    },
+    {
+      "id": "level-curve-non-monotonic",
+      "label": "等级曲线 xpRequired 倒退",
+      "expectation": "level-curve 错误指向 /levels",
+      "status": "failed",
+      "caught": true,
+      "issues": [
+        {
+          "code": "level-curve",
+          "file": "content/level-curves/standard.json",
+          "path": "/levels",
+          "message": "/levels/2/xpRequired（10）必须严格大于上一级（100）"
+        }
+      ]
+    },
+    {
+      "id": "level-curve-empty-modifiers",
+      "label": "等级曲线 defaultModifiers 为空",
+      "expectation": "schema 或 level-curve 错误",
+      "status": "failed",
+      "caught": true,
+      "issues": [
+        {
+          "code": "schema",
+          "file": "content/level-curves/standard.json",
+          "path": "/defaultModifiers",
+          "message": "must NOT have fewer than 1 items"
+        }
+      ]
+    }
+  ]
+}

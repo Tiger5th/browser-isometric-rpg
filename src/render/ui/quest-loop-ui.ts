@@ -7,6 +7,8 @@
  */
 
 import type { ContentBundle, ItemDefinition } from "../../logic/content/types";
+import type { LevelCurveDefinition } from "../../logic/leveling";
+import { levelHudView } from "./level-hud";
 import type {
   GameSessionSnapshot,
   IntentResult,
@@ -26,6 +28,16 @@ export interface QuestLoopUiOptions {
   onUnequipItem?(instanceId: string): IntentResult | void;
   /** 调试战斗入口：用真实战斗攻击最近的敌人（方便手动验证任务进度）。 */
   onDebugKill?(): IntentResult | void;
+  /**
+   * 票 29：对话改由 galgame 立绘 UI（dialogue-portrait.ts）呈现时为 true；
+   * 旧对话框面板不再渲染，避免两套 UI 叠加。
+   */
+  usePortraitDialogue?: boolean;
+  /**
+   * 等级曲线（票 34）。HUD 只用它换算等级徽标与经验条，不持有任何逻辑状态；
+   * 缺省时回退到玩家实体属性上的 level / xpToNext。
+   */
+  levelCurve?: LevelCurveDefinition;
   /**
    * 重击技能（票 27）：对当前选中/最近敌人发起重击意图。
    * HUD 只负责把冷却剩余显示成转圈，不持有任何逻辑状态。
@@ -395,15 +407,15 @@ export function createQuestLoopUi(options: QuestLoopUiOptions): QuestLoopUi {
       const hp = Math.round(player.combat.hp);
       const maxHp = Math.round(player.combat.maxHp);
       const hpRatio = maxHp > 0 ? Math.min(1, Math.max(0, hp / maxHp)) : 0;
-      const xp = Math.round(player.attributes.xp ?? player.baseAttributes.xp ?? 0);
-      // xpToNext 由内容属性提供；缺失时退化为只显示经验数值、经验条为空。
-      const xpToNextRaw = player.attributes.xpToNext ?? player.baseAttributes.xpToNext;
-      const xpToNext =
-        typeof xpToNextRaw === "number" && xpToNextRaw > 0
-          ? Math.round(xpToNextRaw)
-          : null;
-      const xpRatio =
-        xpToNext === null ? 0 : Math.min(1, Math.max(0, xp / xpToNext));
+      // 票 34：等级/经验条的换算收敛到 levelHudView，HUD 只负责搭 DOM。
+      const level = levelHudView(
+        {
+          xp: player.attributes.xp ?? player.baseAttributes.xp ?? 0,
+          level: player.baseAttributes.level,
+          xpToNext: player.attributes.xpToNext ?? player.baseAttributes.xpToNext,
+        },
+        options.levelCurve,
+      );
 
       const stats = element("div", "");
       stats.dataset.testid = "hud-attributes";
@@ -416,17 +428,20 @@ export function createQuestLoopUi(options: QuestLoopUiOptions): QuestLoopUi {
       hpText.dataset.testid = "hud-hp";
       hpText.dataset.hp = String(hp);
       hpText.dataset.maxHp = String(maxHp);
-      const xpText = element(
+      const levelBadge = element(
         "span",
-        "color:#fbbf24;",
-        xpToNext === null ? `经验 ${xp}` : `经验 ${xp} / ${xpToNext}`,
+        "color:#fbbf24;font-weight:700;margin-right:8px;",
+        level.badge,
       );
+      levelBadge.dataset.testid = "hud-level";
+      levelBadge.dataset.level = String(level.level);
+      const xpText = element("span", "color:#fbbf24;", level.xpText);
       xpText.dataset.testid = "hud-xp";
-      xpText.dataset.xp = String(xp);
-      if (xpToNext !== null) {
-        xpText.dataset.xpToNext = String(xpToNext);
+      xpText.dataset.xp = String(level.xp);
+      if (level.xpToNext !== null) {
+        xpText.dataset.xpToNext = String(level.xpToNext);
       }
-      hpRow.append(hpText, xpText);
+      hpRow.append(hpText, levelBadge, xpText);
 
       const bar = element(
         "div",
@@ -446,7 +461,7 @@ export function createQuestLoopUi(options: QuestLoopUiOptions): QuestLoopUi {
       xpBar.dataset.testid = "hud-xp-bar";
       const xpFill = element(
         "div",
-        `height:100%;width:${(xpRatio * 100).toFixed(1)}%;border-radius:999px;background:linear-gradient(90deg,#38bdf8,#a78bfa);transition:width 120ms linear;`,
+        `height:100%;width:${(level.xpRatio * 100).toFixed(1)}%;border-radius:999px;background:linear-gradient(90deg,#38bdf8,#a78bfa);transition:width 120ms linear;`,
       );
       xpFill.dataset.testid = "hud-xp-fill";
       xpBar.append(xpFill);
@@ -598,6 +613,13 @@ export function createQuestLoopUi(options: QuestLoopUiOptions): QuestLoopUi {
   };
 
   const renderDialogue = (snapshot: GameSessionSnapshot): void => {
+    // 票 29：galgame 立绘 UI（dialogue-portrait.ts）接管对话呈现，
+    // 这里只在不使用立绘的场景（dialogue-quest 等验证场景）渲染旧面板，
+    // 避免两套对话框叠加。
+    if (options.usePortraitDialogue === true) {
+      dialogue.style.display = "none";
+      return;
+    }
     dialogue.replaceChildren();
     const active = snapshot.dialogue;
     if (active === null) {

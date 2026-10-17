@@ -19,6 +19,7 @@ content/
   enemies/            敌人实例（放置 + 模板变体）
   items/              物品
   quests/             任务
+  character-palettes/ 角色色板卡（票 29：3D 贴图/立绘/头像同卡生成）
   dialogues/          ink 对话源文件
 ```
 
@@ -42,14 +43,33 @@ content/
   | 任务 | `quest:` | `quest:cull_slimes` |
   | 任务目标 | `objective:` | `objective:kill_slimes` |
   | 玩家实体 | `entity:` | `entity:player` |
+  | 角色色板卡 | `character_palette:` | `character_palette:elder_ma` |
+  | 等级曲线 | `level_curve:` | `level_curve:standard` |
 
 - 坐标：世界坐标，单位米，Y 轴向上；`position`/`rotation` 均为 `{x,y,z}`，旋转单位为弧度（`Entity.state.rotation` 同一约定）。
-- `attributes` 是**开放数值表**：`maxHp`/`hp`/`attack`/`defense`/`moveSpeed`/`xp`/`xpToNext` 是 P1 识别的一组键（`xpToNext` 供 HUD 经验条计算比例），其余键原样保留。新增键不需要改 schema。
+- `attributes` 是**开放数值表**：`maxHp`/`hp`/`attack`/`defense`/`moveSpeed`/`xp`/`xpToNext` 是 P1 识别的一组键，其余键原样保留。新增键不需要改 schema。
+  - `xp`：累计经验，由击杀奖励累积（`GameSession.grantExperience` 是唯一的入账口）。
+  - `level`：玩家等级，由 `level-curves/` 的曲线在经验入账时结算（票 34）。
+  - `xpToNext`：**旧内容口径**，只在没有等级曲线时供 HUD 算经验条。接了等级曲线后由 `levels[]` 决定，别再手填。
 - 修饰器（装备/任务奖励共用）字段与 `src/logic/modifier.ts` 完全一致：
   `{ attribute, operation: "add" | "multiply", value }`；
   最终属性 = `(base + Σadd) × (1 + Σmultiply)`。
 
 ## 各类型字段
+
+### 等级曲线 `level-curves/<local>.json`
+
+经验阈值表 + 每级属性加成。运行时解释口是 `src/logic/leveling.ts`；L2 校验除 schema 外还查阈值严格递增、等级序号从 1 连续。
+
+| 字段 | 必填 | 含义 |
+|---|---|---|
+| `id` | 是 | `level_curve:` + 文件名 |
+| `displayName` | 是 | 显示名 |
+| `defaultModifiers` | 是 | 每升一级的默认加成（形状同修饰器模板） |
+| `levels[]` | 是 | 按 `level` 升序、从 1 连续；`xpRequired` 是**累计**经验阈值 |
+| `levels[].modifiers` | 否 | 覆盖该级的默认加成 |
+
+L1 不加属性（基准等级）；`levels[1].xpRequired` 必须为 0。一个内容包目前只支持一条曲线（`ContentBundle.levelCurves`）。
 
 ### 区域 `regions/<local>.json`
 
@@ -80,6 +100,24 @@ content/
 | `tags` | 否 | 行为/剧情标签；缺省 `["npc"]` |
 | `dialogueId` | 否 | 对应 `dialogues/<dialogueId>.ink`，必须存在 |
 | `questIds` | 否 | 该 NPC 可提供的任务，必须都存在 |
+| `paletteId` | 否 | 角色色板卡 id（票 29），必须存在；3D tint 与立绘同源 |
+| `portrait` | 否 | 立绘引用 `{image, keywords?}`；`image` 缺失会被 schema 拒绝。资产未生成时可整个字段缺省，表现层用程序化色块占位 |
+
+### 角色色板卡 `character-palettes/<local>.json`
+
+| 字段 | 必填 | 含义 |
+|---|---|---|
+| `id` / `displayName` | 是 | 同通用约定 |
+| `role` | 是 | 角色定位描述（供生图统一风格） |
+| `primary` | 是 | 主色 `#rrggbb`：对话框边、名字牌、3D tint 基调 |
+| `secondary` | 是 | 辅色 `#rrggbb`：服装大面积 |
+| `accent` | 是 | 点缀色 `#rrggbb`：装饰/高光 |
+| `hairKeywords` | 是 | 发色关键词（生图提示词） |
+| `costumeKeywords` | 是 | 服装关键词（生图提示词） |
+| `status` | 否 | `pending`（未出图，允许占位）/ `generated`（已出图） |
+
+一个主要角色一张卡：立绘、3D 贴图、头像全部按同一张卡生成，保证配色不漂移
+（见 GLOSSARY「角色色板卡」）。敌人维持占位统一贴图，不做独立卡。
 
 ### 敌人模板 `enemy-templates/<local>.json`
 
@@ -204,7 +242,8 @@ P1 任务：`quest:cull_slimes`（杀 3 只 `enemy_template:slime` → 物品 + 
 
 ## 引用完整性（L2 强制）
 
-- `npc.regionId` → 区域；`npc.dialogueId` → ink 文件；`npc.questIds[]` → 任务
+- `npc.regionId` → 区域；`npc.dialogueId` → ink 文件；`npc.questIds[]` → 任务；
+  `npc.paletteId` → 角色色板卡（票 29）
 - `enemy.regionId` → 区域；`enemy.templateId` → 敌人模板
 - `enemy-template.drops[].itemId` → 物品（且 `max ≥ min`）
 - `quest.giverNpcId` / `turnInNpcId` → NPC；`objectives[].enemyTemplateId` → 敌人模板；

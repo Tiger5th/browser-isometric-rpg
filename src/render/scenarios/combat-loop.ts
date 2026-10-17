@@ -10,6 +10,7 @@ import elderMa from "../../../content/npcs/elder_ma.json";
 import healHerb from "../../../content/items/healing_herb.json";
 import oldCoin from "../../../content/items/old_coin.json";
 import regionGreenHollow from "../../../content/regions/green_hollow.json";
+import levelCurveData from "../../../content/level-curves/standard.json";
 import scoutLin from "../../../content/npcs/scout_lin.json";
 import slimeBlue from "../../../content/enemies/slime_blue.json";
 import slimeElder from "../../../content/enemies/slime_elder.json";
@@ -66,6 +67,7 @@ function combatBundle(): ContentBundle {
     enemies: [slimeMeadow, slimeBlue, slimeElder],
     items: [slimeGel, healHerb, oldCoin, travelerSword],
     quests: [cullSlimes],
+    levelCurves: [levelCurveData],
   } as unknown as ContentBundle;
 }
 
