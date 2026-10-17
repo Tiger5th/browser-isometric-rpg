@@ -38,7 +38,8 @@
 - **12 号票已完成合并**（72f82bb：200×200 navmesh 143ms/45KB、50 agents 避让正常、热替换无尖峰；规模上限=200×200 主线程生成）。
 - **15 号票已完成合并**（8693d36：meshopt 锁定、自动 LOD 可接受、KTX2 兼容（Safari 未实测）、lint 就位；Blender 未装——headless 导出可重复性 blocked，需用户安装 Blender 后补测）。
 - **14 号票已完成合并**（3b83e8a：50MB 区域 preload 55ms 但首帧 shader 编译卡 ~200ms——黑场须盖预热；**Editor git 友好，不触发 LDtk 降级**）。
-- **当前 frontier：13/17 运行中；18 待 13/17。**
+- **13 号票已完成合并**（381a63f：24 角色描边 60fps，HighlightLayer 0.65ms/帧——**描边方案可用**；scene.pick 有 GC 长帧坑，用零分配射线-OBB 替代）。
+- **当前 frontier：17 运行中；18 待 17。**
 
 ## Fog
 
