@@ -1,0 +1,280 @@
+{
+  "schemaVersion": 1,
+  "kind": "characters-resolution-scaling",
+  "generatedAt": "2026-10-17T05:33:53Z",
+  "note": "同一场景在 1080p(dpr1) 下的补充读数，用于预算分辨率联动",
+  "runs": [
+    {
+      "pass": 1,
+      "wallMs": 14402,
+      "report": {
+        "schemaVersion": 1,
+        "harness": "P0Harness",
+        "scenario": "characters-300",
+        "status": "failed",
+        "startedAt": "2026-10-17T05:33:11.571Z",
+        "finishedAt": "2026-10-17T05:33:25.673Z",
+        "durationMs": 14102,
+        "environment": {
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+          "renderBackend": "webgl2",
+          "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+          "capturedAt": "2026-10-17T05:33:25.673Z",
+          "devicePixelRatio": 1,
+          "hardwareConcurrency": 10
+        },
+        "metrics": [
+          {
+            "name": "characterCount",
+            "value": 300,
+            "unit": "characters",
+            "threshold": 300,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "skeletonCount",
+            "value": 300,
+            "unit": "skeletons"
+          },
+          {
+            "name": "boneCount",
+            "value": 900,
+            "unit": "bones"
+          },
+          {
+            "name": "spineRotationRangeRad",
+            "value": 0.319,
+            "unit": "rad",
+            "threshold": 0.1,
+            "comparison": "gte",
+            "passed": true
+          },
+          {
+            "name": "fpsAverage",
+            "value": 60,
+            "unit": "fps",
+            "threshold": 60,
+            "comparison": "gte",
+            "passed": true
+          },
+          {
+            "name": "fpsMin",
+            "value": 51,
+            "unit": "fps"
+          },
+          {
+            "name": "frameTimeMsAverage",
+            "value": 16.7,
+            "unit": "ms",
+            "threshold": 16.666666666666668,
+            "comparison": "lte",
+            "passed": false
+          },
+          {
+            "name": "drawCallsAverage",
+            "value": 300,
+            "unit": "calls",
+            "threshold": 300,
+            "comparison": "lte",
+            "passed": true
+          },
+          {
+            "name": "drawCallsMax",
+            "value": 300,
+            "unit": "calls"
+          },
+          {
+            "name": "activeMeshesAverage",
+            "value": 300,
+            "unit": "meshes"
+          },
+          {
+            "name": "animationUpdateMsAverage",
+            "value": 0.29,
+            "unit": "ms/frame"
+          },
+          {
+            "name": "renderSubmitMsAverage",
+            "value": 1.8,
+            "unit": "ms/frame"
+          },
+          {
+            "name": "sceneRenderMsAverage",
+            "value": 3.51,
+            "unit": "ms/frame"
+          },
+          {
+            "name": "renderWidth",
+            "value": 1920,
+            "unit": "px"
+          },
+          {
+            "name": "renderHeight",
+            "value": 1080,
+            "unit": "px"
+          },
+          {
+            "name": "renderPixelsMP",
+            "value": 2.07,
+            "unit": "MP"
+          },
+          {
+            "name": "jsHeapUsedMB",
+            "value": 68.2,
+            "unit": "MB",
+            "threshold": 1536,
+            "comparison": "lte",
+            "passed": true
+          },
+          {
+            "name": "jsHeapTotalMB",
+            "value": 95.5,
+            "unit": "MB"
+          }
+        ]
+      },
+      "viewport": {
+        "innerWidth": 1920,
+        "innerHeight": 1080,
+        "dpr": 1
+      }
+    },
+    {
+      "pass": 2,
+      "wallMs": 14352,
+      "report": {
+        "schemaVersion": 1,
+        "harness": "P0Harness",
+        "scenario": "characters-300",
+        "status": "failed",
+        "startedAt": "2026-10-17T05:33:25.902Z",
+        "finishedAt": "2026-10-17T05:33:39.986Z",
+        "durationMs": 14084,
+        "environment": {
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+          "renderBackend": "webgl2",
+          "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+          "capturedAt": "2026-10-17T05:33:39.986Z",
+          "devicePixelRatio": 1,
+          "hardwareConcurrency": 10
+        },
+        "metrics": [
+          {
+            "name": "characterCount",
+            "value": 300,
+            "unit": "characters",
+            "threshold": 300,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "skeletonCount",
+            "value": 300,
+            "unit": "skeletons"
+          },
+          {
+            "name": "boneCount",
+            "value": 900,
+            "unit": "bones"
+          },
+          {
+            "name": "spineRotationRangeRad",
+            "value": 0.319,
+            "unit": "rad",
+            "threshold": 0.1,
+            "comparison": "gte",
+            "passed": true
+          },
+          {
+            "name": "fpsAverage",
+            "value": 59.7,
+            "unit": "fps",
+            "threshold": 60,
+            "comparison": "gte",
+            "passed": false
+          },
+          {
+            "name": "fpsMin",
+            "value": 26.6,
+            "unit": "fps"
+          },
+          {
+            "name": "frameTimeMsAverage",
+            "value": 16.8,
+            "unit": "ms",
+            "threshold": 16.666666666666668,
+            "comparison": "lte",
+            "passed": false
+          },
+          {
+            "name": "drawCallsAverage",
+            "value": 300,
+            "unit": "calls",
+            "threshold": 300,
+            "comparison": "lte",
+            "passed": true
+          },
+          {
+            "name": "drawCallsMax",
+            "value": 300,
+            "unit": "calls"
+          },
+          {
+            "name": "activeMeshesAverage",
+            "value": 300,
+            "unit": "meshes"
+          },
+          {
+            "name": "animationUpdateMsAverage",
+            "value": 0.37,
+            "unit": "ms/frame"
+          },
+          {
+            "name": "renderSubmitMsAverage",
+            "value": 2.21,
+            "unit": "ms/frame"
+          },
+          {
+            "name": "sceneRenderMsAverage",
+            "value": 4.37,
+            "unit": "ms/frame"
+          },
+          {
+            "name": "renderWidth",
+            "value": 1920,
+            "unit": "px"
+          },
+          {
+            "name": "renderHeight",
+            "value": 1080,
+            "unit": "px"
+          },
+          {
+            "name": "renderPixelsMP",
+            "value": 2.07,
+            "unit": "MP"
+          },
+          {
+            "name": "jsHeapUsedMB",
+            "value": 70.2,
+            "unit": "MB",
+            "threshold": 1536,
+            "comparison": "lte",
+            "passed": true
+          },
+          {
+            "name": "jsHeapTotalMB",
+            "value": 132.7,
+            "unit": "MB"
+          }
+        ]
+      },
+      "viewport": {
+        "innerWidth": 1920,
+        "innerHeight": 1080,
+        "dpr": 1
+      }
+    }
+  ]
+}

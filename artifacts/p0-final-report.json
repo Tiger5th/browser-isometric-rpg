@@ -1,0 +1,430 @@
+{
+  "schemaVersion": 1,
+  "kind": "p0-final-report",
+  "generatedAt": "2026-10-17T05:55:00.000Z",
+  "baseline": {
+    "branch": "p0-integration",
+    "commit": "0d96302",
+    "ticketsMerged": "10-17"
+  },
+  "environment": {
+    "machine": "Apple M5 MacBook Air, 16GB",
+    "os": "macOS 26.7.1",
+    "browser": "ego-browser Chromium 154",
+    "renderBackend": "webgl2 (ANGLE Metal Renderer: Apple M5)",
+    "devicePixelRatio": 2,
+    "viewportCss": "1450x826",
+    "renderSizeDefault": "2900x1652",
+    "caffeinate": true
+  },
+  "verdict": {
+    "enterP1": true,
+    "conditional": true,
+    "degradationTriggers": {
+      "ldtk": false,
+      "customDialogueDsl": false,
+      "ktx2PngFallback": "reserved-pending-safari"
+    },
+    "headlineRisks": [
+      "300 角色 60fps 无余量，fpsMin 26.6-51.3",
+      "区域首帧 shader 编译/GPU 上传 203-233ms，加载门必须覆盖预热",
+      "性能读数对电源/热/共享浏览器负载敏感"
+    ]
+  },
+  "smoke": {
+    "report": "reports/p0-smoke.json",
+    "passes": 2,
+    "scenarioCount": 9,
+    "allScenariosExecutedAndReported": true,
+    "totalWallMsApprox": {
+      "pass1": 54000,
+      "pass2": 49000
+    },
+    "operationalFindings": [
+      "fresh checkout 必须先 npm run assets:vendor；否则 asset-pipeline 加载 meshopt glb 失败",
+      "frameTimeMsAverage <= 16.6667 阈值使 60fps 读数在 passed/failed 间抖动"
+    ],
+    "scenarios": [
+      {
+        "name": "hello",
+        "pass1": { "status": "passed", "wallMs": 575, "scenarioDurationMs": 1, "reportTextLength": 1106 },
+        "pass2": { "status": "passed", "wallMs": 295, "scenarioDurationMs": 1, "reportTextLength": 1106 },
+        "stable": true
+      },
+      {
+        "name": "characters-300",
+        "pass1": { "status": "failed", "wallMs": 14281, "scenarioDurationMs": 14069, "fpsAverage": 60.0, "fpsMin": 51.3, "frameTimeMsAverage": 16.7, "drawCallsAverage": 300, "renderPixelsMP": 4.79, "jsHeapUsedMB": 76.5 },
+        "pass2": { "status": "passed", "wallMs": 13291, "scenarioDurationMs": 13086, "fpsAverage": 60.1, "fpsMin": 43.3, "frameTimeMsAverage": 16.6, "drawCallsAverage": 300, "renderPixelsMP": 4.68, "jsHeapUsedMB": 99.3 },
+        "stable": "execution-stable-status-flickers-on-threshold",
+        "note": "pass1 status failed only because 16.7 > 16.6667; fpsAverage passed"
+      },
+      {
+        "name": "crowd-nav",
+        "pass1": { "status": "passed", "wallMs": 6403, "scenarioDurationMs": 6149, "fps": 60, "navmesh200Ms": 25.1 },
+        "pass2": { "status": "passed", "wallMs": 5397, "scenarioDurationMs": 5166, "fps": 60, "navmesh200Ms": 22.9 },
+        "stable": true
+      },
+      {
+        "name": "crowd-hot-swap",
+        "pass1": { "status": "passed", "wallMs": 7443, "scenarioDurationMs": 7182, "switchFrameMs": 16.1, "spikeRatio": 0.91, "fpsBefore": 60.01, "fpsAfter": 59.98, "maxPositionSnap": 0 },
+        "pass2": { "status": "passed", "wallMs": 6385, "scenarioDurationMs": 6185, "switchFrameMs": 15.7, "spikeRatio": 0.89, "fpsBefore": 60, "fpsAfter": 59.98, "maxPositionSnap": 0 },
+        "stable": true
+      },
+      {
+        "name": "occlusion-outline",
+        "pass1": { "status": "passed", "wallMs": 17473, "scenarioDurationMs": 17233, "outlinedCharacters": 24, "fps": 60, "highlightMsAverage": 0.629, "drawCallsDelta": 40 },
+        "pass2": { "status": "passed", "wallMs": 17473, "scenarioDurationMs": 17197, "outlinedCharacters": 24, "fps": 60, "highlightMsAverage": 0.544, "drawCallsDelta": 40 },
+        "stable": true
+      },
+      {
+        "name": "region-loading",
+        "pass1": { "status": "passed", "wallMs": 3155, "scenarioDurationMs": 2881, "preloadMs": 46.1, "maskedWarmupMs": 499, "revealMaxFrameMs": 19.4, "jsHeapPeakDeltaMB": 286.5 },
+        "pass2": { "status": "passed", "wallMs": 2605, "scenarioDurationMs": 2381, "preloadMs": 24.5, "maskedWarmupMs": 151.9, "revealMaxFrameMs": 18.0, "jsHeapPeakDeltaMB": 266.9 },
+        "stable": true
+      },
+      {
+        "name": "region-gate",
+        "pass1": { "status": "passed", "wallMs": 6208, "scenarioDurationMs": 5981, "swapMs": 1.5, "maxFrameMsA": 19.4, "maxFrameMsB": 18.6, "exitedCleanly": 1 },
+        "pass2": { "status": "passed", "wallMs": 5781, "scenarioDurationMs": 5530, "swapMs": 0.5, "maxFrameMsA": 20.3, "maxFrameMsB": 18.2, "exitedCleanly": 1 },
+        "stable": true
+      },
+      {
+        "name": "anime-pipeline",
+        "pass1": { "status": "passed", "wallMs": 893, "scenarioDurationMs": 647, "fps": 62.1, "triangleCount": 11236, "boneCount": 22 },
+        "pass2": { "status": "passed", "wallMs": 900, "scenarioDurationMs": 632, "fps": 62.29, "triangleCount": 11236, "boneCount": 22 },
+        "stable": true
+      },
+      {
+        "name": "asset-pipeline",
+        "pass1": { "status": "passed-after-vendor-fix", "wallMs": 1076, "scenarioDurationMs": 709, "meshoptLoadMedianMs": 16.2, "dracoLoadMedianMs": 14.6, "ktx2LoadOk": 1, "productionLoadOk": 1 },
+        "pass2": { "status": "passed-after-vendor-fix", "wallMs": 913, "scenarioDurationMs": 681, "meshoptLoadMedianMs": 16.1, "dracoLoadMedianMs": 14.8, "ktx2LoadOk": 1, "productionLoadOk": 1 },
+        "stable": "after-vendor-setup",
+        "note": "before npm run assets:vendor, 4/4 attempts timed out because public/vendor/meshopt/meshopt_decoder.js was missing"
+      }
+    ]
+  },
+  "validations": [
+    {
+      "id": 1,
+      "name": "300 骨骼动画角色同屏（WebGL2）",
+      "measured": "平均 60.0/60.1fps @4.79/4.68MP；fpsMin 51.3/43.3；帧时间 16.7/16.6ms；draw calls 300；JS heap 76.5/99.3MB；骨骼 0.19-0.32ms；scene.render 1.58-3.72ms",
+      "threshold07": "60fps 桌面；draw calls <=300；内存 <=1.5GB",
+      "verdict": "边界通过",
+      "note": "均值达标但无余量；ticket 11 曾测 40.4fps，对电源/热/后台负载敏感"
+    },
+    {
+      "id": 2,
+      "name": "WebGPU 路径对比",
+      "measured": "39.4fps @4.79MP；fpsMin 1；帧时间 25.4ms；scene.render 4.86ms；内存 75.7MB",
+      "threshold07": "07 未定义（WebGPU 仅增强路径）",
+      "verdict": "通过（本场景无收益）"
+    },
+    {
+      "id": 3,
+      "name": "Crowd navmesh 200x200",
+      "measured": "冷 143.1ms / 45KB / JS heap +0.8MB；300x300 冷 277.7ms；热 200x200 25.1/22.9ms，300x300 48.8/47.2ms",
+      "threshold07": "07 未定义；建议新增 <=150ms 冷",
+      "verdict": "通过"
+    },
+    {
+      "id": 4,
+      "name": "跨区 navmesh 热替换",
+      "measured": "同步 1.1-2.9ms；切换帧 15.7-16.1ms 热 / 32.0ms 冷；spikeRatio 0.89-0.92；50 agents 迁移；maxPositionSnap 0",
+      "threshold07": "07 未定义；票面：无断点/卡顿",
+      "verdict": "通过"
+    },
+    {
+      "id": 5,
+      "name": "遮挡描边 24 角色",
+      "measured": "24/30 描边；基线 60.1 vs 描边 60.0fps；Highlight 0.544-0.652ms/帧；draw +40；检测 0.013-0.021ms/帧；0 长帧",
+      "threshold07": "07 未定义；票面 >=10 角色、>=57fps",
+      "verdict": "通过"
+    },
+    {
+      "id": 6,
+      "name": "50MB 区域加载",
+      "measured": "49.314MB；preload 24.5-55.3ms；add 0.4ms；remove 0.3ms；dispose 2.1-6ms；heap 增量 251.0-286.5MB；warmup 152-1140.6ms；warmup 后 reveal max 18-36ms；未 warmup 203-233ms",
+      "threshold07": "单区域 <=50MB；内存 <=1.5GB；首屏 <=5s",
+      "verdict": "通过（资产/内存）；首帧预热须计入加载门"
+    },
+    {
+      "id": 7,
+      "name": "Editor git 友好度",
+      "measured": "gitFriendly=true；no-op save 0 diff；移动对象 1 行 diff；首保存 11 文件一次性 churn；preview.png 二进制噪声",
+      "threshold07": "07 未定义；票面：文本可 review / 不触发 LDtk",
+      "verdict": "通过；ldktDowngradeTriggered=false"
+    },
+    {
+      "id": 8,
+      "name": "meshopt vs draco",
+      "measured": "基线 592736B；meshopt 200660B（33.9%），几何 67001B；draco 298924B（50.4%），几何 167438B；解码器中位 5.8 vs 4.7ms；解码器体积约小 30 倍",
+      "threshold07": "07 未定义；票面：锁定方案",
+      "verdict": "通过；锁定 meshopt"
+    },
+    {
+      "id": 9,
+      "name": "自动 LOD 质量",
+      "measured": "LOD0/1/2 = 11488/5744/2296 三角；近景 PSNR 48.017/37.576dB；远景 64.949/53.643dB",
+      "threshold07": "07 未定义；票面：可接受/需手动",
+      "verdict": "通过；建议 3 级，LOD2 仅远景"
+    },
+    {
+      "id": 10,
+      "name": "KTX2 兼容性",
+      "measured": "PNG 127967B -> KTX2 59853B（46.8%）；生产组合 132620B；Chromium WebGL2 ETC2 通过；Chromium WebGPU 通过但 RGBA8；Safari 未测",
+      "threshold07": "07 未定义；票面：Safari/WebGPU 兼容",
+      "verdict": "部分通过；PNG 回退保留"
+    },
+    {
+      "id": 11,
+      "name": "headless Blender 可重复性",
+      "measured": "blender 未安装；替代验证：glTF-Transform 两次构建 7 个 GLB 字节一致；程序化构建 SHA256 一致",
+      "threshold07": "票面：两次产物字节一致",
+      "verdict": "blocked",
+      "commands": ["npm run assets:blender", "npm run assets:blender:repro"]
+    },
+    {
+      "id": 12,
+      "name": "lint 规则 + 负向自测",
+      "measured": "8/8 资产 passed、0 errors/0 warnings；负向 fixture 捕获 1 non-manifold error + 1 boundary-edge warning；assertNonManifoldCaught=true",
+      "threshold07": "票面：规则跑通、负向可捕获",
+      "verdict": "通过"
+    },
+    {
+      "id": 13,
+      "name": "inkjs 对话性能",
+      "measured": "300 节点树 Continue 均值 0.044ms/步；快照往返正确",
+      "threshold07": "票面：几百节点可用、快照正确",
+      "verdict": "通过；无需自研 DSL"
+    },
+    {
+      "id": 14,
+      "name": "修饰器 schema",
+      "measured": "装备/buff/任务奖励三场景 vitest 全绿；冻结边界已定义",
+      "threshold07": "票面：表达力确认后可冻结",
+      "verdict": "通过；可冻结",
+      "freezeBoundary": [
+        "条件型修饰器按条件增删列表项",
+        "百分比加性聚合",
+        "无 clamp",
+        "绝对游戏时间",
+        "叠层上限在 buff 定义层"
+      ]
+    },
+    {
+      "id": 15,
+      "name": "存档迁移链",
+      "measured": "v1->v2 模拟迁移测试绿；快照可序列化；全仓 43/43 测试通过",
+      "threshold07": "票面：迁移链雏形绿",
+      "verdict": "通过（雏形）"
+    },
+    {
+      "id": 16,
+      "name": "vitest 逻辑/表现边界",
+      "measured": "深层子路径导入可行；barrel 661ms 慢；NullEngine 可测无渲染场景图；真实渲染需浏览器",
+      "threshold07": "ADR-0005：逻辑/表现分离",
+      "verdict": "通过"
+    },
+    {
+      "id": 17,
+      "name": "ego-browser L4 冒烟",
+      "measured": "9/9 scenario 执行并产出报告；8/9 两轮稳定；characters 状态抖动来自阈值；asset-pipeline 需 assets:vendor；总耗时约 50-55s/轮",
+      "threshold07": "ADR-0005：L4 可重试、不阻塞",
+      "verdict": "通过（L4 可行）"
+    },
+    {
+      "id": 18,
+      "name": "VRoid -> glTF -> toon",
+      "measured": "占位角色 11236 三角/22 骨骼/2 动画/1 morph；lint 0/0；toon 开/关 5 张截图；62.1-62.3fps；VRM->GLB 转换器自测通过；真实 VRoid/Mixamo 未执行",
+      "threshold07": "票面：一个 VRoid 角色 + Mixamo 动画 + toon 开关",
+      "verdict": "部分通过；真实资产待用户手做"
+    }
+  ],
+  "budgetRevisions": [
+    {
+      "item": "帧率",
+      "draft07": "60fps 桌面 / 30fps 中端移动",
+      "measured": "300 角色 40.4-60.1fps @4.7-4.8MP；1080p 60.0/59.7fps；fpsMin 26.6-51.3；0.29MP 60.1fps",
+      "proposed": "分辨率联动画质档位：1920x1080@60fps；retina/4K@45-60fps + 动态分辨率；移动端 30fps@<=1MP。判据 fpsAverage>=60、p95 帧时间<=17ms、fpsMin>=50"
+    },
+    {
+      "item": "draw calls",
+      "draft07": "<=300 WebGL2",
+      "measured": "300 角色 300；描边场景 36->76（+40）",
+      "proposed": "基础场景 <=300；描边/VFX <=50；总量 <=350"
+    },
+    {
+      "item": "初始包体",
+      "draft07": "<=8MB gzip",
+      "measured": "全部 JS gzip 1.48MB；主 chunk 609.86kB gzip；dist 总计 9.19MB（含 wasm/资产）",
+      "proposed": "保留 <=8MB gzip，明确为初始 JS+wasm gzip；资产不计入"
+    },
+    {
+      "item": "单区域资产",
+      "draft07": "<=50MB（含 KTX2）",
+      "measured": "49.314MB；preload 24.5-55.3ms；add/remove <1ms；dispose 2.1-6ms；heap 增量 251.0-286.5MB；warmup 152-1140.6ms",
+      "proposed": "<=50MB；preload<=100ms；add/remove<=1ms；dispose<=10ms；heap 增量<=300MB/区域；masked warmup<=1.5s 冷；预热后首帧<=50ms"
+    },
+    {
+      "item": "内存",
+      "draft07": "<=1.5GB 桌面 / <=800MB 移动",
+      "measured": "角色 68-99MB JS heap；区域峰值 323.8-373.0MB JS heap（增量 251-286MB）",
+      "proposed": "按区域增量校准 <=300MB/50MB 区域；1.5GB 仅作进程级暂定上限；P1 补进程 RSS + GPU 显存；移动端未验证"
+    },
+    {
+      "item": "首屏可交互",
+      "draft07": "<=5s 桌面 / <=12s 中端移动",
+      "measured": "P0 未测生产构建；dev server 295-575ms 不可作为预算",
+      "proposed": "P1 用 production build + Lighthouse 实测；区域进入另算，加载门预热计入"
+    },
+    {
+      "item": "navmesh（新增）",
+      "draft07": "无",
+      "measured": "200x200 冷 143.1ms / 热 22.9-25.1ms；300x300 冷 277.7ms",
+      "proposed": "200x200 主线程生成 <=150ms 冷；>200 必须 Worker/预烘焙；热路径 <=30ms"
+    },
+    {
+      "item": "crowd 更新/切换（新增）",
+      "draft07": "无",
+      "measured": "更新 0.22-0.39ms/帧；同步 1.1-2.9ms；spikeRatio 0.89-0.92",
+      "proposed": "更新 <=1ms/帧；同步 <=5ms；spikeRatio <=1.0；位置突变=0"
+    },
+    {
+      "item": "描边（新增）",
+      "draft07": "无",
+      "measured": "24 角色 0.544-0.652ms/帧；draw +40；检测 0.013-0.021ms/帧",
+      "proposed": "24 角色 <=1ms/帧；draw +<=40；检测 <=0.05ms/帧；50+ 角色复测"
+    },
+    {
+      "item": "压缩（新增）",
+      "draft07": "无",
+      "measured": "meshopt 几何为 draco 40%；生产组合为基线 22.4%；KTX2 为 PNG 46.8%",
+      "proposed": "几何必须 meshopt；生产组合 <=25% 基线；KTX2 <=50% PNG"
+    },
+    {
+      "item": "LOD（新增）",
+      "draft07": "无",
+      "measured": "LOD1/2 近景 48.017/37.576dB；远景 64.949/53.643dB",
+      "proposed": "3 级 LOD；LOD1 近景 >=40dB；LOD2 近景 >=32dB、远景 >=40dB"
+    },
+    {
+      "item": "对话（新增）",
+      "draft07": "无",
+      "measured": "inkjs Continue 0.044ms/步",
+      "proposed": "单步 Continue <=1ms（P95）"
+    },
+    {
+      "item": "编译预热（新增）",
+      "draft07": "无",
+      "measured": "未 warmup 首帧 203-233ms；warmup 后 18-36ms",
+      "proposed": "加载门覆盖首帧预热；masked warmup <=1.5s 冷；预热后 reveal 最大帧 <=50ms"
+    }
+  ],
+  "adrSuggestions": [
+    {
+      "adr": "0002-click-move-and-crowd-nav",
+      "suggestions": [
+        "确认 HighlightLayer 描边可用：24/30 角色、60fps、0.544-0.652ms/帧、draw +40",
+        "写入实现约束：禁止每帧 scene.pick（本场景 34 个 GC 长帧）；改用零分配射线-OBB slab 法",
+        "写入 crowd 数字：200x200 冷 143.1ms/热 22.9-25.1ms；300x300 冷 277.7ms；热替换同步 1.1-2.9ms、spikeRatio 0.89-0.92、0 突变",
+        "写入 >200x200 需 Worker/预烘焙；50-100 人描边需复测低端 GPU 全屏模糊填充"
+      ]
+    },
+    {
+      "adr": "0003-region-asset-container-streaming",
+      "suggestions": [
+        "加载门必须覆盖 addAllToScene 后的第一帧：首帧 203-233ms，预热 1.14s 冷后 reveal max 36ms",
+        "新增预算：masked warmup <=1.5s 冷；预热后首帧 <=50ms；add/remove <1ms；dispose <=10ms",
+        "确认 Editor git 友好、双轨策略、不触发 LDtk；preview.png gitignore，二进制走 LFS/导出步骤",
+        "注明 P0 的 50MB 是内存 Blob 解析，不含网络下载；P1 必须把下载时间计入加载门"
+      ]
+    },
+    {
+      "adr": "0004-data-driven-systems-ink",
+      "suggestions": [
+        "修饰器 schema 确认可冻结；记录冻结边界（条件型增删列表项、百分比加性聚合、无 clamp、绝对游戏时间、叠层上限在 buff 定义层）",
+        "inkjs 风险降级：300 节点 0.044ms/步、快照往返正确，无需自研 DSL；持续关注维护状态",
+        "存档变更必须附带迁移函数 + 往返测试；v1->v2 雏形已绿"
+      ]
+    },
+    {
+      "adr": "0005-testing-layers-ego-browser",
+      "suggestions": [
+        "L4 冒烟实测可行：9 scenario x 2 轮，全部产出统一 JSON，约 50-55s/轮",
+        "fresh checkout 前置：npm ci && npm run assets:vendor；否则 asset-pipeline 失败",
+        "L4 只验加载/执行/报告产出；性能判定放 L5，并要求 caffeinate、固定视口/DPR、干净浏览器、预热缓存、多次运行取 p95/fpsMin",
+        "修正 frameTimeMsAverage<=16.6667 阈值抖动；主判据改 fpsAverage，帧时间用 p95",
+        "MeasurementReport schema 可直接复用为 L5 夜测输入"
+      ]
+    }
+  ],
+  "p1": {
+    "enter": true,
+    "beforeSpec": {
+      "userActions": [
+        "安装 VRoid Studio，导出 VRM，运行 node tools/pipeline/vrm-to-glb.mjs ~/Downloads/character.vrm assets/character_vroid_lod0.glb，再 lint 与 anime-pipeline 场景验证（约 15 分钟）",
+        "安装 Blender（可选 Mixamo）用于 headless 可重复性复测与 FBX 烘焙；命令 npm run assets:blender / npm run assets:blender:repro"
+      ],
+      "technicalDebt": [
+        "动态分辨率/画质档位设计，决定 300 角色+动态分辨率或 200 角色+原生分辨率",
+        "L5 性能测量协议（电源状态、固定视口/DPR、干净浏览器、预热、多次运行、fpsAverage+p95+fpsMin+long frames、进程 RSS/GPU 显存）",
+        "生产构建首屏与包体实测（Lighthouse + 网络节流）",
+        "区域加载预算落地（masked warmup、网络下载、首帧预热）；无缝流式需 tiled navmesh + Worker/预烘焙",
+        "Safari KTX2 实测与 PNG 回退开关；WebGPU KTX2 的 RGBA8 显存收益确认",
+        "修正 frameTime 阈值抖动与 Harness 性能边界提示"
+      ]
+    },
+    "degradationStatus": {
+      "ldtk": "not-triggered",
+      "customDialogueDsl": "not-triggered",
+      "ktx2PngFallback": "reserved-pending-safari",
+      "blender": "blocked-user-action",
+      "vroid": "blocked-user-action"
+    },
+    "suggestedAcceptance": [
+      "1080p@60fps，fpsMin>=50，p95 帧时间<=17ms；retina 档允许动态分辨率",
+      "单区域<=50MB；进入加载门<=2s（含下载与预热，缓存命中<=1s）；预热后首帧<=50ms",
+      "200x200 navmesh 冷生成<=150ms；50 agents 更新<=1ms/帧；切换无位置突变",
+      "24 角色描边<=1ms/帧；基础 draw calls<=300、叠加<=50",
+      "真实 VRoid 角色通过 lint 并在 toon 场景播放 Mixamo 动画",
+      "L1 全绿；L3 资产 lint 8/8 起；L4 9 scenario 冒烟全绿（允许重试）"
+    ]
+  },
+  "evidence": {
+    "newReports": [
+      "reports/p0-smoke.json",
+      "reports/p0-characters-1080p.json"
+    ],
+    "existingReports": [
+      "reports/p0-hello.json",
+      "reports/p0-characters-300-webgl2.json",
+      "reports/p0-characters-300-webgpu.json",
+      "reports/p0-characters-300-webgl2-lowres-diagnostic.json",
+      "reports/p0-crowd-nav.json",
+      "reports/p0-crowd-hot-swap.json",
+      "reports/p0-occlusion-outline-webgl2.json",
+      "reports/region-loading.json",
+      "reports/region-loading-notes.json",
+      "reports/region-gate.json",
+      "reports/editor-git-friendliness.json",
+      "reports/p0-asset-pipeline.json",
+      "reports/asset-pipeline-browser-runs.json",
+      "reports/ktx2-compatibility.json",
+      "reports/webgpu-ktx2.json",
+      "reports/lod-visual-comparison.json",
+      "reports/lint-negative-test.json",
+      "reports/pipeline-lint.json",
+      "reports/procedural-determinism.json",
+      "reports/blender-determinism.json",
+      "reports/p0-anime-pipeline.json",
+      "reports/anime-pipeline.json"
+    ],
+    "currentWorktreeChecks": {
+      "vitest": "7 files / 43 tests passed",
+      "assetLint": "8/8 passed, 0 errors / 0 warnings",
+      "assetLintNegative": "assertNonManifoldCaught=true",
+      "build": "tsc --noEmit + vite build passed; all JS gzip 1.48MB; main chunk 609.86kB gzip",
+      "blender": "not found"
+    }
+  }
+}

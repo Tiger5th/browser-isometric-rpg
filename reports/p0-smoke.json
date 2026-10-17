@@ -1,0 +1,3709 @@
+{
+  "schemaVersion": 1,
+  "kind": "p0-smoke",
+  "generatedAt": "2026-10-17T05:33:51Z",
+  "harness": "P0Harness",
+  "browser": "ego-browser Chromium 154 / macOS arm64",
+  "viewport": "1450x826 CSS @ dpr2 (render 2900x1652) unless noted",
+  "note": "9 scenarios x 2 passes. asset-pipeline requires npm run assets:vendor on a fresh checkout; initial 4 attempts failed before decoders were generated.",
+  "runs": [
+    {
+      "pass": 1,
+      "attempt": 1,
+      "name": "hello",
+      "wallMs": 575,
+      "report": {
+        "schemaVersion": 1,
+        "harness": "P0Harness",
+        "scenario": "hello",
+        "status": "passed",
+        "startedAt": "2026-10-17T05:22:57.372Z",
+        "finishedAt": "2026-10-17T05:22:57.373Z",
+        "durationMs": 1,
+        "environment": {
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+          "renderBackend": "webgl2",
+          "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+          "capturedAt": "2026-10-17T05:22:57.373Z",
+          "devicePixelRatio": 2,
+          "hardwareConcurrency": 10
+        },
+        "metrics": [
+          {
+            "name": "cameraOrthographic",
+            "value": 1,
+            "unit": "boolean",
+            "threshold": 1,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "regionCount",
+            "value": 1,
+            "unit": "regions"
+          },
+          {
+            "name": "entityCount",
+            "value": 6,
+            "unit": "entities"
+          },
+          {
+            "name": "meshCount",
+            "value": 74,
+            "unit": "meshes"
+          },
+          {
+            "name": "activeMeshCount",
+            "value": 73,
+            "unit": "meshes"
+          }
+        ]
+      },
+      "reportTextLength": 1106,
+      "statusText": "hello · webgl2 · passed · 1 ms",
+      "error": null,
+      "viewport": {
+        "innerWidth": 1450,
+        "innerHeight": 826,
+        "dpr": 2
+      },
+      "environment": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+        "renderBackend": "webgl2",
+        "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+        "capturedAt": "2026-10-17T05:22:57.415Z",
+        "devicePixelRatio": 2,
+        "hardwareConcurrency": 10
+      }
+    },
+    {
+      "pass": 1,
+      "attempt": 1,
+      "name": "characters-300",
+      "wallMs": 14281,
+      "report": {
+        "schemaVersion": 1,
+        "harness": "P0Harness",
+        "scenario": "characters-300",
+        "status": "failed",
+        "startedAt": "2026-10-17T05:22:57.588Z",
+        "finishedAt": "2026-10-17T05:23:11.657Z",
+        "durationMs": 14069,
+        "environment": {
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+          "renderBackend": "webgl2",
+          "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+          "capturedAt": "2026-10-17T05:23:11.657Z",
+          "devicePixelRatio": 2,
+          "hardwareConcurrency": 10
+        },
+        "metrics": [
+          {
+            "name": "characterCount",
+            "value": 300,
+            "unit": "characters",
+            "threshold": 300,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "skeletonCount",
+            "value": 300,
+            "unit": "skeletons"
+          },
+          {
+            "name": "boneCount",
+            "value": 900,
+            "unit": "bones"
+          },
+          {
+            "name": "spineRotationRangeRad",
+            "value": 0.319,
+            "unit": "rad",
+            "threshold": 0.1,
+            "comparison": "gte",
+            "passed": true
+          },
+          {
+            "name": "fpsAverage",
+            "value": 60,
+            "unit": "fps",
+            "threshold": 60,
+            "comparison": "gte",
+            "passed": true
+          },
+          {
+            "name": "fpsMin",
+            "value": 51.3,
+            "unit": "fps"
+          },
+          {
+            "name": "frameTimeMsAverage",
+            "value": 16.7,
+            "unit": "ms",
+            "threshold": 16.666666666666668,
+            "comparison": "lte",
+            "passed": false
+          },
+          {
+            "name": "drawCallsAverage",
+            "value": 300,
+            "unit": "calls",
+            "threshold": 300,
+            "comparison": "lte",
+            "passed": true
+          },
+          {
+            "name": "drawCallsMax",
+            "value": 300,
+            "unit": "calls"
+          },
+          {
+            "name": "activeMeshesAverage",
+            "value": 300,
+            "unit": "meshes"
+          },
+          {
+            "name": "animationUpdateMsAverage",
+            "value": 0.32,
+            "unit": "ms/frame"
+          },
+          {
+            "name": "renderSubmitMsAverage",
+            "value": 1.94,
+            "unit": "ms/frame"
+          },
+          {
+            "name": "sceneRenderMsAverage",
+            "value": 3.72,
+            "unit": "ms/frame"
+          },
+          {
+            "name": "renderWidth",
+            "value": 2900,
+            "unit": "px"
+          },
+          {
+            "name": "renderHeight",
+            "value": 1652,
+            "unit": "px"
+          },
+          {
+            "name": "renderPixelsMP",
+            "value": 4.79,
+            "unit": "MP"
+          },
+          {
+            "name": "jsHeapUsedMB",
+            "value": 76.5,
+            "unit": "MB",
+            "threshold": 1536,
+            "comparison": "lte",
+            "passed": true
+          },
+          {
+            "name": "jsHeapTotalMB",
+            "value": 121.7,
+            "unit": "MB"
+          }
+        ]
+      },
+      "reportTextLength": 2658,
+      "statusText": "characters-300 · webgl2 · failed · 14069 ms",
+      "error": null,
+      "viewport": {
+        "innerWidth": 1450,
+        "innerHeight": 826,
+        "dpr": 2
+      },
+      "environment": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+        "renderBackend": "webgl2",
+        "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+        "capturedAt": "2026-10-17T05:23:11.696Z",
+        "devicePixelRatio": 2,
+        "hardwareConcurrency": 10
+      }
+    },
+    {
+      "pass": 1,
+      "attempt": 1,
+      "name": "crowd-nav",
+      "wallMs": 6403,
+      "report": {
+        "schemaVersion": 1,
+        "harness": "P0Harness",
+        "scenario": "crowd-nav",
+        "status": "passed",
+        "startedAt": "2026-10-17T05:23:11.889Z",
+        "finishedAt": "2026-10-17T05:23:18.038Z",
+        "durationMs": 6149,
+        "environment": {
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+          "renderBackend": "webgl2",
+          "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+          "capturedAt": "2026-10-17T05:23:18.038Z",
+          "devicePixelRatio": 2,
+          "hardwareConcurrency": 10
+        },
+        "metrics": [
+          {
+            "name": "navmesh.generated",
+            "value": 1,
+            "unit": "boolean",
+            "threshold": 1,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "navmesh.config.cs",
+            "value": 0.5,
+            "unit": "units"
+          },
+          {
+            "name": "navmesh.config.ch",
+            "value": 0.2,
+            "unit": "units"
+          },
+          {
+            "name": "navmesh.config.walkableRadius",
+            "value": 1,
+            "unit": "voxels"
+          },
+          {
+            "name": "crowd.agentCount",
+            "value": 50,
+            "unit": "agents",
+            "threshold": 50,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "crowd.commandedAgents",
+            "value": 50,
+            "unit": "agents",
+            "threshold": 50,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "crowd.sampledFrames",
+            "value": 300,
+            "unit": "frames"
+          },
+          {
+            "name": "crowd.sampleDurationMs",
+            "value": 5000,
+            "unit": "ms"
+          },
+          {
+            "name": "crowd.fps",
+            "value": 60,
+            "unit": "fps"
+          },
+          {
+            "name": "crowd.frameTimeAvgMs",
+            "value": 16.67,
+            "unit": "ms"
+          },
+          {
+            "name": "crowd.frameTimeP95Ms",
+            "value": 17.7,
+            "unit": "ms"
+          },
+          {
+            "name": "crowd.frameTimeMaxMs",
+            "value": 17.8,
+            "unit": "ms"
+          },
+          {
+            "name": "crowd.longFrames",
+            "value": 0,
+            "unit": "frames"
+          },
+          {
+            "name": "crowd.updateAvgMs",
+            "value": 0.388,
+            "unit": "ms"
+          },
+          {
+            "name": "crowd.updateMaxMs",
+            "value": 2.4,
+            "unit": "ms"
+          },
+          {
+            "name": "crowd.minSeparation",
+            "value": 0.8,
+            "unit": "units"
+          },
+          {
+            "name": "crowd.overlapPairs",
+            "value": 0,
+            "unit": "pairs"
+          },
+          {
+            "name": "crowd.maxMovingAgents",
+            "value": 50,
+            "unit": "agents"
+          },
+          {
+            "name": "crowd.agentsReachedTarget",
+            "value": 28,
+            "unit": "agents"
+          },
+          {
+            "name": "navmesh.jsHeapApiAvailable",
+            "value": 1,
+            "unit": "boolean"
+          },
+          {
+            "name": "navmesh.genMs.50",
+            "value": 9.1,
+            "unit": "ms"
+          },
+          {
+            "name": "navmesh.bytes.50",
+            "value": 6336,
+            "unit": "bytes"
+          },
+          {
+            "name": "navmesh.triangles.50",
+            "value": 79,
+            "unit": "triangles"
+          },
+          {
+            "name": "navmesh.obstacles.50",
+            "value": 4,
+            "unit": "obstacles"
+          },
+          {
+            "name": "navmesh.genMs.100",
+            "value": 8.1,
+            "unit": "ms"
+          },
+          {
+            "name": "navmesh.bytes.100",
+            "value": 16104,
+            "unit": "bytes"
+          },
+          {
+            "name": "navmesh.triangles.100",
+            "value": 183,
+            "unit": "triangles"
+          },
+          {
+            "name": "navmesh.obstacles.100",
+            "value": 10,
+            "unit": "obstacles"
+          },
+          {
+            "name": "navmesh.genMs.200",
+            "value": 25.1,
+            "unit": "ms"
+          },
+          {
+            "name": "navmesh.bytes.200",
+            "value": 45068,
+            "unit": "bytes"
+          },
+          {
+            "name": "navmesh.triangles.200",
+            "value": 561,
+            "unit": "triangles"
+          },
+          {
+            "name": "navmesh.obstacles.200",
+            "value": 40,
+            "unit": "obstacles"
+          },
+          {
+            "name": "navmesh.wasmHeapDeltaMB.200",
+            "value": 0,
+            "unit": "MB"
+          },
+          {
+            "name": "navmesh.jsHeapDeltaMB.200",
+            "value": 0,
+            "unit": "MB"
+          },
+          {
+            "name": "navmesh.genMs.300",
+            "value": 48.8,
+            "unit": "ms"
+          },
+          {
+            "name": "navmesh.bytes.300",
+            "value": 89928,
+            "unit": "bytes"
+          },
+          {
+            "name": "navmesh.triangles.300",
+            "value": 1130,
+            "unit": "triangles"
+          },
+          {
+            "name": "navmesh.obstacles.300",
+            "value": 90,
+            "unit": "obstacles"
+          }
+        ]
+      },
+      "reportTextLength": 4334,
+      "statusText": "crowd-nav · webgl2 · passed · 6149 ms",
+      "error": null,
+      "viewport": {
+        "innerWidth": 1450,
+        "innerHeight": 826,
+        "dpr": 2
+      },
+      "environment": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+        "renderBackend": "webgl2",
+        "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+        "capturedAt": "2026-10-17T05:23:18.099Z",
+        "devicePixelRatio": 2,
+        "hardwareConcurrency": 10
+      }
+    },
+    {
+      "pass": 1,
+      "attempt": 1,
+      "name": "crowd-hot-swap",
+      "wallMs": 7443,
+      "report": {
+        "schemaVersion": 1,
+        "harness": "P0Harness",
+        "scenario": "crowd-hot-swap",
+        "status": "passed",
+        "startedAt": "2026-10-17T05:23:18.289Z",
+        "finishedAt": "2026-10-17T05:23:25.471Z",
+        "durationMs": 7182,
+        "environment": {
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+          "renderBackend": "webgl2",
+          "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+          "capturedAt": "2026-10-17T05:23:25.471Z",
+          "devicePixelRatio": 2,
+          "hardwareConcurrency": 10
+        },
+        "metrics": [
+          {
+            "name": "hotSwap.success",
+            "value": 1,
+            "unit": "boolean",
+            "threshold": 1,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "hotSwap.preloadedNextRegion",
+            "value": 1,
+            "unit": "boolean",
+            "threshold": 1,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "hotSwap.agentCount",
+            "value": 50,
+            "unit": "agents",
+            "threshold": 50,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "hotSwap.migratedAgents",
+            "value": 50,
+            "unit": "agents",
+            "threshold": 50,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "hotSwap.activeRegionB",
+            "value": 1,
+            "unit": "boolean",
+            "threshold": 1,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "hotSwap.commandedAgents",
+            "value": 50,
+            "unit": "agents"
+          },
+          {
+            "name": "hotSwap.sampledFrames",
+            "value": 330,
+            "unit": "frames"
+          },
+          {
+            "name": "hotSwap.switchAtMs",
+            "value": 3000,
+            "unit": "ms"
+          },
+          {
+            "name": "hotSwap.switchWorkMs",
+            "value": 1.9,
+            "unit": "ms"
+          },
+          {
+            "name": "hotSwap.switchFrameMs",
+            "value": 16.1,
+            "unit": "ms"
+          },
+          {
+            "name": "hotSwap.spikeRatio",
+            "value": 0.91,
+            "unit": "ratio"
+          },
+          {
+            "name": "hotSwap.maxPositionSnap",
+            "value": 0,
+            "unit": "units"
+          },
+          {
+            "name": "hotSwap.frameTimeBeforeAvgMs",
+            "value": 16.66,
+            "unit": "ms"
+          },
+          {
+            "name": "hotSwap.frameTimeBeforeP95Ms",
+            "value": 17.6,
+            "unit": "ms"
+          },
+          {
+            "name": "hotSwap.frameTimeBeforeMaxMs",
+            "value": 17.7,
+            "unit": "ms"
+          },
+          {
+            "name": "hotSwap.longFramesBefore",
+            "value": 0,
+            "unit": "frames"
+          },
+          {
+            "name": "hotSwap.longFrameRatioBefore",
+            "value": 0,
+            "unit": "ratio"
+          },
+          {
+            "name": "hotSwap.frameTimeAfterAvgMs",
+            "value": 16.67,
+            "unit": "ms"
+          },
+          {
+            "name": "hotSwap.frameTimeAfterP95Ms",
+            "value": 17.6,
+            "unit": "ms"
+          },
+          {
+            "name": "hotSwap.frameTimeAfterMaxMs",
+            "value": 17.7,
+            "unit": "ms"
+          },
+          {
+            "name": "hotSwap.longFramesAfter",
+            "value": 0,
+            "unit": "frames"
+          },
+          {
+            "name": "hotSwap.longFrameRatioAfter",
+            "value": 0,
+            "unit": "ratio"
+          },
+          {
+            "name": "hotSwap.fpsBefore",
+            "value": 60.01,
+            "unit": "fps"
+          },
+          {
+            "name": "hotSwap.fpsAfter",
+            "value": 59.98,
+            "unit": "fps"
+          },
+          {
+            "name": "hotSwap.updateAvgMs",
+            "value": 0.643,
+            "unit": "ms"
+          },
+          {
+            "name": "hotSwap.updateMaxMs",
+            "value": 1.9,
+            "unit": "ms"
+          },
+          {
+            "name": "hotSwap.navmeshGenMs.a",
+            "value": 34.6,
+            "unit": "ms"
+          },
+          {
+            "name": "hotSwap.navmeshGenMs.b",
+            "value": 30.3,
+            "unit": "ms"
+          },
+          {
+            "name": "hotSwap.navmeshBytes.a",
+            "value": 19824,
+            "unit": "bytes"
+          },
+          {
+            "name": "hotSwap.navmeshBytes.b",
+            "value": 20368,
+            "unit": "bytes"
+          },
+          {
+            "name": "hotSwap.navmeshTriangles.a",
+            "value": 246,
+            "unit": "triangles"
+          },
+          {
+            "name": "hotSwap.navmeshTriangles.b",
+            "value": 252,
+            "unit": "triangles"
+          },
+          {
+            "name": "hotSwap.navmeshWasmHeapDeltaMB.a",
+            "value": 0,
+            "unit": "MB"
+          },
+          {
+            "name": "hotSwap.navmeshWasmHeapDeltaMB.b",
+            "value": 0,
+            "unit": "MB"
+          },
+          {
+            "name": "hotSwap.navmeshCs",
+            "value": 0.5,
+            "unit": "units"
+          }
+        ]
+      },
+      "reportTextLength": 4302,
+      "statusText": "crowd-hot-swap · webgl2 · passed · 7182 ms",
+      "error": null,
+      "viewport": {
+        "innerWidth": 1450,
+        "innerHeight": 826,
+        "dpr": 2
+      },
+      "environment": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+        "renderBackend": "webgl2",
+        "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+        "capturedAt": "2026-10-17T05:23:25.543Z",
+        "devicePixelRatio": 2,
+        "hardwareConcurrency": 10
+      }
+    },
+    {
+      "pass": 1,
+      "attempt": 1,
+      "name": "occlusion-outline",
+      "wallMs": 17473,
+      "report": {
+        "schemaVersion": 1,
+        "harness": "P0Harness",
+        "scenario": "occlusion-outline",
+        "status": "passed",
+        "startedAt": "2026-10-17T05:23:25.739Z",
+        "finishedAt": "2026-10-17T05:23:42.972Z",
+        "durationMs": 17233,
+        "environment": {
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+          "renderBackend": "webgl2",
+          "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+          "capturedAt": "2026-10-17T05:23:42.972Z",
+          "devicePixelRatio": 2,
+          "hardwareConcurrency": 10
+        },
+        "metrics": [
+          {
+            "name": "occlusion.characterCount",
+            "value": 30,
+            "unit": "characters",
+            "threshold": 30,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "occlusion.skeletonCount",
+            "value": 30,
+            "unit": "skeletons"
+          },
+          {
+            "name": "occlusion.boneCount",
+            "value": 90,
+            "unit": "bones"
+          },
+          {
+            "name": "occlusion.occluderCount",
+            "value": 3,
+            "unit": "occluders"
+          },
+          {
+            "name": "occlusion.occludedCharacters",
+            "value": 24,
+            "unit": "characters",
+            "threshold": 10,
+            "comparison": "gte",
+            "passed": true
+          },
+          {
+            "name": "occlusion.outlinedCharacters",
+            "value": 24,
+            "unit": "characters",
+            "threshold": 10,
+            "comparison": "gte",
+            "passed": true
+          },
+          {
+            "name": "occlusion.highlightLayerEnabled",
+            "value": 1,
+            "unit": "boolean",
+            "threshold": 1,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "occlusion.outlineAddTransitionsDuringMeasure",
+            "value": 0,
+            "unit": "transitions"
+          },
+          {
+            "name": "occlusion.outlineRemoveTransitionsDuringMeasure",
+            "value": 0,
+            "unit": "transitions"
+          },
+          {
+            "name": "occlusion.spineRotationRangeRad",
+            "value": 0.318,
+            "unit": "rad",
+            "threshold": 0.1,
+            "comparison": "gte",
+            "passed": true
+          },
+          {
+            "name": "occlusion.outlineWarmupMs",
+            "value": 51.7,
+            "unit": "ms"
+          },
+          {
+            "name": "occlusion.rayBackoff",
+            "value": 25,
+            "unit": "units"
+          },
+          {
+            "name": "occlusion.targetPointY",
+            "value": 0.55,
+            "unit": "units"
+          },
+          {
+            "name": "occlusion.wallHeight",
+            "value": 1.55,
+            "unit": "units"
+          },
+          {
+            "name": "occlusion.wallCameraOffset",
+            "value": 1.3,
+            "unit": "units"
+          },
+          {
+            "name": "occlusion.outlineViable",
+            "value": 1,
+            "unit": "boolean",
+            "threshold": 1,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "occlusion.minViableFps",
+            "value": 57,
+            "unit": "fps"
+          },
+          {
+            "name": "renderWidth",
+            "value": 2560,
+            "unit": "px"
+          },
+          {
+            "name": "renderHeight",
+            "value": 1458,
+            "unit": "px"
+          },
+          {
+            "name": "renderPixelsMP",
+            "value": 3.73,
+            "unit": "MP"
+          },
+          {
+            "name": "renderWidthPinned",
+            "value": 2560,
+            "unit": "px"
+          },
+          {
+            "name": "baseline.fps",
+            "value": 60.1,
+            "unit": "fps"
+          },
+          {
+            "name": "baseline.fpsMin",
+            "value": 52.9,
+            "unit": "fps"
+          },
+          {
+            "name": "baseline.frameTimeAvgMs",
+            "value": 16.6,
+            "unit": "ms"
+          },
+          {
+            "name": "baseline.frameTimeP95Ms",
+            "value": 17.7,
+            "unit": "ms"
+          },
+          {
+            "name": "baseline.longFrames",
+            "value": 0,
+            "unit": "frames"
+          },
+          {
+            "name": "baseline.sampledFrames",
+            "value": 241,
+            "unit": "frames"
+          },
+          {
+            "name": "baseline.drawCallsAverage",
+            "value": 36,
+            "unit": "calls"
+          },
+          {
+            "name": "baseline.drawCallsMax",
+            "value": 36,
+            "unit": "calls"
+          },
+          {
+            "name": "baseline.sceneRenderMsAverage",
+            "value": 1.01,
+            "unit": "ms/frame"
+          },
+          {
+            "name": "baseline.detectionMsAverage",
+            "value": 0,
+            "unit": "ms/frame"
+          },
+          {
+            "name": "baseline.detectionMsMax",
+            "value": 0,
+            "unit": "ms"
+          },
+          {
+            "name": "baseline.highlightMsAverage",
+            "value": 0,
+            "unit": "ms/frame"
+          },
+          {
+            "name": "baseline.highlightMsMax",
+            "value": 0,
+            "unit": "ms"
+          },
+          {
+            "name": "detectionOnly.fps",
+            "value": 60,
+            "unit": "fps"
+          },
+          {
+            "name": "detectionOnly.fpsMin",
+            "value": 33.3,
+            "unit": "fps"
+          },
+          {
+            "name": "detectionOnly.frameTimeAvgMs",
+            "value": 16.7,
+            "unit": "ms"
+          },
+          {
+            "name": "detectionOnly.frameTimeP95Ms",
+            "value": 17.9,
+            "unit": "ms"
+          },
+          {
+            "name": "detectionOnly.longFrames",
+            "value": 0,
+            "unit": "frames"
+          },
+          {
+            "name": "detectionOnly.sampledFrames",
+            "value": 241,
+            "unit": "frames"
+          },
+          {
+            "name": "detectionOnly.drawCallsAverage",
+            "value": 36,
+            "unit": "calls"
+          },
+          {
+            "name": "detectionOnly.drawCallsMax",
+            "value": 36,
+            "unit": "calls"
+          },
+          {
+            "name": "detectionOnly.sceneRenderMsAverage",
+            "value": 0.9,
+            "unit": "ms/frame"
+          },
+          {
+            "name": "detectionOnly.detectionMsAverage",
+            "value": 0.021,
+            "unit": "ms/frame"
+          },
+          {
+            "name": "detectionOnly.detectionMsMax",
+            "value": 0.1,
+            "unit": "ms"
+          },
+          {
+            "name": "detectionOnly.highlightMsAverage",
+            "value": 0,
+            "unit": "ms/frame"
+          },
+          {
+            "name": "detectionOnly.highlightMsMax",
+            "value": 0,
+            "unit": "ms"
+          },
+          {
+            "name": "outline.fps",
+            "value": 60,
+            "unit": "fps"
+          },
+          {
+            "name": "outline.fpsMin",
+            "value": 54.6,
+            "unit": "fps"
+          },
+          {
+            "name": "outline.frameTimeAvgMs",
+            "value": 16.7,
+            "unit": "ms"
+          },
+          {
+            "name": "outline.frameTimeP95Ms",
+            "value": 17.9,
+            "unit": "ms"
+          },
+          {
+            "name": "outline.longFrames",
+            "value": 0,
+            "unit": "frames"
+          },
+          {
+            "name": "outline.sampledFrames",
+            "value": 301,
+            "unit": "frames"
+          },
+          {
+            "name": "outline.drawCallsAverage",
+            "value": 76,
+            "unit": "calls"
+          },
+          {
+            "name": "outline.drawCallsMax",
+            "value": 76,
+            "unit": "calls"
+          },
+          {
+            "name": "outline.sceneRenderMsAverage",
+            "value": 1.05,
+            "unit": "ms/frame"
+          },
+          {
+            "name": "outline.detectionMsAverage",
+            "value": 0.015,
+            "unit": "ms/frame"
+          },
+          {
+            "name": "outline.detectionMsMax",
+            "value": 0.1,
+            "unit": "ms"
+          },
+          {
+            "name": "outline.highlightMsAverage",
+            "value": 0.629,
+            "unit": "ms/frame"
+          },
+          {
+            "name": "outline.highlightMsMax",
+            "value": 1.4,
+            "unit": "ms"
+          },
+          {
+            "name": "comparison.frameTimeDeltaMs",
+            "value": 0,
+            "unit": "ms"
+          },
+          {
+            "name": "comparison.highlightMarginalFrameTimeMs",
+            "value": 0,
+            "unit": "ms"
+          },
+          {
+            "name": "comparison.drawCallsDelta",
+            "value": 40,
+            "unit": "calls"
+          },
+          {
+            "name": "comparison.fpsDelta",
+            "value": -0.1,
+            "unit": "fps"
+          }
+        ]
+      },
+      "reportTextLength": 7238,
+      "statusText": "occlusion-outline · webgl2 · passed · 17233 ms",
+      "error": null,
+      "viewport": {
+        "innerWidth": 1450,
+        "innerHeight": 826,
+        "dpr": 2
+      },
+      "environment": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+        "renderBackend": "webgl2",
+        "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+        "capturedAt": "2026-10-17T05:23:43.015Z",
+        "devicePixelRatio": 2,
+        "hardwareConcurrency": 10
+      }
+    },
+    {
+      "pass": 1,
+      "attempt": 1,
+      "name": "region-loading",
+      "wallMs": 3155,
+      "report": {
+        "schemaVersion": 1,
+        "harness": "P0Harness",
+        "scenario": "region-loading",
+        "status": "passed",
+        "startedAt": "2026-10-17T05:23:43.222Z",
+        "finishedAt": "2026-10-17T05:23:46.103Z",
+        "durationMs": 2881,
+        "environment": {
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+          "renderBackend": "webgl2",
+          "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+          "capturedAt": "2026-10-17T05:23:46.102Z",
+          "devicePixelRatio": 2,
+          "hardwareConcurrency": 10
+        },
+        "metrics": [
+          {
+            "name": "regionGlbSizeBytes",
+            "value": 49314044,
+            "unit": "bytes"
+          },
+          {
+            "name": "regionGlbSizeMB",
+            "value": 49.314044,
+            "unit": "MB",
+            "threshold": 50,
+            "comparison": "lte",
+            "passed": true
+          },
+          {
+            "name": "regionGlbSizeMiB",
+            "value": 47.029537200927734,
+            "unit": "MiB"
+          },
+          {
+            "name": "regionExportMs",
+            "value": 331.2999999523163,
+            "unit": "ms"
+          },
+          {
+            "name": "regionAssetCached",
+            "value": 0,
+            "unit": "boolean"
+          },
+          {
+            "name": "regionChunkCount",
+            "value": 10,
+            "unit": "chunks"
+          },
+          {
+            "name": "regionChunkSubdivisions",
+            "value": 296,
+            "unit": "subdivisions"
+          },
+          {
+            "name": "regionSourceMeshCount",
+            "value": 32,
+            "unit": "meshes"
+          },
+          {
+            "name": "regionVertexCount",
+            "value": 882838,
+            "unit": "vertices"
+          },
+          {
+            "name": "regionTriangleCount",
+            "value": 1752864,
+            "unit": "triangles"
+          },
+          {
+            "name": "containerPreloadMs",
+            "value": 46.09999990463257,
+            "unit": "ms"
+          },
+          {
+            "name": "containerAddToSceneMs",
+            "value": 0.5,
+            "unit": "ms"
+          },
+          {
+            "name": "containerRemoveFromSceneMs",
+            "value": 0.9000000953674316,
+            "unit": "ms"
+          },
+          {
+            "name": "containerDisposeMs",
+            "value": 2.799999952316284,
+            "unit": "ms"
+          },
+          {
+            "name": "containerMeshCount",
+            "value": 33,
+            "unit": "meshes"
+          },
+          {
+            "name": "containerMaterialCount",
+            "value": 4,
+            "unit": "materials"
+          },
+          {
+            "name": "containerVertexCount",
+            "value": 882838,
+            "unit": "vertices"
+          },
+          {
+            "name": "maskedWarmupMs",
+            "value": 499,
+            "unit": "ms"
+          },
+          {
+            "name": "sceneMeshesBeforePreload",
+            "value": 73,
+            "unit": "meshes"
+          },
+          {
+            "name": "sceneMeshesAfterPreload",
+            "value": 73,
+            "unit": "meshes"
+          },
+          {
+            "name": "sceneMeshesAfterAdd",
+            "value": 106,
+            "unit": "meshes"
+          },
+          {
+            "name": "sceneMeshesAfterRemove",
+            "value": 73,
+            "unit": "meshes"
+          },
+          {
+            "name": "containerPreloadedOutsideScene",
+            "value": 1,
+            "unit": "boolean"
+          },
+          {
+            "name": "containerAddAttachedToScene",
+            "value": 1,
+            "unit": "boolean"
+          },
+          {
+            "name": "containerRemoveDetachedFromScene",
+            "value": 1,
+            "unit": "boolean"
+          },
+          {
+            "name": "gateMaskInMs",
+            "value": 245.29999995231628,
+            "unit": "ms"
+          },
+          {
+            "name": "gateMaskInBeforeRemoveMs",
+            "value": 248.59999990463257,
+            "unit": "ms"
+          },
+          {
+            "name": "gateMaskOutMs",
+            "value": 282,
+            "unit": "ms"
+          },
+          {
+            "name": "gateMaskOutAfterDisposeMs",
+            "value": 279.60000014305115,
+            "unit": "ms"
+          },
+          {
+            "name": "gateMaskedDuringSwap",
+            "value": 1,
+            "unit": "boolean"
+          },
+          {
+            "name": "revealFrameCount",
+            "value": 60,
+            "unit": "frames"
+          },
+          {
+            "name": "revealMaxFrameMs",
+            "value": 19.40000009536743,
+            "unit": "ms"
+          },
+          {
+            "name": "revealAverageFrameMs",
+            "value": 16.66500000158946,
+            "unit": "ms"
+          },
+          {
+            "name": "jsHeapBaselineMB",
+            "value": 84.528847,
+            "unit": "MB"
+          },
+          {
+            "name": "jsHeapPeakMB",
+            "value": 370.993948,
+            "unit": "MB"
+          },
+          {
+            "name": "jsHeapPeakDeltaMB",
+            "value": 286.465101,
+            "unit": "MB"
+          },
+          {
+            "name": "jsHeapAfterCycleMB",
+            "value": 370.859584,
+            "unit": "MB"
+          },
+          {
+            "name": "memorySamplingEnabled",
+            "value": 1,
+            "unit": "boolean"
+          },
+          {
+            "name": "memorySampleCount",
+            "value": 49,
+            "unit": "samples"
+          }
+        ]
+      },
+      "reportTextLength": 4455,
+      "statusText": "region-loading · webgl2 · passed · 2881 ms",
+      "error": null,
+      "viewport": {
+        "innerWidth": 1450,
+        "innerHeight": 826,
+        "dpr": 2
+      },
+      "environment": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+        "renderBackend": "webgl2",
+        "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+        "capturedAt": "2026-10-17T05:23:46.171Z",
+        "devicePixelRatio": 2,
+        "hardwareConcurrency": 10
+      }
+    },
+    {
+      "pass": 1,
+      "attempt": 1,
+      "name": "region-gate",
+      "wallMs": 6208,
+      "report": {
+        "schemaVersion": 1,
+        "harness": "P0Harness",
+        "scenario": "region-gate",
+        "status": "passed",
+        "startedAt": "2026-10-17T05:23:46.371Z",
+        "finishedAt": "2026-10-17T05:23:52.352Z",
+        "durationMs": 5981,
+        "environment": {
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+          "renderBackend": "webgl2",
+          "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+          "capturedAt": "2026-10-17T05:23:52.352Z",
+          "devicePixelRatio": 2,
+          "hardwareConcurrency": 10
+        },
+        "metrics": [
+          {
+            "name": "gateRegionCount",
+            "value": 2,
+            "unit": "regions"
+          },
+          {
+            "name": "gatePreloadBothMs",
+            "value": 58.39999985694885,
+            "unit": "ms"
+          },
+          {
+            "name": "gatePreloadedOutsideScene",
+            "value": 1,
+            "unit": "boolean"
+          },
+          {
+            "name": "gateAddRegionAMs",
+            "value": 0,
+            "unit": "ms"
+          },
+          {
+            "name": "gateMaskedWarmupAMs",
+            "value": 568.2000000476837,
+            "unit": "ms"
+          },
+          {
+            "name": "gateRevealAMs",
+            "value": 347.40000009536743,
+            "unit": "ms"
+          },
+          {
+            "name": "gateSwapMs",
+            "value": 1.5,
+            "unit": "ms"
+          },
+          {
+            "name": "gateMaskedWarmupBMs",
+            "value": 15.599999904632568,
+            "unit": "ms"
+          },
+          {
+            "name": "gateRevealBMs",
+            "value": 349.5,
+            "unit": "ms"
+          },
+          {
+            "name": "gateRemoveAndDisposeMs",
+            "value": 3.799999952316284,
+            "unit": "ms"
+          },
+          {
+            "name": "gateMaskInTotalMs",
+            "value": 848.5,
+            "unit": "ms"
+          },
+          {
+            "name": "gateMaskOutTotalMs",
+            "value": 1040.9000000953674,
+            "unit": "ms"
+          },
+          {
+            "name": "gateMaskedDuringSwap",
+            "value": 1,
+            "unit": "boolean"
+          },
+          {
+            "name": "gateVisibleHoldMs",
+            "value": 1500,
+            "unit": "ms"
+          },
+          {
+            "name": "gateSceneMeshesBaseline",
+            "value": 73,
+            "unit": "meshes"
+          },
+          {
+            "name": "gateSceneMeshesAfterSwap",
+            "value": 106,
+            "unit": "meshes"
+          },
+          {
+            "name": "gateSceneMeshesAfterExit",
+            "value": 73,
+            "unit": "meshes"
+          },
+          {
+            "name": "gateExitedCleanly",
+            "value": 1,
+            "unit": "boolean"
+          },
+          {
+            "name": "gateFrameCountA",
+            "value": 111,
+            "unit": "frames"
+          },
+          {
+            "name": "gateMaxFrameMsA",
+            "value": 19.40000009536743,
+            "unit": "ms"
+          },
+          {
+            "name": "gateAverageFrameMsA",
+            "value": 16.659459459889042,
+            "unit": "ms"
+          },
+          {
+            "name": "gateFrameCountB",
+            "value": 112,
+            "unit": "frames"
+          },
+          {
+            "name": "gateMaxFrameMsB",
+            "value": 18.59999990463257,
+            "unit": "ms"
+          },
+          {
+            "name": "gateAverageFrameMsB",
+            "value": 16.659821429422923,
+            "unit": "ms"
+          },
+          {
+            "name": "gateTotalTransitionMs",
+            "value": 63.69999980926514,
+            "unit": "ms"
+          }
+        ]
+      },
+      "reportTextLength": 3005,
+      "statusText": "region-gate · webgl2 · passed · 5981 ms",
+      "error": null,
+      "viewport": {
+        "innerWidth": 1450,
+        "innerHeight": 826,
+        "dpr": 2
+      },
+      "environment": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+        "renderBackend": "webgl2",
+        "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+        "capturedAt": "2026-10-17T05:23:52.378Z",
+        "devicePixelRatio": 2,
+        "hardwareConcurrency": 10
+      }
+    },
+    {
+      "pass": 1,
+      "attempt": 1,
+      "name": "anime-pipeline",
+      "wallMs": 893,
+      "report": {
+        "schemaVersion": 1,
+        "harness": "P0Harness",
+        "scenario": "anime-pipeline",
+        "status": "passed",
+        "startedAt": "2026-10-17T05:23:52.573Z",
+        "finishedAt": "2026-10-17T05:23:53.220Z",
+        "durationMs": 647,
+        "environment": {
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+          "renderBackend": "webgl2",
+          "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+          "capturedAt": "2026-10-17T05:23:53.220Z",
+          "devicePixelRatio": 2,
+          "hardwareConcurrency": 10
+        },
+        "metrics": [
+          {
+            "name": "characterLoaded",
+            "value": 1,
+            "unit": "boolean",
+            "threshold": 1,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "vroidAssetLoaded",
+            "value": 0,
+            "unit": "boolean"
+          },
+          {
+            "name": "mixamoAnimationLoaded",
+            "value": 0,
+            "unit": "boolean"
+          },
+          {
+            "name": "triangleCount",
+            "value": 11236,
+            "unit": "triangles",
+            "threshold": 15000,
+            "comparison": "lte",
+            "passed": true
+          },
+          {
+            "name": "boneCount",
+            "value": 22,
+            "unit": "bones",
+            "threshold": 20,
+            "comparison": "gte",
+            "passed": true
+          },
+          {
+            "name": "morphTargetCount",
+            "value": 1,
+            "unit": "targets",
+            "threshold": 1,
+            "comparison": "gte",
+            "passed": true
+          },
+          {
+            "name": "animationCount",
+            "value": 2,
+            "unit": "animations",
+            "threshold": 1,
+            "comparison": "gte",
+            "passed": true
+          },
+          {
+            "name": "animationPlaying",
+            "value": 1,
+            "unit": "boolean",
+            "threshold": 1,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "boneMotionRangeRad",
+            "value": 0.534,
+            "unit": "rad",
+            "threshold": 0.2,
+            "comparison": "gte",
+            "passed": true
+          },
+          {
+            "name": "toonMaterialActive",
+            "value": 1,
+            "unit": "boolean",
+            "threshold": 1,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "outlineEnabled",
+            "value": 1,
+            "unit": "boolean",
+            "threshold": 1,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "imageProcessingEnabled",
+            "value": 1,
+            "unit": "boolean",
+            "threshold": 1,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "textureCount",
+            "value": 1,
+            "unit": "textures",
+            "threshold": 1,
+            "comparison": "gte",
+            "passed": true
+          },
+          {
+            "name": "materialCount",
+            "value": 1,
+            "unit": "materials"
+          },
+          {
+            "name": "assetBytes",
+            "value": 529816,
+            "unit": "bytes"
+          },
+          {
+            "name": "fps",
+            "value": 62.1,
+            "unit": "fps"
+          },
+          {
+            "name": "sampledFrames",
+            "value": 28,
+            "unit": "frames"
+          }
+        ]
+      },
+      "reportTextLength": 2897,
+      "statusText": "anime-pipeline · webgl2 · passed · 647 ms",
+      "error": null,
+      "viewport": {
+        "innerWidth": 1450,
+        "innerHeight": 826,
+        "dpr": 2
+      },
+      "environment": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+        "renderBackend": "webgl2",
+        "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+        "capturedAt": "2026-10-17T05:23:53.271Z",
+        "devicePixelRatio": 2,
+        "hardwareConcurrency": 10
+      }
+    },
+    {
+      "pass": 1,
+      "name": "asset-pipeline",
+      "attempt": 2,
+      "failed": true,
+      "error": "Error: page.waitForFunction timed out after 90000ms on page p1; last URL was \"http://127.0.0.1:5173/?scenario=asset-pipeline\"; last title was \"P0 Harness · Greybox Region\".",
+      "wallMs": 90192
+    },
+    {
+      "pass": 2,
+      "attempt": 1,
+      "name": "hello",
+      "wallMs": 295,
+      "report": {
+        "schemaVersion": 1,
+        "harness": "P0Harness",
+        "scenario": "hello",
+        "status": "passed",
+        "startedAt": "2026-10-17T05:26:53.872Z",
+        "finishedAt": "2026-10-17T05:26:53.873Z",
+        "durationMs": 1,
+        "environment": {
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+          "renderBackend": "webgl2",
+          "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+          "capturedAt": "2026-10-17T05:26:53.873Z",
+          "devicePixelRatio": 2,
+          "hardwareConcurrency": 10
+        },
+        "metrics": [
+          {
+            "name": "cameraOrthographic",
+            "value": 1,
+            "unit": "boolean",
+            "threshold": 1,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "regionCount",
+            "value": 1,
+            "unit": "regions"
+          },
+          {
+            "name": "entityCount",
+            "value": 6,
+            "unit": "entities"
+          },
+          {
+            "name": "meshCount",
+            "value": 74,
+            "unit": "meshes"
+          },
+          {
+            "name": "activeMeshCount",
+            "value": 73,
+            "unit": "meshes"
+          }
+        ]
+      },
+      "reportTextLength": 1106,
+      "statusText": "hello · webgl2 · passed · 1 ms",
+      "error": null,
+      "viewport": {
+        "innerWidth": 1438,
+        "innerHeight": 814,
+        "dpr": 2
+      },
+      "environment": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+        "renderBackend": "webgl2",
+        "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+        "capturedAt": "2026-10-17T05:26:53.957Z",
+        "devicePixelRatio": 2,
+        "hardwareConcurrency": 10
+      }
+    },
+    {
+      "pass": 2,
+      "attempt": 1,
+      "name": "characters-300",
+      "wallMs": 13291,
+      "report": {
+        "schemaVersion": 1,
+        "harness": "P0Harness",
+        "scenario": "characters-300",
+        "status": "passed",
+        "startedAt": "2026-10-17T05:26:54.156Z",
+        "finishedAt": "2026-10-17T05:27:07.242Z",
+        "durationMs": 13086,
+        "environment": {
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+          "renderBackend": "webgl2",
+          "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+          "capturedAt": "2026-10-17T05:27:07.242Z",
+          "devicePixelRatio": 2,
+          "hardwareConcurrency": 10
+        },
+        "metrics": [
+          {
+            "name": "characterCount",
+            "value": 300,
+            "unit": "characters",
+            "threshold": 300,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "skeletonCount",
+            "value": 300,
+            "unit": "skeletons"
+          },
+          {
+            "name": "boneCount",
+            "value": 900,
+            "unit": "bones"
+          },
+          {
+            "name": "spineRotationRangeRad",
+            "value": 0.319,
+            "unit": "rad",
+            "threshold": 0.1,
+            "comparison": "gte",
+            "passed": true
+          },
+          {
+            "name": "fpsAverage",
+            "value": 60.1,
+            "unit": "fps",
+            "threshold": 60,
+            "comparison": "gte",
+            "passed": true
+          },
+          {
+            "name": "fpsMin",
+            "value": 43.3,
+            "unit": "fps"
+          },
+          {
+            "name": "frameTimeMsAverage",
+            "value": 16.6,
+            "unit": "ms",
+            "threshold": 16.666666666666668,
+            "comparison": "lte",
+            "passed": true
+          },
+          {
+            "name": "drawCallsAverage",
+            "value": 300,
+            "unit": "calls",
+            "threshold": 300,
+            "comparison": "lte",
+            "passed": true
+          },
+          {
+            "name": "drawCallsMax",
+            "value": 300,
+            "unit": "calls"
+          },
+          {
+            "name": "activeMeshesAverage",
+            "value": 300,
+            "unit": "meshes"
+          },
+          {
+            "name": "animationUpdateMsAverage",
+            "value": 0.19,
+            "unit": "ms/frame"
+          },
+          {
+            "name": "renderSubmitMsAverage",
+            "value": 0.7,
+            "unit": "ms/frame"
+          },
+          {
+            "name": "sceneRenderMsAverage",
+            "value": 1.58,
+            "unit": "ms/frame"
+          },
+          {
+            "name": "renderWidth",
+            "value": 2876,
+            "unit": "px"
+          },
+          {
+            "name": "renderHeight",
+            "value": 1628,
+            "unit": "px"
+          },
+          {
+            "name": "renderPixelsMP",
+            "value": 4.68,
+            "unit": "MP"
+          },
+          {
+            "name": "jsHeapUsedMB",
+            "value": 99.3,
+            "unit": "MB",
+            "threshold": 1536,
+            "comparison": "lte",
+            "passed": true
+          },
+          {
+            "name": "jsHeapTotalMB",
+            "value": 103.9,
+            "unit": "MB"
+          }
+        ]
+      },
+      "reportTextLength": 2658,
+      "statusText": "characters-300 · webgl2 · passed · 13086 ms",
+      "error": null,
+      "viewport": {
+        "innerWidth": 1438,
+        "innerHeight": 814,
+        "dpr": 2
+      },
+      "environment": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+        "renderBackend": "webgl2",
+        "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+        "capturedAt": "2026-10-17T05:27:07.248Z",
+        "devicePixelRatio": 2,
+        "hardwareConcurrency": 10
+      }
+    },
+    {
+      "pass": 2,
+      "attempt": 1,
+      "name": "crowd-nav",
+      "wallMs": 5397,
+      "report": {
+        "schemaVersion": 1,
+        "harness": "P0Harness",
+        "scenario": "crowd-nav",
+        "status": "passed",
+        "startedAt": "2026-10-17T05:27:07.440Z",
+        "finishedAt": "2026-10-17T05:27:12.606Z",
+        "durationMs": 5166,
+        "environment": {
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+          "renderBackend": "webgl2",
+          "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+          "capturedAt": "2026-10-17T05:27:12.606Z",
+          "devicePixelRatio": 2,
+          "hardwareConcurrency": 10
+        },
+        "metrics": [
+          {
+            "name": "navmesh.generated",
+            "value": 1,
+            "unit": "boolean",
+            "threshold": 1,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "navmesh.config.cs",
+            "value": 0.5,
+            "unit": "units"
+          },
+          {
+            "name": "navmesh.config.ch",
+            "value": 0.2,
+            "unit": "units"
+          },
+          {
+            "name": "navmesh.config.walkableRadius",
+            "value": 1,
+            "unit": "voxels"
+          },
+          {
+            "name": "crowd.agentCount",
+            "value": 50,
+            "unit": "agents",
+            "threshold": 50,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "crowd.commandedAgents",
+            "value": 50,
+            "unit": "agents",
+            "threshold": 50,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "crowd.sampledFrames",
+            "value": 300,
+            "unit": "frames"
+          },
+          {
+            "name": "crowd.sampleDurationMs",
+            "value": 5000,
+            "unit": "ms"
+          },
+          {
+            "name": "crowd.fps",
+            "value": 60,
+            "unit": "fps"
+          },
+          {
+            "name": "crowd.frameTimeAvgMs",
+            "value": 16.67,
+            "unit": "ms"
+          },
+          {
+            "name": "crowd.frameTimeP95Ms",
+            "value": 17.6,
+            "unit": "ms"
+          },
+          {
+            "name": "crowd.frameTimeMaxMs",
+            "value": 17.8,
+            "unit": "ms"
+          },
+          {
+            "name": "crowd.longFrames",
+            "value": 0,
+            "unit": "frames"
+          },
+          {
+            "name": "crowd.updateAvgMs",
+            "value": 0.223,
+            "unit": "ms"
+          },
+          {
+            "name": "crowd.updateMaxMs",
+            "value": 1,
+            "unit": "ms"
+          },
+          {
+            "name": "crowd.minSeparation",
+            "value": 0.78,
+            "unit": "units"
+          },
+          {
+            "name": "crowd.overlapPairs",
+            "value": 0,
+            "unit": "pairs"
+          },
+          {
+            "name": "crowd.maxMovingAgents",
+            "value": 50,
+            "unit": "agents"
+          },
+          {
+            "name": "crowd.agentsReachedTarget",
+            "value": 29,
+            "unit": "agents"
+          },
+          {
+            "name": "navmesh.jsHeapApiAvailable",
+            "value": 1,
+            "unit": "boolean"
+          },
+          {
+            "name": "navmesh.genMs.50",
+            "value": 7.3,
+            "unit": "ms"
+          },
+          {
+            "name": "navmesh.bytes.50",
+            "value": 6336,
+            "unit": "bytes"
+          },
+          {
+            "name": "navmesh.triangles.50",
+            "value": 79,
+            "unit": "triangles"
+          },
+          {
+            "name": "navmesh.obstacles.50",
+            "value": 4,
+            "unit": "obstacles"
+          },
+          {
+            "name": "navmesh.genMs.100",
+            "value": 6.8,
+            "unit": "ms"
+          },
+          {
+            "name": "navmesh.bytes.100",
+            "value": 16104,
+            "unit": "bytes"
+          },
+          {
+            "name": "navmesh.triangles.100",
+            "value": 183,
+            "unit": "triangles"
+          },
+          {
+            "name": "navmesh.obstacles.100",
+            "value": 10,
+            "unit": "obstacles"
+          },
+          {
+            "name": "navmesh.genMs.200",
+            "value": 22.9,
+            "unit": "ms"
+          },
+          {
+            "name": "navmesh.bytes.200",
+            "value": 45068,
+            "unit": "bytes"
+          },
+          {
+            "name": "navmesh.triangles.200",
+            "value": 561,
+            "unit": "triangles"
+          },
+          {
+            "name": "navmesh.obstacles.200",
+            "value": 40,
+            "unit": "obstacles"
+          },
+          {
+            "name": "navmesh.wasmHeapDeltaMB.200",
+            "value": 0,
+            "unit": "MB"
+          },
+          {
+            "name": "navmesh.jsHeapDeltaMB.200",
+            "value": 0,
+            "unit": "MB"
+          },
+          {
+            "name": "navmesh.genMs.300",
+            "value": 47.2,
+            "unit": "ms"
+          },
+          {
+            "name": "navmesh.bytes.300",
+            "value": 89928,
+            "unit": "bytes"
+          },
+          {
+            "name": "navmesh.triangles.300",
+            "value": 1130,
+            "unit": "triangles"
+          },
+          {
+            "name": "navmesh.obstacles.300",
+            "value": 90,
+            "unit": "obstacles"
+          }
+        ]
+      },
+      "reportTextLength": 4333,
+      "statusText": "crowd-nav · webgl2 · passed · 5166 ms",
+      "error": null,
+      "viewport": {
+        "innerWidth": 1438,
+        "innerHeight": 814,
+        "dpr": 2
+      },
+      "environment": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+        "renderBackend": "webgl2",
+        "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+        "capturedAt": "2026-10-17T05:27:12.645Z",
+        "devicePixelRatio": 2,
+        "hardwareConcurrency": 10
+      }
+    },
+    {
+      "pass": 2,
+      "attempt": 1,
+      "name": "crowd-hot-swap",
+      "wallMs": 6385,
+      "report": {
+        "schemaVersion": 1,
+        "harness": "P0Harness",
+        "scenario": "crowd-hot-swap",
+        "status": "passed",
+        "startedAt": "2026-10-17T05:27:12.840Z",
+        "finishedAt": "2026-10-17T05:27:19.025Z",
+        "durationMs": 6185,
+        "environment": {
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+          "renderBackend": "webgl2",
+          "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+          "capturedAt": "2026-10-17T05:27:19.025Z",
+          "devicePixelRatio": 2,
+          "hardwareConcurrency": 10
+        },
+        "metrics": [
+          {
+            "name": "hotSwap.success",
+            "value": 1,
+            "unit": "boolean",
+            "threshold": 1,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "hotSwap.preloadedNextRegion",
+            "value": 1,
+            "unit": "boolean",
+            "threshold": 1,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "hotSwap.agentCount",
+            "value": 50,
+            "unit": "agents",
+            "threshold": 50,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "hotSwap.migratedAgents",
+            "value": 50,
+            "unit": "agents",
+            "threshold": 50,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "hotSwap.activeRegionB",
+            "value": 1,
+            "unit": "boolean",
+            "threshold": 1,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "hotSwap.commandedAgents",
+            "value": 50,
+            "unit": "agents"
+          },
+          {
+            "name": "hotSwap.sampledFrames",
+            "value": 330,
+            "unit": "frames"
+          },
+          {
+            "name": "hotSwap.switchAtMs",
+            "value": 3000,
+            "unit": "ms"
+          },
+          {
+            "name": "hotSwap.switchWorkMs",
+            "value": 1.1,
+            "unit": "ms"
+          },
+          {
+            "name": "hotSwap.switchFrameMs",
+            "value": 15.7,
+            "unit": "ms"
+          },
+          {
+            "name": "hotSwap.spikeRatio",
+            "value": 0.89,
+            "unit": "ratio"
+          },
+          {
+            "name": "hotSwap.maxPositionSnap",
+            "value": 0,
+            "unit": "units"
+          },
+          {
+            "name": "hotSwap.frameTimeBeforeAvgMs",
+            "value": 16.67,
+            "unit": "ms"
+          },
+          {
+            "name": "hotSwap.frameTimeBeforeP95Ms",
+            "value": 17.6,
+            "unit": "ms"
+          },
+          {
+            "name": "hotSwap.frameTimeBeforeMaxMs",
+            "value": 17.7,
+            "unit": "ms"
+          },
+          {
+            "name": "hotSwap.longFramesBefore",
+            "value": 0,
+            "unit": "frames"
+          },
+          {
+            "name": "hotSwap.longFrameRatioBefore",
+            "value": 0,
+            "unit": "ratio"
+          },
+          {
+            "name": "hotSwap.frameTimeAfterAvgMs",
+            "value": 16.67,
+            "unit": "ms"
+          },
+          {
+            "name": "hotSwap.frameTimeAfterP95Ms",
+            "value": 17.6,
+            "unit": "ms"
+          },
+          {
+            "name": "hotSwap.frameTimeAfterMaxMs",
+            "value": 17.7,
+            "unit": "ms"
+          },
+          {
+            "name": "hotSwap.longFramesAfter",
+            "value": 0,
+            "unit": "frames"
+          },
+          {
+            "name": "hotSwap.longFrameRatioAfter",
+            "value": 0,
+            "unit": "ratio"
+          },
+          {
+            "name": "hotSwap.fpsBefore",
+            "value": 60,
+            "unit": "fps"
+          },
+          {
+            "name": "hotSwap.fpsAfter",
+            "value": 59.98,
+            "unit": "fps"
+          },
+          {
+            "name": "hotSwap.updateAvgMs",
+            "value": 0.424,
+            "unit": "ms"
+          },
+          {
+            "name": "hotSwap.updateMaxMs",
+            "value": 1.6,
+            "unit": "ms"
+          },
+          {
+            "name": "hotSwap.navmeshGenMs.a",
+            "value": 7.8,
+            "unit": "ms"
+          },
+          {
+            "name": "hotSwap.navmeshGenMs.b",
+            "value": 6.8,
+            "unit": "ms"
+          },
+          {
+            "name": "hotSwap.navmeshBytes.a",
+            "value": 19824,
+            "unit": "bytes"
+          },
+          {
+            "name": "hotSwap.navmeshBytes.b",
+            "value": 20368,
+            "unit": "bytes"
+          },
+          {
+            "name": "hotSwap.navmeshTriangles.a",
+            "value": 246,
+            "unit": "triangles"
+          },
+          {
+            "name": "hotSwap.navmeshTriangles.b",
+            "value": 252,
+            "unit": "triangles"
+          },
+          {
+            "name": "hotSwap.navmeshWasmHeapDeltaMB.a",
+            "value": 0,
+            "unit": "MB"
+          },
+          {
+            "name": "hotSwap.navmeshWasmHeapDeltaMB.b",
+            "value": 0,
+            "unit": "MB"
+          },
+          {
+            "name": "hotSwap.navmeshCs",
+            "value": 0.5,
+            "unit": "units"
+          }
+        ]
+      },
+      "reportTextLength": 4297,
+      "statusText": "crowd-hot-swap · webgl2 · passed · 6185 ms",
+      "error": null,
+      "viewport": {
+        "innerWidth": 1438,
+        "innerHeight": 814,
+        "dpr": 2
+      },
+      "environment": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+        "renderBackend": "webgl2",
+        "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+        "capturedAt": "2026-10-17T05:27:19.029Z",
+        "devicePixelRatio": 2,
+        "hardwareConcurrency": 10
+      }
+    },
+    {
+      "pass": 2,
+      "attempt": 1,
+      "name": "occlusion-outline",
+      "wallMs": 17473,
+      "report": {
+        "schemaVersion": 1,
+        "harness": "P0Harness",
+        "scenario": "occlusion-outline",
+        "status": "passed",
+        "startedAt": "2026-10-17T05:27:19.240Z",
+        "finishedAt": "2026-10-17T05:27:36.437Z",
+        "durationMs": 17197,
+        "environment": {
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+          "renderBackend": "webgl2",
+          "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+          "capturedAt": "2026-10-17T05:27:36.437Z",
+          "devicePixelRatio": 2,
+          "hardwareConcurrency": 10
+        },
+        "metrics": [
+          {
+            "name": "occlusion.characterCount",
+            "value": 30,
+            "unit": "characters",
+            "threshold": 30,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "occlusion.skeletonCount",
+            "value": 30,
+            "unit": "skeletons"
+          },
+          {
+            "name": "occlusion.boneCount",
+            "value": 90,
+            "unit": "bones"
+          },
+          {
+            "name": "occlusion.occluderCount",
+            "value": 3,
+            "unit": "occluders"
+          },
+          {
+            "name": "occlusion.occludedCharacters",
+            "value": 24,
+            "unit": "characters",
+            "threshold": 10,
+            "comparison": "gte",
+            "passed": true
+          },
+          {
+            "name": "occlusion.outlinedCharacters",
+            "value": 24,
+            "unit": "characters",
+            "threshold": 10,
+            "comparison": "gte",
+            "passed": true
+          },
+          {
+            "name": "occlusion.highlightLayerEnabled",
+            "value": 1,
+            "unit": "boolean",
+            "threshold": 1,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "occlusion.outlineAddTransitionsDuringMeasure",
+            "value": 0,
+            "unit": "transitions"
+          },
+          {
+            "name": "occlusion.outlineRemoveTransitionsDuringMeasure",
+            "value": 0,
+            "unit": "transitions"
+          },
+          {
+            "name": "occlusion.spineRotationRangeRad",
+            "value": 0.319,
+            "unit": "rad",
+            "threshold": 0.1,
+            "comparison": "gte",
+            "passed": true
+          },
+          {
+            "name": "occlusion.outlineWarmupMs",
+            "value": 35.2,
+            "unit": "ms"
+          },
+          {
+            "name": "occlusion.rayBackoff",
+            "value": 25,
+            "unit": "units"
+          },
+          {
+            "name": "occlusion.targetPointY",
+            "value": 0.55,
+            "unit": "units"
+          },
+          {
+            "name": "occlusion.wallHeight",
+            "value": 1.55,
+            "unit": "units"
+          },
+          {
+            "name": "occlusion.wallCameraOffset",
+            "value": 1.3,
+            "unit": "units"
+          },
+          {
+            "name": "occlusion.outlineViable",
+            "value": 1,
+            "unit": "boolean",
+            "threshold": 1,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "occlusion.minViableFps",
+            "value": 57,
+            "unit": "fps"
+          },
+          {
+            "name": "renderWidth",
+            "value": 2560,
+            "unit": "px"
+          },
+          {
+            "name": "renderHeight",
+            "value": 1449,
+            "unit": "px"
+          },
+          {
+            "name": "renderPixelsMP",
+            "value": 3.71,
+            "unit": "MP"
+          },
+          {
+            "name": "renderWidthPinned",
+            "value": 2560,
+            "unit": "px"
+          },
+          {
+            "name": "baseline.fps",
+            "value": 60.2,
+            "unit": "fps"
+          },
+          {
+            "name": "baseline.fpsMin",
+            "value": 55.2,
+            "unit": "fps"
+          },
+          {
+            "name": "baseline.frameTimeAvgMs",
+            "value": 16.6,
+            "unit": "ms"
+          },
+          {
+            "name": "baseline.frameTimeP95Ms",
+            "value": 17.7,
+            "unit": "ms"
+          },
+          {
+            "name": "baseline.longFrames",
+            "value": 0,
+            "unit": "frames"
+          },
+          {
+            "name": "baseline.sampledFrames",
+            "value": 241,
+            "unit": "frames"
+          },
+          {
+            "name": "baseline.drawCallsAverage",
+            "value": 36,
+            "unit": "calls"
+          },
+          {
+            "name": "baseline.drawCallsMax",
+            "value": 36,
+            "unit": "calls"
+          },
+          {
+            "name": "baseline.sceneRenderMsAverage",
+            "value": 0.75,
+            "unit": "ms/frame"
+          },
+          {
+            "name": "baseline.detectionMsAverage",
+            "value": 0,
+            "unit": "ms/frame"
+          },
+          {
+            "name": "baseline.detectionMsMax",
+            "value": 0,
+            "unit": "ms"
+          },
+          {
+            "name": "baseline.highlightMsAverage",
+            "value": 0,
+            "unit": "ms/frame"
+          },
+          {
+            "name": "baseline.highlightMsMax",
+            "value": 0,
+            "unit": "ms"
+          },
+          {
+            "name": "detectionOnly.fps",
+            "value": 60,
+            "unit": "fps"
+          },
+          {
+            "name": "detectionOnly.fpsMin",
+            "value": 48.3,
+            "unit": "fps"
+          },
+          {
+            "name": "detectionOnly.frameTimeAvgMs",
+            "value": 16.7,
+            "unit": "ms"
+          },
+          {
+            "name": "detectionOnly.frameTimeP95Ms",
+            "value": 17.6,
+            "unit": "ms"
+          },
+          {
+            "name": "detectionOnly.longFrames",
+            "value": 0,
+            "unit": "frames"
+          },
+          {
+            "name": "detectionOnly.sampledFrames",
+            "value": 241,
+            "unit": "frames"
+          },
+          {
+            "name": "detectionOnly.drawCallsAverage",
+            "value": 36,
+            "unit": "calls"
+          },
+          {
+            "name": "detectionOnly.drawCallsMax",
+            "value": 36,
+            "unit": "calls"
+          },
+          {
+            "name": "detectionOnly.sceneRenderMsAverage",
+            "value": 0.58,
+            "unit": "ms/frame"
+          },
+          {
+            "name": "detectionOnly.detectionMsAverage",
+            "value": 0.019,
+            "unit": "ms/frame"
+          },
+          {
+            "name": "detectionOnly.detectionMsMax",
+            "value": 0.2,
+            "unit": "ms"
+          },
+          {
+            "name": "detectionOnly.highlightMsAverage",
+            "value": 0,
+            "unit": "ms/frame"
+          },
+          {
+            "name": "detectionOnly.highlightMsMax",
+            "value": 0,
+            "unit": "ms"
+          },
+          {
+            "name": "outline.fps",
+            "value": 60,
+            "unit": "fps"
+          },
+          {
+            "name": "outline.fpsMin",
+            "value": 54.6,
+            "unit": "fps"
+          },
+          {
+            "name": "outline.frameTimeAvgMs",
+            "value": 16.7,
+            "unit": "ms"
+          },
+          {
+            "name": "outline.frameTimeP95Ms",
+            "value": 17.9,
+            "unit": "ms"
+          },
+          {
+            "name": "outline.longFrames",
+            "value": 0,
+            "unit": "frames"
+          },
+          {
+            "name": "outline.sampledFrames",
+            "value": 301,
+            "unit": "frames"
+          },
+          {
+            "name": "outline.drawCallsAverage",
+            "value": 76,
+            "unit": "calls"
+          },
+          {
+            "name": "outline.drawCallsMax",
+            "value": 76,
+            "unit": "calls"
+          },
+          {
+            "name": "outline.sceneRenderMsAverage",
+            "value": 0.95,
+            "unit": "ms/frame"
+          },
+          {
+            "name": "outline.detectionMsAverage",
+            "value": 0.013,
+            "unit": "ms/frame"
+          },
+          {
+            "name": "outline.detectionMsMax",
+            "value": 0.1,
+            "unit": "ms"
+          },
+          {
+            "name": "outline.highlightMsAverage",
+            "value": 0.544,
+            "unit": "ms/frame"
+          },
+          {
+            "name": "outline.highlightMsMax",
+            "value": 1.1,
+            "unit": "ms"
+          },
+          {
+            "name": "comparison.frameTimeDeltaMs",
+            "value": 0,
+            "unit": "ms"
+          },
+          {
+            "name": "comparison.highlightMarginalFrameTimeMs",
+            "value": 0,
+            "unit": "ms"
+          },
+          {
+            "name": "comparison.drawCallsDelta",
+            "value": 40,
+            "unit": "calls"
+          },
+          {
+            "name": "comparison.fpsDelta",
+            "value": -0.1,
+            "unit": "fps"
+          }
+        ]
+      },
+      "reportTextLength": 7239,
+      "statusText": "occlusion-outline · webgl2 · passed · 17197 ms",
+      "error": null,
+      "viewport": {
+        "innerWidth": 1438,
+        "innerHeight": 814,
+        "dpr": 2
+      },
+      "environment": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+        "renderBackend": "webgl2",
+        "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+        "capturedAt": "2026-10-17T05:27:36.502Z",
+        "devicePixelRatio": 2,
+        "hardwareConcurrency": 10
+      }
+    },
+    {
+      "pass": 2,
+      "attempt": 1,
+      "name": "region-loading",
+      "wallMs": 2605,
+      "report": {
+        "schemaVersion": 1,
+        "harness": "P0Harness",
+        "scenario": "region-loading",
+        "status": "passed",
+        "startedAt": "2026-10-17T05:27:36.703Z",
+        "finishedAt": "2026-10-17T05:27:39.084Z",
+        "durationMs": 2381,
+        "environment": {
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+          "renderBackend": "webgl2",
+          "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+          "capturedAt": "2026-10-17T05:27:39.084Z",
+          "devicePixelRatio": 2,
+          "hardwareConcurrency": 10
+        },
+        "metrics": [
+          {
+            "name": "regionGlbSizeBytes",
+            "value": 49314044,
+            "unit": "bytes"
+          },
+          {
+            "name": "regionGlbSizeMB",
+            "value": 49.314044,
+            "unit": "MB",
+            "threshold": 50,
+            "comparison": "lte",
+            "passed": true
+          },
+          {
+            "name": "regionGlbSizeMiB",
+            "value": 47.029537200927734,
+            "unit": "MiB"
+          },
+          {
+            "name": "regionExportMs",
+            "value": 318.59999990463257,
+            "unit": "ms"
+          },
+          {
+            "name": "regionAssetCached",
+            "value": 0,
+            "unit": "boolean"
+          },
+          {
+            "name": "regionChunkCount",
+            "value": 10,
+            "unit": "chunks"
+          },
+          {
+            "name": "regionChunkSubdivisions",
+            "value": 296,
+            "unit": "subdivisions"
+          },
+          {
+            "name": "regionSourceMeshCount",
+            "value": 32,
+            "unit": "meshes"
+          },
+          {
+            "name": "regionVertexCount",
+            "value": 882838,
+            "unit": "vertices"
+          },
+          {
+            "name": "regionTriangleCount",
+            "value": 1752864,
+            "unit": "triangles"
+          },
+          {
+            "name": "containerPreloadMs",
+            "value": 24.5,
+            "unit": "ms"
+          },
+          {
+            "name": "containerAddToSceneMs",
+            "value": 0.2999999523162842,
+            "unit": "ms"
+          },
+          {
+            "name": "containerRemoveFromSceneMs",
+            "value": 0.7000000476837158,
+            "unit": "ms"
+          },
+          {
+            "name": "containerDisposeMs",
+            "value": 2.1000001430511475,
+            "unit": "ms"
+          },
+          {
+            "name": "containerMeshCount",
+            "value": 33,
+            "unit": "meshes"
+          },
+          {
+            "name": "containerMaterialCount",
+            "value": 4,
+            "unit": "materials"
+          },
+          {
+            "name": "containerVertexCount",
+            "value": 882838,
+            "unit": "vertices"
+          },
+          {
+            "name": "maskedWarmupMs",
+            "value": 151.89999985694885,
+            "unit": "ms"
+          },
+          {
+            "name": "sceneMeshesBeforePreload",
+            "value": 73,
+            "unit": "meshes"
+          },
+          {
+            "name": "sceneMeshesAfterPreload",
+            "value": 73,
+            "unit": "meshes"
+          },
+          {
+            "name": "sceneMeshesAfterAdd",
+            "value": 106,
+            "unit": "meshes"
+          },
+          {
+            "name": "sceneMeshesAfterRemove",
+            "value": 73,
+            "unit": "meshes"
+          },
+          {
+            "name": "containerPreloadedOutsideScene",
+            "value": 1,
+            "unit": "boolean"
+          },
+          {
+            "name": "containerAddAttachedToScene",
+            "value": 1,
+            "unit": "boolean"
+          },
+          {
+            "name": "containerRemoveDetachedFromScene",
+            "value": 1,
+            "unit": "boolean"
+          },
+          {
+            "name": "gateMaskInMs",
+            "value": 247.5,
+            "unit": "ms"
+          },
+          {
+            "name": "gateMaskInBeforeRemoveMs",
+            "value": 250.5,
+            "unit": "ms"
+          },
+          {
+            "name": "gateMaskOutMs",
+            "value": 283,
+            "unit": "ms"
+          },
+          {
+            "name": "gateMaskOutAfterDisposeMs",
+            "value": 280.2999999523163,
+            "unit": "ms"
+          },
+          {
+            "name": "gateMaskedDuringSwap",
+            "value": 1,
+            "unit": "boolean"
+          },
+          {
+            "name": "revealFrameCount",
+            "value": 60,
+            "unit": "frames"
+          },
+          {
+            "name": "revealMaxFrameMs",
+            "value": 18,
+            "unit": "ms"
+          },
+          {
+            "name": "revealAverageFrameMs",
+            "value": 16.65333333412806,
+            "unit": "ms"
+          },
+          {
+            "name": "jsHeapBaselineMB",
+            "value": 105.867372,
+            "unit": "MB"
+          },
+          {
+            "name": "jsHeapPeakMB",
+            "value": 372.77145,
+            "unit": "MB"
+          },
+          {
+            "name": "jsHeapPeakDeltaMB",
+            "value": 266.904078,
+            "unit": "MB"
+          },
+          {
+            "name": "jsHeapAfterCycleMB",
+            "value": 372.77145,
+            "unit": "MB"
+          },
+          {
+            "name": "memorySamplingEnabled",
+            "value": 1,
+            "unit": "boolean"
+          },
+          {
+            "name": "memorySampleCount",
+            "value": 42,
+            "unit": "samples"
+          }
+        ]
+      },
+      "reportTextLength": 4431,
+      "statusText": "region-loading · webgl2 · passed · 2381 ms",
+      "error": null,
+      "viewport": {
+        "innerWidth": 1438,
+        "innerHeight": 814,
+        "dpr": 2
+      },
+      "environment": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+        "renderBackend": "webgl2",
+        "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+        "capturedAt": "2026-10-17T05:27:39.108Z",
+        "devicePixelRatio": 2,
+        "hardwareConcurrency": 10
+      }
+    },
+    {
+      "pass": 2,
+      "attempt": 1,
+      "name": "region-gate",
+      "wallMs": 5781,
+      "report": {
+        "schemaVersion": 1,
+        "harness": "P0Harness",
+        "scenario": "region-gate",
+        "status": "passed",
+        "startedAt": "2026-10-17T05:27:39.302Z",
+        "finishedAt": "2026-10-17T05:27:44.832Z",
+        "durationMs": 5530,
+        "environment": {
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+          "renderBackend": "webgl2",
+          "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+          "capturedAt": "2026-10-17T05:27:44.832Z",
+          "devicePixelRatio": 2,
+          "hardwareConcurrency": 10
+        },
+        "metrics": [
+          {
+            "name": "gateRegionCount",
+            "value": 2,
+            "unit": "regions"
+          },
+          {
+            "name": "gatePreloadBothMs",
+            "value": 44.299999952316284,
+            "unit": "ms"
+          },
+          {
+            "name": "gatePreloadedOutsideScene",
+            "value": 1,
+            "unit": "boolean"
+          },
+          {
+            "name": "gateAddRegionAMs",
+            "value": 0,
+            "unit": "ms"
+          },
+          {
+            "name": "gateMaskedWarmupAMs",
+            "value": 122.90000009536743,
+            "unit": "ms"
+          },
+          {
+            "name": "gateRevealAMs",
+            "value": 349.5,
+            "unit": "ms"
+          },
+          {
+            "name": "gateSwapMs",
+            "value": 0.5,
+            "unit": "ms"
+          },
+          {
+            "name": "gateMaskedWarmupBMs",
+            "value": 16.09999990463257,
+            "unit": "ms"
+          },
+          {
+            "name": "gateRevealBMs",
+            "value": 349.89999985694885,
+            "unit": "ms"
+          },
+          {
+            "name": "gateRemoveAndDisposeMs",
+            "value": 2.200000047683716,
+            "unit": "ms"
+          },
+          {
+            "name": "gateMaskInTotalMs",
+            "value": 847.1999998092651,
+            "unit": "ms"
+          },
+          {
+            "name": "gateMaskOutTotalMs",
+            "value": 1047.0999999046326,
+            "unit": "ms"
+          },
+          {
+            "name": "gateMaskedDuringSwap",
+            "value": 1,
+            "unit": "boolean"
+          },
+          {
+            "name": "gateVisibleHoldMs",
+            "value": 1500,
+            "unit": "ms"
+          },
+          {
+            "name": "gateSceneMeshesBaseline",
+            "value": 73,
+            "unit": "meshes"
+          },
+          {
+            "name": "gateSceneMeshesAfterSwap",
+            "value": 106,
+            "unit": "meshes"
+          },
+          {
+            "name": "gateSceneMeshesAfterExit",
+            "value": 73,
+            "unit": "meshes"
+          },
+          {
+            "name": "gateExitedCleanly",
+            "value": 1,
+            "unit": "boolean"
+          },
+          {
+            "name": "gateFrameCountA",
+            "value": 112,
+            "unit": "frames"
+          },
+          {
+            "name": "gateMaxFrameMsA",
+            "value": 20.299999952316284,
+            "unit": "ms"
+          },
+          {
+            "name": "gateAverageFrameMsA",
+            "value": 16.669642857142858,
+            "unit": "ms"
+          },
+          {
+            "name": "gateFrameCountB",
+            "value": 112,
+            "unit": "frames"
+          },
+          {
+            "name": "gateMaxFrameMsB",
+            "value": 18.200000047683716,
+            "unit": "ms"
+          },
+          {
+            "name": "gateAverageFrameMsB",
+            "value": 16.66339285671711,
+            "unit": "ms"
+          },
+          {
+            "name": "gateTotalTransitionMs",
+            "value": 47,
+            "unit": "ms"
+          }
+        ]
+      },
+      "reportTextLength": 3004,
+      "statusText": "region-gate · webgl2 · passed · 5530 ms",
+      "error": null,
+      "viewport": {
+        "innerWidth": 1438,
+        "innerHeight": 814,
+        "dpr": 2
+      },
+      "environment": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+        "renderBackend": "webgl2",
+        "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+        "capturedAt": "2026-10-17T05:27:44.888Z",
+        "devicePixelRatio": 2,
+        "hardwareConcurrency": 10
+      }
+    },
+    {
+      "pass": 2,
+      "attempt": 1,
+      "name": "anime-pipeline",
+      "wallMs": 900,
+      "report": {
+        "schemaVersion": 1,
+        "harness": "P0Harness",
+        "scenario": "anime-pipeline",
+        "status": "passed",
+        "startedAt": "2026-10-17T05:27:45.084Z",
+        "finishedAt": "2026-10-17T05:27:45.716Z",
+        "durationMs": 632,
+        "environment": {
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+          "renderBackend": "webgl2",
+          "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+          "capturedAt": "2026-10-17T05:27:45.716Z",
+          "devicePixelRatio": 2,
+          "hardwareConcurrency": 10
+        },
+        "metrics": [
+          {
+            "name": "characterLoaded",
+            "value": 1,
+            "unit": "boolean",
+            "threshold": 1,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "vroidAssetLoaded",
+            "value": 0,
+            "unit": "boolean"
+          },
+          {
+            "name": "mixamoAnimationLoaded",
+            "value": 0,
+            "unit": "boolean"
+          },
+          {
+            "name": "triangleCount",
+            "value": 11236,
+            "unit": "triangles",
+            "threshold": 15000,
+            "comparison": "lte",
+            "passed": true
+          },
+          {
+            "name": "boneCount",
+            "value": 22,
+            "unit": "bones",
+            "threshold": 20,
+            "comparison": "gte",
+            "passed": true
+          },
+          {
+            "name": "morphTargetCount",
+            "value": 1,
+            "unit": "targets",
+            "threshold": 1,
+            "comparison": "gte",
+            "passed": true
+          },
+          {
+            "name": "animationCount",
+            "value": 2,
+            "unit": "animations",
+            "threshold": 1,
+            "comparison": "gte",
+            "passed": true
+          },
+          {
+            "name": "animationPlaying",
+            "value": 1,
+            "unit": "boolean",
+            "threshold": 1,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "boneMotionRangeRad",
+            "value": 0.543,
+            "unit": "rad",
+            "threshold": 0.2,
+            "comparison": "gte",
+            "passed": true
+          },
+          {
+            "name": "toonMaterialActive",
+            "value": 1,
+            "unit": "boolean",
+            "threshold": 1,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "outlineEnabled",
+            "value": 1,
+            "unit": "boolean",
+            "threshold": 1,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "imageProcessingEnabled",
+            "value": 1,
+            "unit": "boolean",
+            "threshold": 1,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "textureCount",
+            "value": 1,
+            "unit": "textures",
+            "threshold": 1,
+            "comparison": "gte",
+            "passed": true
+          },
+          {
+            "name": "materialCount",
+            "value": 1,
+            "unit": "materials"
+          },
+          {
+            "name": "assetBytes",
+            "value": 529816,
+            "unit": "bytes"
+          },
+          {
+            "name": "fps",
+            "value": 62.29,
+            "unit": "fps"
+          },
+          {
+            "name": "sampledFrames",
+            "value": 28,
+            "unit": "frames"
+          }
+        ]
+      },
+      "reportTextLength": 2898,
+      "statusText": "anime-pipeline · webgl2 · passed · 632 ms",
+      "error": null,
+      "viewport": {
+        "innerWidth": 1438,
+        "innerHeight": 814,
+        "dpr": 2
+      },
+      "environment": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+        "renderBackend": "webgl2",
+        "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+        "capturedAt": "2026-10-17T05:27:45.788Z",
+        "devicePixelRatio": 2,
+        "hardwareConcurrency": 10
+      }
+    },
+    {
+      "pass": 2,
+      "name": "asset-pipeline",
+      "attempt": 2,
+      "failed": true,
+      "error": "Error: page.waitForFunction timed out after 90000ms on page p1; last URL was \"http://127.0.0.1:5173/?scenario=asset-pipeline\"; last title was \"P0 Harness · Greybox Region\".",
+      "wallMs": 90194
+    },
+    {
+      "pass": 1,
+      "wallMs": 1076,
+      "report": {
+        "schemaVersion": 1,
+        "harness": "P0Harness",
+        "scenario": "asset-pipeline",
+        "status": "passed",
+        "startedAt": "2026-10-17T05:31:23.173Z",
+        "finishedAt": "2026-10-17T05:31:23.882Z",
+        "durationMs": 709,
+        "environment": {
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+          "renderBackend": "webgl2",
+          "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+          "capturedAt": "2026-10-17T05:31:23.882Z",
+          "devicePixelRatio": 2,
+          "hardwareConcurrency": 10
+        },
+        "metrics": [
+          {
+            "name": "sourceKindBlender",
+            "value": 0,
+            "unit": "boolean"
+          },
+          {
+            "name": "sourceTriangles",
+            "value": 11488,
+            "unit": "triangles"
+          },
+          {
+            "name": "baselineBytes",
+            "value": 592736,
+            "unit": "bytes"
+          },
+          {
+            "name": "baselineFetchMs",
+            "value": 4.5,
+            "unit": "ms"
+          },
+          {
+            "name": "baselineLoadFirstMs",
+            "value": 19.7,
+            "unit": "ms"
+          },
+          {
+            "name": "baselineLoadMedianMs",
+            "value": 14.4,
+            "unit": "ms"
+          },
+          {
+            "name": "meshoptBytes",
+            "value": 200660,
+            "unit": "bytes"
+          },
+          {
+            "name": "meshoptGeometryBytes",
+            "value": 67001,
+            "unit": "bytes"
+          },
+          {
+            "name": "meshoptLoadFirstMs",
+            "value": 38.6,
+            "unit": "ms"
+          },
+          {
+            "name": "meshoptLoadMedianMs",
+            "value": 16.2,
+            "unit": "ms"
+          },
+          {
+            "name": "dracoBytes",
+            "value": 298924,
+            "unit": "bytes"
+          },
+          {
+            "name": "dracoGeometryBytes",
+            "value": 167438,
+            "unit": "bytes"
+          },
+          {
+            "name": "dracoLoadFirstMs",
+            "value": 35.9,
+            "unit": "ms"
+          },
+          {
+            "name": "dracoLoadMedianMs",
+            "value": 14.6,
+            "unit": "ms"
+          },
+          {
+            "name": "triangleCount",
+            "value": 11488,
+            "unit": "triangles"
+          },
+          {
+            "name": "meshCount",
+            "value": 2,
+            "unit": "meshes"
+          },
+          {
+            "name": "boneCount",
+            "value": 7,
+            "unit": "bones",
+            "threshold": 7,
+            "comparison": "gte",
+            "passed": true
+          },
+          {
+            "name": "morphTargetCount",
+            "value": 1,
+            "unit": "targets",
+            "threshold": 1,
+            "comparison": "gte",
+            "passed": true
+          },
+          {
+            "name": "skinnedMeshCount",
+            "value": 1,
+            "unit": "meshes",
+            "threshold": 1,
+            "comparison": "gte",
+            "passed": true
+          },
+          {
+            "name": "animationCount",
+            "value": 1,
+            "unit": "animations",
+            "threshold": 1,
+            "comparison": "gte",
+            "passed": true
+          },
+          {
+            "name": "ktx2LoadOk",
+            "value": 1,
+            "unit": "boolean",
+            "threshold": 1,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "ktx2TextureCount",
+            "value": 1,
+            "unit": "textures"
+          },
+          {
+            "name": "ktx2TextureFormat",
+            "value": 37492,
+            "unit": "format"
+          },
+          {
+            "name": "ktx2LoadMs",
+            "value": 252.4,
+            "unit": "ms"
+          },
+          {
+            "name": "ktx2Bytes",
+            "value": 524580,
+            "unit": "bytes"
+          },
+          {
+            "name": "productionLoadOk",
+            "value": 1,
+            "unit": "boolean",
+            "threshold": 1,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "productionLoadMs",
+            "value": 21.7,
+            "unit": "ms"
+          },
+          {
+            "name": "productionBytes",
+            "value": 132620,
+            "unit": "bytes"
+          },
+          {
+            "name": "productionTriangleCount",
+            "value": 11488,
+            "unit": "triangles"
+          },
+          {
+            "name": "productionTextureFormat",
+            "value": 37492,
+            "unit": "format"
+          },
+          {
+            "name": "lod0Triangles",
+            "value": 11488,
+            "unit": "triangles"
+          },
+          {
+            "name": "lod1Triangles",
+            "value": 5744,
+            "unit": "triangles"
+          },
+          {
+            "name": "lod2Triangles",
+            "value": 2296,
+            "unit": "triangles"
+          }
+        ]
+      },
+      "reportTextLength": 3992,
+      "error": null,
+      "name": "asset-pipeline"
+    },
+    {
+      "pass": 2,
+      "wallMs": 913,
+      "report": {
+        "schemaVersion": 1,
+        "harness": "P0Harness",
+        "scenario": "asset-pipeline",
+        "status": "passed",
+        "startedAt": "2026-10-17T05:31:24.134Z",
+        "finishedAt": "2026-10-17T05:31:24.815Z",
+        "durationMs": 681,
+        "environment": {
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+          "renderBackend": "webgl2",
+          "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+          "capturedAt": "2026-10-17T05:31:24.815Z",
+          "devicePixelRatio": 2,
+          "hardwareConcurrency": 10
+        },
+        "metrics": [
+          {
+            "name": "sourceKindBlender",
+            "value": 0,
+            "unit": "boolean"
+          },
+          {
+            "name": "sourceTriangles",
+            "value": 11488,
+            "unit": "triangles"
+          },
+          {
+            "name": "baselineBytes",
+            "value": 592736,
+            "unit": "bytes"
+          },
+          {
+            "name": "baselineFetchMs",
+            "value": 2.8,
+            "unit": "ms"
+          },
+          {
+            "name": "baselineLoadFirstMs",
+            "value": 18,
+            "unit": "ms"
+          },
+          {
+            "name": "baselineLoadMedianMs",
+            "value": 18,
+            "unit": "ms"
+          },
+          {
+            "name": "meshoptBytes",
+            "value": 200660,
+            "unit": "bytes"
+          },
+          {
+            "name": "meshoptGeometryBytes",
+            "value": 67001,
+            "unit": "bytes"
+          },
+          {
+            "name": "meshoptLoadFirstMs",
+            "value": 41.2,
+            "unit": "ms"
+          },
+          {
+            "name": "meshoptLoadMedianMs",
+            "value": 16.1,
+            "unit": "ms"
+          },
+          {
+            "name": "dracoBytes",
+            "value": 298924,
+            "unit": "bytes"
+          },
+          {
+            "name": "dracoGeometryBytes",
+            "value": 167438,
+            "unit": "bytes"
+          },
+          {
+            "name": "dracoLoadFirstMs",
+            "value": 39.7,
+            "unit": "ms"
+          },
+          {
+            "name": "dracoLoadMedianMs",
+            "value": 14.8,
+            "unit": "ms"
+          },
+          {
+            "name": "triangleCount",
+            "value": 11488,
+            "unit": "triangles"
+          },
+          {
+            "name": "meshCount",
+            "value": 2,
+            "unit": "meshes"
+          },
+          {
+            "name": "boneCount",
+            "value": 7,
+            "unit": "bones",
+            "threshold": 7,
+            "comparison": "gte",
+            "passed": true
+          },
+          {
+            "name": "morphTargetCount",
+            "value": 1,
+            "unit": "targets",
+            "threshold": 1,
+            "comparison": "gte",
+            "passed": true
+          },
+          {
+            "name": "skinnedMeshCount",
+            "value": 1,
+            "unit": "meshes",
+            "threshold": 1,
+            "comparison": "gte",
+            "passed": true
+          },
+          {
+            "name": "animationCount",
+            "value": 1,
+            "unit": "animations",
+            "threshold": 1,
+            "comparison": "gte",
+            "passed": true
+          },
+          {
+            "name": "ktx2LoadOk",
+            "value": 1,
+            "unit": "boolean",
+            "threshold": 1,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "ktx2TextureCount",
+            "value": 1,
+            "unit": "textures"
+          },
+          {
+            "name": "ktx2TextureFormat",
+            "value": 37492,
+            "unit": "format"
+          },
+          {
+            "name": "ktx2LoadMs",
+            "value": 234.3,
+            "unit": "ms"
+          },
+          {
+            "name": "ktx2Bytes",
+            "value": 524580,
+            "unit": "bytes"
+          },
+          {
+            "name": "productionLoadOk",
+            "value": 1,
+            "unit": "boolean",
+            "threshold": 1,
+            "comparison": "eq",
+            "passed": true
+          },
+          {
+            "name": "productionLoadMs",
+            "value": 23.8,
+            "unit": "ms"
+          },
+          {
+            "name": "productionBytes",
+            "value": 132620,
+            "unit": "bytes"
+          },
+          {
+            "name": "productionTriangleCount",
+            "value": 11488,
+            "unit": "triangles"
+          },
+          {
+            "name": "productionTextureFormat",
+            "value": 37492,
+            "unit": "format"
+          },
+          {
+            "name": "lod0Triangles",
+            "value": 11488,
+            "unit": "triangles"
+          },
+          {
+            "name": "lod1Triangles",
+            "value": 5744,
+            "unit": "triangles"
+          },
+          {
+            "name": "lod2Triangles",
+            "value": 2296,
+            "unit": "triangles"
+          }
+        ]
+      },
+      "reportTextLength": 3988,
+      "error": null,
+      "name": "asset-pipeline"
+    }
+  ]
+}

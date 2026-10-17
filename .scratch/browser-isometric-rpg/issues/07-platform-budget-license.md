@@ -70,3 +70,30 @@ Blocked by: 01（部分可先行：预算与许可证审计不依赖引擎）
 ## 决策（2026-10-17，用户确认）
 
 兼容性基线：**WebGL2 为渲染基线，WebGPU 渐进增强（Babylon 自动回退），最低目标 iOS Safari 15+ / 近 5 年主流桌面浏览器。**
+
+## P0 实测后的预算修正（ticket 18，2026-10-17）
+
+来源：`artifacts/p0-final-report.md`、`reports/p0-smoke.json`、ticket 11–17 的 Answer 节。以下为对上方「性能预算草案」的修正，原草案数字保留作对照。
+
+| 预算项 | 原草案 | P0 实测 | 修正值 |
+|---|---|---|---|
+| 帧率 | 60fps 桌面 / 30fps 中端移动 | 300 角色 40.4–60.1fps @4.7–4.8MP；1080p 60.0/59.7fps；fpsMin 26.6–51.3；0.29MP 时 60.1fps | 分辨率联动：1920×1080（2.07MP）目标 60fps；retina/4K（≥4.7MP）目标 45–60fps + 动态分辨率；移动端 30fps @≤1MP。判据：`fpsAverage ≥ 60`、`p95 帧时间 ≤ 17ms`、`fpsMin ≥ 50` |
+| 单帧 draw calls | ≤300（WebGL2） | 300 角色峰值 300；描边场景 36→76（+40） | 基础场景 ≤300；描边/VFX 另加 ≤50；总量 ≤350 |
+| 初始包体 | ≤8MB gzip（引擎+框架+首场景） | 全部 JS gzip 1.48MB；主 chunk 609.86kB gzip；`dist` 总计 9.19MB（含 wasm/资产） | 保留 ≤8MB gzip，明确口径为「初始 JS+wasm gzip」；资产不计入 |
+| 单区域资产 | ≤50MB（含 KTX2） | 49.314MB；preload 24.5–55.3ms；add/remove <1ms；dispose 2.1–6ms；JS heap 增量 251.0–286.5MB；masked warmup 152–1140.6ms | ≤50MB，并拆为：preload ≤100ms、add/remove ≤1ms、dispose ≤10ms、JS heap 增量 ≤300MB/区域、masked warmup ≤1.5s（冷）、预热后首帧 ≤50ms |
+| 内存 | ≤1.5GB 桌面 / ≤800MB 移动 | 角色 68–99MB JS heap；区域峰值 323.8–373.0MB JS heap（增量 251–286MB） | 按区域增量校准：每 50MB 区域 JS heap 增量 ≤300MB；1.5GB 仅作进程级暂定上限；P1 补进程 RSS + GPU 显存；移动端 800MB 未验证 |
+| 首屏可交互 | ≤5s 桌面 / ≤12s 中端移动 | P0 未测生产构建；dev server 295–575ms 不可作为预算 | P1 用 production build + Lighthouse（含网络节流）实测；区域进入时间另算，加载门预热计入 |
+| navmesh（新增） | 无 | 200×200 冷 143.1ms / 热 22.9–25.1ms；300×300 冷 277.7ms | 200×200 主线程生成 ≤150ms（冷）；>200 必须 Worker/预烘焙；热路径 ≤30ms |
+| Crowd 更新/切换（新增） | 无 | 更新 0.22–0.39ms/帧；同步 1.1–2.9ms；spikeRatio 0.89–0.92 | 更新 ≤1ms/帧；切换同步 ≤5ms；spikeRatio ≤1.0；位置突变 = 0 |
+| 描边（新增） | 无 | 24 角色 0.544–0.652ms/帧；draw +40；检测 0.013–0.021ms/帧 | 24 角色 HighlightLayer ≤1ms/帧；draw +≤40；检测 ≤0.05ms/帧；50+ 角色复测 |
+| 压缩（新增） | 无 | meshopt 几何为 draco 的 40%；生产组合为基线 22.4%；KTX2 为 PNG 46.8% | 几何必须 meshopt；生产组合 ≤25% 基线；KTX2 贴图 ≤50% PNG |
+| LOD（新增） | 无 | LOD1/2 近景 48.017/37.576dB；远景 64.949/53.643dB | 3 级 LOD；LOD1 近景 PSNR ≥40dB；LOD2 近景 ≥32dB、远景 ≥40dB |
+| 对话（新增） | 无 | inkjs Continue 0.044ms/步 | 单步 Continue ≤1ms（P95） |
+| 编译预热（新增） | 无 | 未 warmup 首帧 203–233ms；warmup 后 18–36ms | 加载门覆盖首帧预热；masked warmup ≤1.5s（冷）；预热后 reveal 最大帧 ≤50ms |
+
+关键说明：
+
+- **300 角色 60fps 是边界值，不是稳健通过**。ticket 11 测到 40.4fps，ticket 18 干净重跑（caffeinate、无并发负载）平均 60.0/60.1fps，但 fpsMin 43.3–51.3；1080p 补充测试 fpsMin 低至 26.6。预算必须留余量，并同时看分位数。
+- **`frameTimeMsAverage ≤ 16.6667` 阈值会造成状态抖动**（60fps 四舍五入即 16.7ms）；主判据改为 `fpsAverage`，帧时间用 p95。
+- 区域加载的 50MB 是内存 Blob 解析，不含网络下载；首屏预算需在 P1 用生产构建单独验证。
+- WebGPU 在 300 角色填充率场景无收益（39.4fps vs WebGL2 40.4fps），维持「增强路径、非基线」决策。
