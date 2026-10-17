@@ -1,0 +1,1373 @@
+diff --git a/assets/cube.material b/assets/cube.material
+index b9a5ed2..c547049 100644
+--- a/assets/cube.material
++++ b/assets/cube.material
+@@ -7,6 +7,7 @@
+ 	"disableBumpMap": false,
+ 	"albedoTexture": {
+ 		"tags": null,
++		"isBlocking": true,
+ 		"url": "assets/amiga.jpg",
+ 		"uOffset": 0,
+ 		"vOffset": 0,
+@@ -19,7 +20,15 @@
+ 		"vRotationCenter": 0.5,
+ 		"wRotationCenter": 0.5,
+ 		"homogeneousRotationInUVTransform": false,
+-		"isBlocking": true,
++		"wrapU": 1,
++		"wrapV": 1,
++		"isCube": false,
++		"is3D": false,
++		"is2DArray": false,
++		"gammaSpace": true,
++		"lodGenerationOffset": 0,
++		"lodGenerationScale": 0,
++		"linearSpecularLOD": false,
+ 		"name": "assets/amiga.jpg",
+ 		"metadata": {
+ 			"baseSize": {
+@@ -33,23 +42,15 @@
+ 		"coordinatesIndex": 0,
+ 		"optimizeUVAllocation": true,
+ 		"coordinatesMode": 0,
+-		"wrapU": 1,
+-		"wrapV": 1,
+ 		"wrapR": 1,
+ 		"anisotropicFilteringLevel": 4,
+-		"isCube": false,
+-		"is3D": false,
+-		"is2DArray": false,
+-		"gammaSpace": true,
+ 		"invertZ": false,
+ 		"lodLevelInAlpha": false,
+-		"lodGenerationOffset": 0,
+-		"lodGenerationScale": 0,
+-		"linearSpecularLOD": false,
+ 		"isRenderTarget": false,
+ 		"animations": [],
+ 		"invertY": true,
+ 		"samplingMode": 3,
++		"_creationFlags": 0,
+ 		"_useSRGBBuffer": false,
+ 		"noMipmap": false
+ 	},
+@@ -112,7 +113,7 @@
+ 	"parallaxScaleBias": 0.05,
+ 	"disableLighting": false,
+ 	"forceIrradianceInFragment": false,
+-	"maxSimultaneousLights": 32,
++	"maxSimultaneousLights": 8,
+ 	"invertNormalMapX": false,
+ 	"invertNormalMapY": false,
+ 	"twoSidedLighting": false,
+@@ -149,6 +150,9 @@
+ 		"_toneMappingEnabled": false,
+ 		"_toneMappingType": 0,
+ 		"_contrast": 1,
++		"_whiteBalanceEnabled": false,
++		"_temperature": 6500,
++		"_tint": 0,
+ 		"vignetteStretch": 0,
+ 		"vignetteCenterX": 0,
+ 		"vignetteCenterY": 0,
+@@ -170,6 +174,9 @@
+ 		"outputTextureWidth": 0,
+ 		"outputTextureHeight": 0
+ 	},
++	"pointsCloud": false,
++	"fillMode": 0,
++	"transparencyMode": 0,
+ 	"id": "9f2b8769-ac8e-4289-b8a4-171c5b7d3139",
+ 	"name": "box",
+ 	"checkReadyOnEveryCall": false,
+@@ -177,9 +184,18 @@
+ 	"state": "",
+ 	"alpha": 1,
+ 	"backFaceCulling": true,
++	"textureRepetitionMode": 0,
++	"textureRepetitionHexTilingParams": [
++		1,
++		0.6,
++		7,
++		0.5
++	],
+ 	"cullBackFaces": true,
+ 	"sideOrientation": 1,
+-	"alphaMode": 2,
++	"_alphaMode": [
++		2
++	],
+ 	"_needDepthPrePass": false,
+ 	"disableDepthWrite": false,
+ 	"disableColorWrite": false,
+@@ -190,17 +206,19 @@
+ 	"pointSize": 1,
+ 	"zOffset": 0,
+ 	"zOffsetUnits": 0,
+-	"pointsCloud": false,
+-	"fillMode": 0,
+-	"transparencyMode": 0,
++	"_isVertexOutputInvariant": false,
+ 	"stencil": {
+ 		"tags": null,
+ 		"func": 519,
++		"backFunc": 519,
+ 		"funcRef": 1,
+ 		"funcMask": 255,
+ 		"opStencilFail": 7680,
+ 		"opDepthFail": 7680,
+ 		"opStencilDepthPass": 7681,
++		"backOpStencilFail": 7680,
++		"backOpDepthFail": 7680,
++		"backOpStencilDepthPass": 7681,
+ 		"mask": 255,
+ 		"enabled": false
+ 	},
+@@ -213,6 +231,10 @@
+ 			"useSphericalHarmonics": true,
+ 			"useSpecularGlossinessInputEnergyConservation": true,
+ 			"mixIblRadianceWithIrradiance": true,
++			"useLegacySpecularEnergyConservation": true,
++			"baseDiffuseModel": 0,
++			"dielectricSpecularModel": 0,
++			"conductorSpecularModel": 0,
+ 			"name": "PBRBRDF",
+ 			"priority": 90,
+ 			"resolveIncludes": false,
+@@ -221,12 +243,12 @@
+ 		"PBRClearCoatConfiguration": {
+ 			"tags": null,
+ 			"isEnabled": false,
+-			"intensity": 1,
+-			"roughness": 0,
+ 			"indexOfRefraction": 1.5,
+ 			"useRoughnessFromMainTexture": true,
+ 			"remapF0OnInterfaceChange": true,
+ 			"isTintEnabled": false,
++			"intensity": 1,
++			"roughness": 0,
+ 			"tintColor": [
+ 				1,
+ 				1,
+@@ -254,12 +276,12 @@
+ 		"PBRAnisotropicConfiguration": {
+ 			"tags": null,
+ 			"isEnabled": false,
++			"legacy": false,
+ 			"intensity": 1,
+ 			"direction": [
+ 				1,
+ 				0
+ 			],
+-			"legacy": false,
+ 			"name": "PBRAnisotropic",
+ 			"priority": 110,
+ 			"resolveIncludes": false,
+@@ -269,14 +291,14 @@
+ 			"tags": null,
+ 			"isEnabled": false,
+ 			"linkSheenWithAlbedo": false,
++			"useRoughnessFromMainTexture": true,
++			"albedoScaling": false,
+ 			"intensity": 1,
+ 			"color": [
+ 				1,
+ 				1,
+ 				1
+ 			],
+-			"useRoughnessFromMainTexture": true,
+-			"albedoScaling": false,
+ 			"name": "Sheen",
+ 			"priority": 120,
+ 			"resolveIncludes": false,
+@@ -288,15 +310,17 @@
+ 			"isTranslucencyEnabled": false,
+ 			"isDispersionEnabled": false,
+ 			"isScatteringEnabled": false,
+-			"_scatteringDiffusionProfileIndex": 0,
+-			"refractionIntensity": 1,
+-			"translucencyIntensity": 1,
+ 			"useAlbedoToTintRefraction": false,
+ 			"useAlbedoToTintTranslucency": false,
+ 			"indexOfRefraction": 1.5,
+-			"_volumeIndexOfRefraction": -1,
+ 			"invertRefractionY": false,
+ 			"linkRefractionWithTransparency": false,
++			"useMaskFromThicknessTexture": false,
++			"useGltfStyleTextures": false,
++			"_scatteringDiffusionProfileIndex": 0,
++			"refractionIntensity": 1,
++			"translucencyIntensity": 1,
++			"_volumeIndexOfRefraction": -1,
+ 			"minimumThickness": 0,
+ 			"maximumThickness": 1,
+ 			"useThicknessAsDepth": false,
+@@ -312,10 +336,8 @@
+ 				1,
+ 				1
+ 			],
+-			"useMaskFromThicknessTexture": false,
+-			"useGltfStyleTextures": false,
+ 			"applyAlbedoAfterSubSurface": false,
+-			"legacyTransluceny": false,
++			"legacyTranslucency": false,
+ 			"name": "PBRSubSurface",
+ 			"priority": 130,
+ 			"resolveIncludes": false,
+@@ -323,22 +345,15 @@
+ 		},
+ 		"DetailMapConfiguration": {
+ 			"tags": null,
++			"normalBlendMethod": 0,
++			"isEnabled": false,
+ 			"diffuseBlendLevel": 1,
+ 			"roughnessBlendLevel": 1,
+ 			"bumpLevel": 1,
+-			"normalBlendMethod": 0,
+-			"isEnabled": false,
+ 			"name": "DetailMap",
+ 			"priority": 140,
+ 			"resolveIncludes": false,
+ 			"registerForExtraEvents": false
+-		},
+-		"DepthSensingMaterialPlugin": {
+-			"tags": null,
+-			"name": "DepthSensing",
+-			"priority": 222,
+-			"resolveIncludes": false,
+-			"registerForExtraEvents": false
+ 		}
+ 	},
+ 	"customType": "BABYLON.PBRMaterial"
+diff --git a/assets/example.scene/cameras/3ee0f345-7bea-4f59-a657-28c90a7d5e74.json b/assets/example.scene/cameras/3ee0f345-7bea-4f59-a657-28c90a7d5e74.json
+index 06ab22b..eff5960 100644
+--- a/assets/example.scene/cameras/3ee0f345-7bea-4f59-a657-28c90a7d5e74.json
++++ b/assets/example.scene/cameras/3ee0f345-7bea-4f59-a657-28c90a7d5e74.json
+@@ -12,7 +12,6 @@
+     ],
+     "checkCollisions": false,
+     "applyGravity": false,
+-    "ignoreParentScaling": false,
+     "updateUpVectorFromRotation": false,
+     "rotation": [
+         0.13716683763979895,
+@@ -20,6 +19,8 @@
+         0
+     ],
+     "speed": 500,
++    "inertia": 0,
++    "mode": 0,
+     "position": [
+         461.58465792469366,
+         140.63771402557663,
+@@ -34,11 +35,10 @@
+     "projectionPlaneTilt": 0,
+     "minZ": 1,
+     "maxZ": 1000000,
+-    "inertia": 0,
+-    "mode": 0,
+     "layerMask": 268435455,
+     "fovMode": 0,
+     "cameraRigMode": 0,
++    "ignoreCameraMaxZ": false,
+     "name": "camera",
+     "id": "3ee0f345-7bea-4f59-a657-28c90a7d5e74",
+     "state": "",
+diff --git a/assets/example.scene/config.json b/assets/example.scene/config.json
+index c419857..3c2a3ca 100644
+--- a/assets/example.scene/config.json
++++ b/assets/example.scene/config.json
+@@ -11,16 +11,17 @@
+         0
+     ],
+     "environment": {
++        "iblIntensity": 1,
+         "environmentIntensity": 1,
+         "environmentTexture": {
+             "tags": null,
++            "rotationY": 0,
+             "url": "assets/country.env",
+             "boundingBoxPosition": [
+                 0,
+                 0,
+                 0
+             ],
+-            "rotationY": 0,
+             "files": [],
+             "textureMatrix": [
+                 1,
+@@ -58,6 +59,15 @@
+                 0,
+                 0
+             ],
++            "wrapU": 0,
++            "wrapV": 0,
++            "isCube": true,
++            "is3D": false,
++            "is2DArray": false,
++            "gammaSpace": false,
++            "lodGenerationOffset": 0,
++            "lodGenerationScale": 0.8,
++            "linearSpecularLOD": false,
+             "name": "assets/country.env",
+             "hasAlpha": false,
+             "getAlphaFromRGB": false,
+@@ -65,19 +75,10 @@
+             "coordinatesIndex": 0,
+             "optimizeUVAllocation": true,
+             "coordinatesMode": 3,
+-            "wrapU": 0,
+-            "wrapV": 0,
+             "wrapR": 1,
+             "anisotropicFilteringLevel": 1,
+-            "isCube": true,
+-            "is3D": false,
+-            "is2DArray": false,
+-            "gammaSpace": false,
+             "invertZ": false,
+             "lodLevelInAlpha": false,
+-            "lodGenerationOffset": 0,
+-            "lodGenerationScale": 0.8,
+-            "linearSpecularLOD": false,
+             "isRenderTarget": false,
+             "animations": []
+         }
+@@ -94,14 +95,22 @@
+             0.640006735140596
+         ]
+     },
+-    "physics": {
+-        "gravity": [
+-            0,
+-            -981,
+-            0
+-        ]
+-    },
++    "physics": {},
++    "volumetricLightingRenderingPipelineConfiguration": null,
+     "rendering": [
++        {
++            "cameraId": "3ee0f345-7bea-4f59-a657-28c90a7d5e74",
++            "ssao2RenderingPipeline": null,
++            "vlsPostProcess": null,
++            "ssrRenderingPipeline": null,
++            "motionBlurPostProcess": null,
++            "defaultRenderingPipeline": null,
++            "taaRenderingPipeline": null,
++            "iblShadowsRenderPipeline": null
++        },
++        {
++            "cameraId": "3ee0f345-7bea-4f59-a657-28c90a7d5e74"
++        },
+         {
+             "cameraId": "3cc9ef80-8c60-43e0-bcc4-1b55ff36010d",
+             "ssao2RenderingPipeline": null,
+@@ -115,6 +124,7 @@
+             "cameraId": "3ee0f345-7bea-4f59-a657-28c90a7d5e74"
+         }
+     ],
++    "metadata": {},
+     "editorCamera": {
+         "tags": null,
+         "ellipsoid": [
+@@ -129,7 +139,6 @@
+         ],
+         "checkCollisions": false,
+         "applyGravity": false,
+-        "ignoreParentScaling": false,
+         "updateUpVectorFromRotation": false,
+         "rotation": [
+             0.1371668477935948,
+@@ -137,6 +146,8 @@
+             0
+         ],
+         "speed": 200,
++        "inertia": 0.5,
++        "mode": 0,
+         "position": [
+             461.58465792469366,
+             140.63771402557663,
+@@ -151,21 +162,19 @@
+         "projectionPlaneTilt": 0,
+         "minZ": 1,
+         "maxZ": 1500000,
+-        "inertia": 0.5,
+-        "mode": 0,
+         "layerMask": 268435455,
+         "fovMode": 0,
+         "cameraRigMode": 0,
++        "ignoreCameraMaxZ": false,
+         "name": "Editor preview",
+         "id": "3cc9ef80-8c60-43e0-bcc4-1b55ff36010d",
+         "state": "",
+-        "uniqueId": 3,
+         "type": "EditorCamera",
+         "inputsmgr": {
+             "FreeCameraKeyboardMoveInput": {
+                 "tags": null,
+                 "keysUp": [
+-                    90
++                    87
+                 ],
+                 "keysUpward": [
+                     69
+@@ -174,10 +183,10 @@
+                     83
+                 ],
+                 "keysDownward": [
+-                    65
++                    81
+                 ],
+                 "keysLeft": [
+-                    81
++                    65
+                 ],
+                 "keysRight": [
+                     68
+@@ -204,11 +213,21 @@
+                 "wheelPrecisionX": 3,
+                 "wheelPrecisionY": 3,
+                 "wheelPrecisionZ": 3
++            },
++            "EditorFreeCameraPanInput": {
++                "tags": null
+             }
+         },
+         "animations": [],
+         "ranges": [],
+         "isEnabled": true
+     },
+-    "animations": []
++    "animations": [],
++    "clusteredLight": {
++        "maxRange": 16383,
++        "depthSlices": 16,
++        "verticalTiles": 64,
++        "horizontalTiles": 64,
++        "lights": []
++    }
+ }
+diff --git a/assets/example.scene/lights/9242a5b8-a8b8-41d2-94ea-968e4fc3dd61.json b/assets/example.scene/lights/9242a5b8-a8b8-41d2-94ea-968e4fc3dd61.json
+index c0d3ded..97d4b91 100644
+--- a/assets/example.scene/lights/9242a5b8-a8b8-41d2-94ea-968e4fc3dd61.json
++++ b/assets/example.scene/lights/9242a5b8-a8b8-41d2-94ea-968e4fc3dd61.json
+@@ -8,6 +8,19 @@
+     "orthoRight": 5e-324,
+     "orthoTop": 5e-324,
+     "orthoBottom": 1.7976931348623157e+308,
++    "position": [
++        100,
++        200,
++        100
++    ],
++    "direction": [
++        -1,
++        -2,
++        -1
++    ],
++    "range": 1.7976931348623157e+308,
++    "intensityMode": 0,
++    "radius": 0.00001,
+     "diffuse": [
+         1,
+         1,
+@@ -20,24 +33,11 @@
+     ],
+     "falloffType": 0,
+     "intensity": 3.432499999999996,
+-    "range": 1.7976931348623157e+308,
+-    "intensityMode": 0,
+-    "radius": 0.00001,
+     "_renderPriority": 0,
+     "shadowEnabled": true,
+     "excludeWithLayerMask": 0,
+     "includeOnlyWithLayerMask": 0,
+     "lightmapMode": 0,
+-    "position": [
+-        100,
+-        200,
+-        100
+-    ],
+-    "direction": [
+-        -1,
+-        -2,
+-        -1
+-    ],
+     "name": "sun",
+     "id": "9242a5b8-a8b8-41d2-94ea-968e4fc3dd61",
+     "state": "",
+diff --git a/assets/example.scene/meshes/0fe36208-15f6-4366-a95f-7a324d858364.json b/assets/example.scene/meshes/0fe36208-15f6-4366-a95f-7a324d858364.json
+index 8e191e4..9e18113 100644
+--- a/assets/example.scene/meshes/0fe36208-15f6-4366-a95f-7a324d858364.json
++++ b/assets/example.scene/meshes/0fe36208-15f6-4366-a95f-7a324d858364.json
+@@ -83,7 +83,7 @@
+                 0,
+                 0
+             ],
+-            "renderOverlay": true,
++            "renderOverlay": false,
+             "applyFog": true,
+             "subdivisionsX": 1,
+             "subdivisionsY": 1,
+@@ -156,6 +156,7 @@
+             "disableBumpMap": false,
+             "albedoTexture": {
+                 "tags": null,
++                "isBlocking": true,
+                 "url": "assets/albedo.png",
+                 "uOffset": 0,
+                 "vOffset": 0,
+@@ -168,7 +169,15 @@
+                 "vRotationCenter": 0.5,
+                 "wRotationCenter": 0.5,
+                 "homogeneousRotationInUVTransform": false,
+-                "isBlocking": true,
++                "wrapU": 1,
++                "wrapV": 1,
++                "isCube": false,
++                "is3D": false,
++                "is2DArray": false,
++                "gammaSpace": true,
++                "lodGenerationOffset": 0,
++                "lodGenerationScale": 0,
++                "linearSpecularLOD": false,
+                 "name": "assets/albedo.png",
+                 "metadata": {
+                     "baseSize": {
+@@ -182,23 +191,15 @@
+                 "coordinatesIndex": 0,
+                 "optimizeUVAllocation": true,
+                 "coordinatesMode": 0,
+-                "wrapU": 1,
+-                "wrapV": 1,
+                 "wrapR": 1,
+                 "anisotropicFilteringLevel": 4,
+-                "isCube": false,
+-                "is3D": false,
+-                "is2DArray": false,
+-                "gammaSpace": true,
+                 "invertZ": false,
+                 "lodLevelInAlpha": false,
+-                "lodGenerationOffset": 0,
+-                "lodGenerationScale": 0,
+-                "linearSpecularLOD": false,
+                 "isRenderTarget": false,
+                 "animations": [],
+                 "invertY": true,
+                 "samplingMode": 3,
++                "_creationFlags": 0,
+                 "_useSRGBBuffer": false,
+                 "noMipmap": false
+             },
+@@ -261,7 +262,7 @@
+             "parallaxScaleBias": 0.05,
+             "disableLighting": false,
+             "forceIrradianceInFragment": false,
+-            "maxSimultaneousLights": 32,
++            "maxSimultaneousLights": 8,
+             "invertNormalMapX": false,
+             "invertNormalMapY": false,
+             "twoSidedLighting": false,
+@@ -298,6 +299,9 @@
+                 "_toneMappingEnabled": false,
+                 "_toneMappingType": 0,
+                 "_contrast": 1,
++                "_whiteBalanceEnabled": false,
++                "_temperature": 6500,
++                "_tint": 0,
+                 "vignetteStretch": 0,
+                 "vignetteCenterX": 0,
+                 "vignetteCenterY": 0,
+@@ -319,6 +323,9 @@
+                 "outputTextureWidth": 0,
+                 "outputTextureHeight": 0
+             },
++            "pointsCloud": false,
++            "fillMode": 0,
++            "transparencyMode": 0,
+             "id": "27c18987-1817-46cd-bdb0-2328f55c7f8b",
+             "name": "ground",
+             "checkReadyOnEveryCall": false,
+@@ -326,9 +333,18 @@
+             "state": "",
+             "alpha": 1,
+             "backFaceCulling": true,
++            "textureRepetitionMode": 0,
++            "textureRepetitionHexTilingParams": [
++                1,
++                0.6,
++                7,
++                0.5
++            ],
+             "cullBackFaces": true,
+             "sideOrientation": 1,
+-            "alphaMode": 2,
++            "_alphaMode": [
++                2
++            ],
+             "_needDepthPrePass": false,
+             "disableDepthWrite": false,
+             "disableColorWrite": false,
+@@ -339,17 +355,19 @@
+             "pointSize": 1,
+             "zOffset": 0,
+             "zOffsetUnits": 0,
+-            "pointsCloud": false,
+-            "fillMode": 0,
+-            "transparencyMode": 0,
++            "_isVertexOutputInvariant": false,
+             "stencil": {
+                 "tags": null,
+                 "func": 519,
++                "backFunc": 519,
+                 "funcRef": 1,
+                 "funcMask": 255,
+                 "opStencilFail": 7680,
+                 "opDepthFail": 7680,
+                 "opStencilDepthPass": 7681,
++                "backOpStencilFail": 7680,
++                "backOpDepthFail": 7680,
++                "backOpStencilDepthPass": 7681,
+                 "mask": 255,
+                 "enabled": false
+             },
+@@ -362,6 +380,10 @@
+                     "useSphericalHarmonics": true,
+                     "useSpecularGlossinessInputEnergyConservation": true,
+                     "mixIblRadianceWithIrradiance": true,
++                    "useLegacySpecularEnergyConservation": true,
++                    "baseDiffuseModel": 0,
++                    "dielectricSpecularModel": 0,
++                    "conductorSpecularModel": 0,
+                     "name": "PBRBRDF",
+                     "priority": 90,
+                     "resolveIncludes": false,
+@@ -370,12 +392,12 @@
+                 "PBRClearCoatConfiguration": {
+                     "tags": null,
+                     "isEnabled": false,
+-                    "intensity": 1,
+-                    "roughness": 0,
+                     "indexOfRefraction": 1.5,
+                     "useRoughnessFromMainTexture": true,
+                     "remapF0OnInterfaceChange": true,
+                     "isTintEnabled": false,
++                    "intensity": 1,
++                    "roughness": 0,
+                     "tintColor": [
+                         1,
+                         1,
+@@ -403,12 +425,12 @@
+                 "PBRAnisotropicConfiguration": {
+                     "tags": null,
+                     "isEnabled": false,
++                    "legacy": false,
+                     "intensity": 1,
+                     "direction": [
+                         1,
+                         0
+                     ],
+-                    "legacy": false,
+                     "name": "PBRAnisotropic",
+                     "priority": 110,
+                     "resolveIncludes": false,
+@@ -418,14 +440,14 @@
+                     "tags": null,
+                     "isEnabled": false,
+                     "linkSheenWithAlbedo": false,
++                    "useRoughnessFromMainTexture": true,
++                    "albedoScaling": false,
+                     "intensity": 1,
+                     "color": [
+                         1,
+                         1,
+                         1
+                     ],
+-                    "useRoughnessFromMainTexture": true,
+-                    "albedoScaling": false,
+                     "name": "Sheen",
+                     "priority": 120,
+                     "resolveIncludes": false,
+@@ -437,15 +459,17 @@
+                     "isTranslucencyEnabled": false,
+                     "isDispersionEnabled": false,
+                     "isScatteringEnabled": false,
+-                    "_scatteringDiffusionProfileIndex": 0,
+-                    "refractionIntensity": 1,
+-                    "translucencyIntensity": 1,
+                     "useAlbedoToTintRefraction": false,
+                     "useAlbedoToTintTranslucency": false,
+                     "indexOfRefraction": 1.5,
+-                    "_volumeIndexOfRefraction": -1,
+                     "invertRefractionY": false,
+                     "linkRefractionWithTransparency": false,
++                    "useMaskFromThicknessTexture": false,
++                    "useGltfStyleTextures": false,
++                    "_scatteringDiffusionProfileIndex": 0,
++                    "refractionIntensity": 1,
++                    "translucencyIntensity": 1,
++                    "_volumeIndexOfRefraction": -1,
+                     "minimumThickness": 0,
+                     "maximumThickness": 1,
+                     "useThicknessAsDepth": false,
+@@ -461,10 +485,8 @@
+                         1,
+                         1
+                     ],
+-                    "useMaskFromThicknessTexture": false,
+-                    "useGltfStyleTextures": false,
+                     "applyAlbedoAfterSubSurface": false,
+-                    "legacyTransluceny": false,
++                    "legacyTranslucency": false,
+                     "name": "PBRSubSurface",
+                     "priority": 130,
+                     "resolveIncludes": false,
+@@ -472,22 +494,15 @@
+                 },
+                 "DetailMapConfiguration": {
+                     "tags": null,
++                    "normalBlendMethod": 0,
++                    "isEnabled": false,
+                     "diffuseBlendLevel": 1,
+                     "roughnessBlendLevel": 1,
+                     "bumpLevel": 1,
+-                    "normalBlendMethod": 0,
+-                    "isEnabled": false,
+                     "name": "DetailMap",
+                     "priority": 140,
+                     "resolveIncludes": false,
+                     "registerForExtraEvents": false
+-                },
+-                "DepthSensingMaterialPlugin": {
+-                    "tags": null,
+-                    "name": "DepthSensing",
+-                    "priority": 222,
+-                    "resolveIncludes": false,
+-                    "registerForExtraEvents": false
+                 }
+             },
+             "customType": "BABYLON.PBRMaterial"
+diff --git a/assets/example.scene/meshes/6a927ea7-51d9-4248-9b80-4d34b53b386e.json b/assets/example.scene/meshes/6a927ea7-51d9-4248-9b80-4d34b53b386e.json
+index fa56f1b..347f391 100644
+--- a/assets/example.scene/meshes/6a927ea7-51d9-4248-9b80-4d34b53b386e.json
++++ b/assets/example.scene/meshes/6a927ea7-51d9-4248-9b80-4d34b53b386e.json
+@@ -80,7 +80,7 @@
+                 0,
+                 0
+             ],
+-            "renderOverlay": true,
++            "renderOverlay": false,
+             "applyFog": true,
+             "delayLoadingFile": "assets/example.scene/geometries/d2a60991-6acc-4d76-b3d8-67e1d6662870.babylonbinarymeshdata",
+             "boundingBoxMaximum": [
+@@ -163,6 +163,10 @@
+                 0
+             ],
+             "dithering": false,
++            "rawHdrOutput": false,
++            "cloudiness": 0,
++            "pointsCloud": false,
++            "fillMode": 0,
+             "id": "b2346078-7465-4c63-8877-44b542584898",
+             "name": "sky",
+             "metadata": {},
+@@ -171,9 +175,18 @@
+             "state": "",
+             "alpha": 1,
+             "backFaceCulling": true,
++            "textureRepetitionMode": 0,
++            "textureRepetitionHexTilingParams": [
++                1,
++                0.6,
++                7,
++                0.5
++            ],
+             "cullBackFaces": true,
+             "sideOrientation": 1,
+-            "alphaMode": 2,
++            "_alphaMode": [
++                2
++            ],
+             "_needDepthPrePass": false,
+             "disableDepthWrite": false,
+             "disableColorWrite": false,
+@@ -184,29 +197,24 @@
+             "pointSize": 1,
+             "zOffset": 0,
+             "zOffsetUnits": 0,
+-            "pointsCloud": false,
+-            "fillMode": 0,
++            "_isVertexOutputInvariant": false,
+             "stencil": {
+                 "tags": null,
+                 "func": 519,
++                "backFunc": 519,
+                 "funcRef": 1,
+                 "funcMask": 255,
+                 "opStencilFail": 7680,
+                 "opDepthFail": 7680,
+                 "opStencilDepthPass": 7681,
++                "backOpStencilFail": 7680,
++                "backOpDepthFail": 7680,
++                "backOpStencilDepthPass": 7681,
+                 "mask": 255,
+                 "enabled": false
+             },
+             "uniqueId": 1705193880869.0974,
+-            "plugins": {
+-                "DepthSensingMaterialPlugin": {
+-                    "tags": null,
+-                    "name": "DepthSensing",
+-                    "priority": 222,
+-                    "resolveIncludes": false,
+-                    "registerForExtraEvents": false
+-                }
+-            },
++            "plugins": {},
+             "customType": "BABYLON.SkyMaterial"
+         }
+     ],
+diff --git a/assets/example.scene/meshes/c04fac55-2089-4c99-bb08-39044d112145.json b/assets/example.scene/meshes/c04fac55-2089-4c99-bb08-39044d112145.json
+index 435def1..dff95f0 100644
+--- a/assets/example.scene/meshes/c04fac55-2089-4c99-bb08-39044d112145.json
++++ b/assets/example.scene/meshes/c04fac55-2089-4c99-bb08-39044d112145.json
+@@ -96,7 +96,7 @@
+                 0,
+                 0
+             ],
+-            "renderOverlay": true,
++            "renderOverlay": false,
+             "applyFog": true,
+             "delayLoadingFile": "assets/example.scene/geometries/0ba89c0a-1fc1-414a-af14-ffbc7ee3200d.babylonbinarymeshdata",
+             "boundingBoxMaximum": [
+@@ -161,6 +161,7 @@
+             "disableBumpMap": false,
+             "albedoTexture": {
+                 "tags": null,
++                "isBlocking": true,
+                 "url": "assets/amiga.jpg",
+                 "uOffset": 0,
+                 "vOffset": 0,
+@@ -173,7 +174,15 @@
+                 "vRotationCenter": 0.5,
+                 "wRotationCenter": 0.5,
+                 "homogeneousRotationInUVTransform": false,
+-                "isBlocking": true,
++                "wrapU": 1,
++                "wrapV": 1,
++                "isCube": false,
++                "is3D": false,
++                "is2DArray": false,
++                "gammaSpace": true,
++                "lodGenerationOffset": 0,
++                "lodGenerationScale": 0,
++                "linearSpecularLOD": false,
+                 "name": "assets/amiga.jpg",
+                 "metadata": {
+                     "baseSize": {
+@@ -187,23 +196,15 @@
+                 "coordinatesIndex": 0,
+                 "optimizeUVAllocation": true,
+                 "coordinatesMode": 0,
+-                "wrapU": 1,
+-                "wrapV": 1,
+                 "wrapR": 1,
+                 "anisotropicFilteringLevel": 4,
+-                "isCube": false,
+-                "is3D": false,
+-                "is2DArray": false,
+-                "gammaSpace": true,
+                 "invertZ": false,
+                 "lodLevelInAlpha": false,
+-                "lodGenerationOffset": 0,
+-                "lodGenerationScale": 0,
+-                "linearSpecularLOD": false,
+                 "isRenderTarget": false,
+                 "animations": [],
+                 "invertY": true,
+                 "samplingMode": 3,
++                "_creationFlags": 0,
+                 "_useSRGBBuffer": false,
+                 "noMipmap": false
+             },
+@@ -266,7 +267,7 @@
+             "parallaxScaleBias": 0.05,
+             "disableLighting": false,
+             "forceIrradianceInFragment": false,
+-            "maxSimultaneousLights": 32,
++            "maxSimultaneousLights": 8,
+             "invertNormalMapX": false,
+             "invertNormalMapY": false,
+             "twoSidedLighting": false,
+@@ -303,6 +304,9 @@
+                 "_toneMappingEnabled": false,
+                 "_toneMappingType": 0,
+                 "_contrast": 1,
++                "_whiteBalanceEnabled": false,
++                "_temperature": 6500,
++                "_tint": 0,
+                 "vignetteStretch": 0,
+                 "vignetteCenterX": 0,
+                 "vignetteCenterY": 0,
+@@ -324,6 +328,9 @@
+                 "outputTextureWidth": 0,
+                 "outputTextureHeight": 0
+             },
++            "pointsCloud": false,
++            "fillMode": 0,
++            "transparencyMode": 0,
+             "id": "9f2b8769-ac8e-4289-b8a4-171c5b7d3139",
+             "name": "box",
+             "checkReadyOnEveryCall": false,
+@@ -331,9 +338,18 @@
+             "state": "",
+             "alpha": 1,
+             "backFaceCulling": true,
++            "textureRepetitionMode": 0,
++            "textureRepetitionHexTilingParams": [
++                1,
++                0.6,
++                7,
++                0.5
++            ],
+             "cullBackFaces": true,
+             "sideOrientation": 1,
+-            "alphaMode": 2,
++            "_alphaMode": [
++                2
++            ],
+             "_needDepthPrePass": false,
+             "disableDepthWrite": false,
+             "disableColorWrite": false,
+@@ -344,17 +360,19 @@
+             "pointSize": 1,
+             "zOffset": 0,
+             "zOffsetUnits": 0,
+-            "pointsCloud": false,
+-            "fillMode": 0,
+-            "transparencyMode": 0,
++            "_isVertexOutputInvariant": false,
+             "stencil": {
+                 "tags": null,
+                 "func": 519,
++                "backFunc": 519,
+                 "funcRef": 1,
+                 "funcMask": 255,
+                 "opStencilFail": 7680,
+                 "opDepthFail": 7680,
+                 "opStencilDepthPass": 7681,
++                "backOpStencilFail": 7680,
++                "backOpDepthFail": 7680,
++                "backOpStencilDepthPass": 7681,
+                 "mask": 255,
+                 "enabled": false
+             },
+@@ -367,6 +385,10 @@
+                     "useSphericalHarmonics": true,
+                     "useSpecularGlossinessInputEnergyConservation": true,
+                     "mixIblRadianceWithIrradiance": true,
++                    "useLegacySpecularEnergyConservation": true,
++                    "baseDiffuseModel": 0,
++                    "dielectricSpecularModel": 0,
++                    "conductorSpecularModel": 0,
+                     "name": "PBRBRDF",
+                     "priority": 90,
+                     "resolveIncludes": false,
+@@ -375,12 +397,12 @@
+                 "PBRClearCoatConfiguration": {
+                     "tags": null,
+                     "isEnabled": false,
+-                    "intensity": 1,
+-                    "roughness": 0,
+                     "indexOfRefraction": 1.5,
+                     "useRoughnessFromMainTexture": true,
+                     "remapF0OnInterfaceChange": true,
+                     "isTintEnabled": false,
++                    "intensity": 1,
++                    "roughness": 0,
+                     "tintColor": [
+                         1,
+                         1,
+@@ -408,12 +430,12 @@
+                 "PBRAnisotropicConfiguration": {
+                     "tags": null,
+                     "isEnabled": false,
++                    "legacy": false,
+                     "intensity": 1,
+                     "direction": [
+                         1,
+                         0
+                     ],
+-                    "legacy": false,
+                     "name": "PBRAnisotropic",
+                     "priority": 110,
+                     "resolveIncludes": false,
+@@ -423,14 +445,14 @@
+                     "tags": null,
+                     "isEnabled": false,
+                     "linkSheenWithAlbedo": false,
++                    "useRoughnessFromMainTexture": true,
++                    "albedoScaling": false,
+                     "intensity": 1,
+                     "color": [
+                         1,
+                         1,
+                         1
+                     ],
+-                    "useRoughnessFromMainTexture": true,
+-                    "albedoScaling": false,
+                     "name": "Sheen",
+                     "priority": 120,
+                     "resolveIncludes": false,
+@@ -442,15 +464,17 @@
+                     "isTranslucencyEnabled": false,
+                     "isDispersionEnabled": false,
+                     "isScatteringEnabled": false,
+-                    "_scatteringDiffusionProfileIndex": 0,
+-                    "refractionIntensity": 1,
+-                    "translucencyIntensity": 1,
+                     "useAlbedoToTintRefraction": false,
+                     "useAlbedoToTintTranslucency": false,
+                     "indexOfRefraction": 1.5,
+-                    "_volumeIndexOfRefraction": -1,
+                     "invertRefractionY": false,
+                     "linkRefractionWithTransparency": false,
++                    "useMaskFromThicknessTexture": false,
++                    "useGltfStyleTextures": false,
++                    "_scatteringDiffusionProfileIndex": 0,
++                    "refractionIntensity": 1,
++                    "translucencyIntensity": 1,
++                    "_volumeIndexOfRefraction": -1,
+                     "minimumThickness": 0,
+                     "maximumThickness": 1,
+                     "useThicknessAsDepth": false,
+@@ -466,10 +490,8 @@
+                         1,
+                         1
+                     ],
+-                    "useMaskFromThicknessTexture": false,
+-                    "useGltfStyleTextures": false,
+                     "applyAlbedoAfterSubSurface": false,
+-                    "legacyTransluceny": false,
++                    "legacyTranslucency": false,
+                     "name": "PBRSubSurface",
+                     "priority": 130,
+                     "resolveIncludes": false,
+@@ -477,22 +499,15 @@
+                 },
+                 "DetailMapConfiguration": {
+                     "tags": null,
++                    "normalBlendMethod": 0,
++                    "isEnabled": false,
+                     "diffuseBlendLevel": 1,
+                     "roughnessBlendLevel": 1,
+                     "bumpLevel": 1,
+-                    "normalBlendMethod": 0,
+-                    "isEnabled": false,
+                     "name": "DetailMap",
+                     "priority": 140,
+                     "resolveIncludes": false,
+                     "registerForExtraEvents": false
+-                },
+-                "DepthSensingMaterialPlugin": {
+-                    "tags": null,
+-                    "name": "DepthSensing",
+-                    "priority": 222,
+-                    "resolveIncludes": false,
+-                    "registerForExtraEvents": false
+                 }
+             },
+             "customType": "BABYLON.PBRMaterial"
+diff --git a/assets/example.scene/preview.png b/assets/example.scene/preview.png
+index ddb200d..b6b4d24 100644
+Binary files a/assets/example.scene/preview.png and b/assets/example.scene/preview.png differ
+diff --git a/assets/example.scene/shadowGenerators/9242a5b8-a8b8-41d2-94ea-968e4fc3dd61.json b/assets/example.scene/shadowGenerators/9242a5b8-a8b8-41d2-94ea-968e4fc3dd61.json
+index d5f4c7e..0e917c3 100644
+--- a/assets/example.scene/shadowGenerators/9242a5b8-a8b8-41d2-94ea-968e4fc3dd61.json
++++ b/assets/example.scene/shadowGenerators/9242a5b8-a8b8-41d2-94ea-968e4fc3dd61.json
+@@ -24,7 +24,13 @@
+     "blurScale": 2,
+     "useKernelBlur": false,
+     "renderList": [
+-        "c04fac55-2089-4c99-bb08-39044d112145"
++        "c04fac55-2089-4c99-bb08-39044d112145",
++        "c04fac55-2089-4c99-bb08-39044d112145",
++        "c04fac55-2089-4c99-bb08-39044d112145",
++        "9bfe8d43-894c-4c27-ad3c-f70bea3cb844",
++        "f9f1d62a-8c75-4b1c-8b97-c2631316c4a1",
++        "c30381fb-11dc-4680-b2b4-cffdb877b24a",
++        "14db4dc7-d6e8-46a3-b5be-4601f603719f"
+     ],
+     "numCascades": 4,
+     "debug": false,
+diff --git a/assets/floor.material b/assets/floor.material
+index afa05fb..7af388d 100644
+--- a/assets/floor.material
++++ b/assets/floor.material
+@@ -7,6 +7,7 @@
+ 	"disableBumpMap": false,
+ 	"albedoTexture": {
+ 		"tags": null,
++		"isBlocking": true,
+ 		"url": "assets/albedo.png",
+ 		"uOffset": 0,
+ 		"vOffset": 0,
+@@ -19,7 +20,15 @@
+ 		"vRotationCenter": 0.5,
+ 		"wRotationCenter": 0.5,
+ 		"homogeneousRotationInUVTransform": false,
+-		"isBlocking": true,
++		"wrapU": 1,
++		"wrapV": 1,
++		"isCube": false,
++		"is3D": false,
++		"is2DArray": false,
++		"gammaSpace": true,
++		"lodGenerationOffset": 0,
++		"lodGenerationScale": 0,
++		"linearSpecularLOD": false,
+ 		"name": "assets/albedo.png",
+ 		"metadata": {
+ 			"baseSize": {
+@@ -33,23 +42,15 @@
+ 		"coordinatesIndex": 0,
+ 		"optimizeUVAllocation": true,
+ 		"coordinatesMode": 0,
+-		"wrapU": 1,
+-		"wrapV": 1,
+ 		"wrapR": 1,
+ 		"anisotropicFilteringLevel": 4,
+-		"isCube": false,
+-		"is3D": false,
+-		"is2DArray": false,
+-		"gammaSpace": true,
+ 		"invertZ": false,
+ 		"lodLevelInAlpha": false,
+-		"lodGenerationOffset": 0,
+-		"lodGenerationScale": 0,
+-		"linearSpecularLOD": false,
+ 		"isRenderTarget": false,
+ 		"animations": [],
+ 		"invertY": true,
+ 		"samplingMode": 3,
++		"_creationFlags": 0,
+ 		"_useSRGBBuffer": false,
+ 		"noMipmap": false
+ 	},
+@@ -112,7 +113,7 @@
+ 	"parallaxScaleBias": 0.05,
+ 	"disableLighting": false,
+ 	"forceIrradianceInFragment": false,
+-	"maxSimultaneousLights": 32,
++	"maxSimultaneousLights": 8,
+ 	"invertNormalMapX": false,
+ 	"invertNormalMapY": false,
+ 	"twoSidedLighting": false,
+@@ -149,6 +150,9 @@
+ 		"_toneMappingEnabled": false,
+ 		"_toneMappingType": 0,
+ 		"_contrast": 1,
++		"_whiteBalanceEnabled": false,
++		"_temperature": 6500,
++		"_tint": 0,
+ 		"vignetteStretch": 0,
+ 		"vignetteCenterX": 0,
+ 		"vignetteCenterY": 0,
+@@ -170,6 +174,9 @@
+ 		"outputTextureWidth": 0,
+ 		"outputTextureHeight": 0
+ 	},
++	"pointsCloud": false,
++	"fillMode": 0,
++	"transparencyMode": 0,
+ 	"id": "27c18987-1817-46cd-bdb0-2328f55c7f8b",
+ 	"name": "ground",
+ 	"checkReadyOnEveryCall": false,
+@@ -177,9 +184,18 @@
+ 	"state": "",
+ 	"alpha": 1,
+ 	"backFaceCulling": true,
++	"textureRepetitionMode": 0,
++	"textureRepetitionHexTilingParams": [
++		1,
++		0.6,
++		7,
++		0.5
++	],
+ 	"cullBackFaces": true,
+ 	"sideOrientation": 1,
+-	"alphaMode": 2,
++	"_alphaMode": [
++		2
++	],
+ 	"_needDepthPrePass": false,
+ 	"disableDepthWrite": false,
+ 	"disableColorWrite": false,
+@@ -190,17 +206,19 @@
+ 	"pointSize": 1,
+ 	"zOffset": 0,
+ 	"zOffsetUnits": 0,
+-	"pointsCloud": false,
+-	"fillMode": 0,
+-	"transparencyMode": 0,
++	"_isVertexOutputInvariant": false,
+ 	"stencil": {
+ 		"tags": null,
+ 		"func": 519,
++		"backFunc": 519,
+ 		"funcRef": 1,
+ 		"funcMask": 255,
+ 		"opStencilFail": 7680,
+ 		"opDepthFail": 7680,
+ 		"opStencilDepthPass": 7681,
++		"backOpStencilFail": 7680,
++		"backOpDepthFail": 7680,
++		"backOpStencilDepthPass": 7681,
+ 		"mask": 255,
+ 		"enabled": false
+ 	},
+@@ -213,6 +231,10 @@
+ 			"useSphericalHarmonics": true,
+ 			"useSpecularGlossinessInputEnergyConservation": true,
+ 			"mixIblRadianceWithIrradiance": true,
++			"useLegacySpecularEnergyConservation": true,
++			"baseDiffuseModel": 0,
++			"dielectricSpecularModel": 0,
++			"conductorSpecularModel": 0,
+ 			"name": "PBRBRDF",
+ 			"priority": 90,
+ 			"resolveIncludes": false,
+@@ -221,12 +243,12 @@
+ 		"PBRClearCoatConfiguration": {
+ 			"tags": null,
+ 			"isEnabled": false,
+-			"intensity": 1,
+-			"roughness": 0,
+ 			"indexOfRefraction": 1.5,
+ 			"useRoughnessFromMainTexture": true,
+ 			"remapF0OnInterfaceChange": true,
+ 			"isTintEnabled": false,
++			"intensity": 1,
++			"roughness": 0,
+ 			"tintColor": [
+ 				1,
+ 				1,
+@@ -254,12 +276,12 @@
+ 		"PBRAnisotropicConfiguration": {
+ 			"tags": null,
+ 			"isEnabled": false,
++			"legacy": false,
+ 			"intensity": 1,
+ 			"direction": [
+ 				1,
+ 				0
+ 			],
+-			"legacy": false,
+ 			"name": "PBRAnisotropic",
+ 			"priority": 110,
+ 			"resolveIncludes": false,
+@@ -269,14 +291,14 @@
+ 			"tags": null,
+ 			"isEnabled": false,
+ 			"linkSheenWithAlbedo": false,
++			"useRoughnessFromMainTexture": true,
++			"albedoScaling": false,
+ 			"intensity": 1,
+ 			"color": [
+ 				1,
+ 				1,
+ 				1
+ 			],
+-			"useRoughnessFromMainTexture": true,
+-			"albedoScaling": false,
+ 			"name": "Sheen",
+ 			"priority": 120,
+ 			"resolveIncludes": false,
+@@ -288,15 +310,17 @@
+ 			"isTranslucencyEnabled": false,
+ 			"isDispersionEnabled": false,
+ 			"isScatteringEnabled": false,
+-			"_scatteringDiffusionProfileIndex": 0,
+-			"refractionIntensity": 1,
+-			"translucencyIntensity": 1,
+ 			"useAlbedoToTintRefraction": false,
+ 			"useAlbedoToTintTranslucency": false,
+ 			"indexOfRefraction": 1.5,
+-			"_volumeIndexOfRefraction": -1,
+ 			"invertRefractionY": false,
+ 			"linkRefractionWithTransparency": false,
++			"useMaskFromThicknessTexture": false,
++			"useGltfStyleTextures": false,
++			"_scatteringDiffusionProfileIndex": 0,
++			"refractionIntensity": 1,
++			"translucencyIntensity": 1,
++			"_volumeIndexOfRefraction": -1,
+ 			"minimumThickness": 0,
+ 			"maximumThickness": 1,
+ 			"useThicknessAsDepth": false,
+@@ -312,10 +336,8 @@
+ 				1,
+ 				1
+ 			],
+-			"useMaskFromThicknessTexture": false,
+-			"useGltfStyleTextures": false,
+ 			"applyAlbedoAfterSubSurface": false,
+-			"legacyTransluceny": false,
++			"legacyTranslucency": false,
+ 			"name": "PBRSubSurface",
+ 			"priority": 130,
+ 			"resolveIncludes": false,
+@@ -323,22 +345,15 @@
+ 		},
+ 		"DetailMapConfiguration": {
+ 			"tags": null,
++			"normalBlendMethod": 0,
++			"isEnabled": false,
+ 			"diffuseBlendLevel": 1,
+ 			"roughnessBlendLevel": 1,
+ 			"bumpLevel": 1,
+-			"normalBlendMethod": 0,
+-			"isEnabled": false,
+ 			"name": "DetailMap",
+ 			"priority": 140,
+ 			"resolveIncludes": false,
+ 			"registerForExtraEvents": false
+-		},
+-		"DepthSensingMaterialPlugin": {
+-			"tags": null,
+-			"name": "DepthSensing",
+-			"priority": 222,
+-			"resolveIncludes": false,
+-			"registerForExtraEvents": false
+ 		}
+ 	},
+ 	"customType": "BABYLON.PBRMaterial"
+diff --git a/project.bjseditor b/project.bjseditor
+index 3782700..35487f8 100644
+--- a/project.bjseditor
++++ b/project.bjseditor
+@@ -1,8 +1,20 @@
+ {
+     "plugins": [],
+-    "version": "5.0.0",
++    "version": "5.5.2",
+     "packageManager": "npm",
+-    "lastOpenedScene": "assets/example.scene",
++    "lastOpenedScene": "/assets/example.scene",
++    "compressedTextureSoftware": "PVRTexTool",
+     "compressedTexturesEnabled": false,
+-    "compressedTexturesEnabledInPreview": false
++    "compressedTexturesEnabledInPreview": false,
++    "compressedEtc2Enabled": false,
++    "compressedPvrtcEnabled": false,
++    "compressedTextureQuality": "very-fast",
++    "gizmoSnap": {
++        "translationEnabled": false,
++        "translationStep": 1,
++        "rotationEnabled": false,
++        "rotationStepDegrees": 15,
++        "scaleEnabled": false,
++        "scaleStep": 0.25
++    }
+ }

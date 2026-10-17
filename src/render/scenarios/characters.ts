@@ -1,21 +1,23 @@
-import { Animation } from "@babylonjs/core/Animations/animation";
-// 注册 Scene.beginAnimation 等动画副作用（Babylon 9 按需加载）。
-import "@babylonjs/core/Animations/animatable";
-import { Bone } from "@babylonjs/core/Bones/bone";
-import { Skeleton } from "@babylonjs/core/Bones/skeleton";
-import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
+import type { Skeleton } from "@babylonjs/core/Bones/skeleton";
 import type { AbstractEngine } from "@babylonjs/core/Engines/abstractEngine";
 import { SceneInstrumentation } from "@babylonjs/core/Instrumentation/sceneInstrumentation";
-import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
+import type { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import { Matrix, Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
-import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
+import type { Mesh } from "@babylonjs/core/Meshes/mesh";
 import type { Scene } from "@babylonjs/core/scene";
 
 import type { Metric } from "../../logic/report";
 import { updateOrthographicFrustum } from "../camera";
+import {
+  CHARACTER_ANIMATION_FRAMES,
+  CHARACTER_BONE_SPINE,
+  createCharacterAnimations,
+  createCharacterMaterial,
+  createCharacterPrototype,
+  createCharacterSkeleton,
+  mulberry32,
+} from "../character-proto";
 import type { ScenarioDefinition } from "../harness";
 
 export const CHARACTER_SCENARIO_NAME = "characters-300";
@@ -26,18 +28,12 @@ const GRID_COLUMNS = 20;
 const GRID_SPACING = 1.0;
 const WARMUP_MS = 3_000;
 const SAMPLE_MS = 10_000;
-const ANIMATION_FRAMES = 30;
-const ANIMATION_FPS = 30;
 const BASE_CAMERA_VERTICAL_SPAN = 20;
 /** 20×15 网格投影后的水平半径约 11.7，留一点余量。 */
 const REQUIRED_HALF_WIDTH = 13;
 const JS_HEAP_BUDGET_MB = 1_536;
 const FPS_BUDGET = 60;
 const DRAW_CALL_BUDGET = 300;
-
-const BONE_ROOT = 0;
-const BONE_SPINE = 1;
-const BONE_HEAD = 2;
 
 interface FrameSample {
   /** 与上一帧的间隔（毫秒）。 */
@@ -70,135 +66,6 @@ const state: CharacterScenarioState = {
   materials: [],
   hiddenMeshes: [],
 };
-
-function mulberry32(seed: number): () => number {
-  let value = seed >>> 0;
-  return () => {
-    value = (value + 0x6d2b79f5) >>> 0;
-    let t = value;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4_294_967_296;
-  };
-}
-
-function clamp01(value: number): number {
-  return Math.min(1, Math.max(0, value));
-}
-
-/**
- * 按顶点高度分配三根骨骼的蒙皮权重：
- * 脚部 → root，腰部 → spine，头部 → head，中间线性过渡。
- */
-function computeSkinWeights(y: number): [number, number, number] {
-  const rootToSpine = clamp01((y - 0.2) / 0.35);
-  const spineToHead = clamp01((y - 0.82) / 0.28);
-  if (y < 0.2) {
-    return [1, 0, 0];
-  }
-  if (y < 0.82) {
-    return [1 - rootToSpine, rootToSpine, 0];
-  }
-  if (y < 1.1) {
-    return [0, 1 - spineToHead, spineToHead];
-  }
-  return [0, 0, 1];
-}
-
-function applySkinWeights(mesh: Mesh): void {
-  const positions = mesh.getVerticesData(VertexBuffer.PositionKind);
-  if (!positions) {
-    throw new Error("角色原型缺少顶点位置数据");
-  }
-
-  const vertexCount = positions.length / 3;
-  const matricesIndices = new Float32Array(vertexCount * 4);
-  const matricesWeights = new Float32Array(vertexCount * 4);
-
-  for (let index = 0; index < vertexCount; index += 1) {
-    const weights = computeSkinWeights(positions[index * 3 + 1]);
-    const offset = index * 4;
-    matricesIndices[offset] = BONE_ROOT;
-    matricesIndices[offset + 1] = BONE_SPINE;
-    matricesIndices[offset + 2] = BONE_HEAD;
-    matricesIndices[offset + 3] = 0;
-    matricesWeights[offset] = weights[0];
-    matricesWeights[offset + 1] = weights[1];
-    matricesWeights[offset + 2] = weights[2];
-    matricesWeights[offset + 3] = 0;
-  }
-
-  mesh.setVerticesData(VertexBuffer.MatricesIndicesKind, matricesIndices, false);
-  mesh.setVerticesData(VertexBuffer.MatricesWeightsKind, matricesWeights, false);
-}
-
-/** 程序化占位角色：胶囊身体 + 球形头部合并为单个 skinned mesh。 */
-function createPrototype(scene: Scene): Mesh {
-  const body = MeshBuilder.CreateCapsule(
-    `${CHARACTER_PREFIX}proto-body`,
-    { radius: 0.24, height: 0.95, tessellation: 8, subdivisions: 2, capSubdivisions: 2 },
-    scene,
-  );
-  body.position.y = 0.475;
-
-  const head = MeshBuilder.CreateSphere(
-    `${CHARACTER_PREFIX}proto-head`,
-    { diameter: 0.44, segments: 8 },
-    scene,
-  );
-  head.position.y = 1.12;
-
-  const merged = Mesh.MergeMeshes([body, head], true, true, undefined, false, false);
-  if (!merged) {
-    throw new Error("角色原型合并网格失败");
-  }
-  merged.name = `${CHARACTER_PREFIX}proto`;
-  applySkinWeights(merged);
-  return merged;
-}
-
-/**
- * Bone.rotation 的 getter 返回临时 Vector3，动画必须走 rotationQuaternion
- * （setter 会写回 _localRotation），否则关键帧值会被丢弃。
- */
-function createQuaternionAnimation(
-  name: string,
-  axis: Vector3,
-  keys: Array<{ frame: number; angle: number }>,
-): Animation {
-  const animation = new Animation(
-    name,
-    "rotationQuaternion",
-    ANIMATION_FPS,
-    Animation.ANIMATIONTYPE_QUATERNION,
-    Animation.ANIMATIONLOOPMODE_CYCLE,
-  );
-  animation.setKeys(
-    keys.map((key) => ({ frame: key.frame, value: Quaternion.RotationAxis(axis, key.angle) })),
-  );
-  return animation;
-}
-
-function createSkeleton(
-  scene: Scene,
-  index: number,
-  sway: Animation,
-  nod: Animation,
-): Skeleton {
-  const skeleton = new Skeleton(
-    `${CHARACTER_PREFIX}${index}.skeleton`,
-    `${CHARACTER_PREFIX}${index}.skeleton`,
-    scene,
-  );
-
-  const root = new Bone("root", skeleton, null, Matrix.Identity());
-  const spine = new Bone("spine", skeleton, root, Matrix.Translation(0, 0.5, 0));
-  new Bone("head", skeleton, spine, Matrix.Translation(0, 0.42, 0));
-
-  spine.animations = [sway];
-  skeleton.bones[BONE_HEAD].animations = [nod];
-  return skeleton;
-}
 
 function nextFrame(): Promise<void> {
   return new Promise((resolve) => {
@@ -253,7 +120,7 @@ function sampleFrames(scene: Scene, durationMs: number): Promise<FrameSample[]> 
         animationMs,
         drawPhaseMs,
         sceneRenderMs: now - sceneRenderStart,
-        spineRotationZ: state.skeletons[0]?.bones[BONE_SPINE]?.rotation.z ?? 0,
+        spineRotationZ: state.skeletons[0]?.bones[CHARACTER_BONE_SPINE]?.rotation.z ?? 0,
       });
       lastFrameAt = now;
 
@@ -496,18 +363,7 @@ export const charactersScenario: ScenarioDefinition = {
     fitCamera(scene);
 
     const random = mulberry32(0x5eed11);
-    const swayAxis = new Vector3(0, 0, 1);
-    const nodAxis = new Vector3(1, 0, 0);
-    const sway = createQuaternionAnimation("character.sway", swayAxis, [
-      { frame: 0, angle: -0.16 },
-      { frame: ANIMATION_FRAMES / 2, angle: 0.16 },
-      { frame: ANIMATION_FRAMES, angle: -0.16 },
-    ]);
-    const nod = createQuaternionAnimation("character.nod", nodAxis, [
-      { frame: 0, angle: 0.1 },
-      { frame: ANIMATION_FRAMES / 2, angle: -0.08 },
-      { frame: ANIMATION_FRAMES, angle: 0.1 },
-    ]);
+    const animations = createCharacterAnimations();
 
     const colors = [
       new Color3(0.3, 0.75, 0.7),
@@ -516,13 +372,12 @@ export const charactersScenario: ScenarioDefinition = {
       new Color3(0.65, 0.75, 0.4),
     ];
     for (let index = 0; index < colors.length; index += 1) {
-      const material = new StandardMaterial(`${CHARACTER_PREFIX}material-${index}`, scene);
-      material.diffuseColor = colors[index];
-      material.specularColor = Color3.Black();
-      state.materials.push(material);
+      state.materials.push(
+        createCharacterMaterial(scene, `${CHARACTER_PREFIX}material-${index}`, colors[index]),
+      );
     }
 
-    const prototype = createPrototype(scene);
+    const prototype = createCharacterPrototype(scene, CHARACTER_PREFIX);
     const rows = Math.ceil(CHARACTER_COUNT / GRID_COLUMNS);
     const offsetX = ((GRID_COLUMNS - 1) * GRID_SPACING) / 2;
     const offsetZ = ((rows - 1) * GRID_SPACING) / 2;
@@ -535,7 +390,7 @@ export const charactersScenario: ScenarioDefinition = {
       mesh.material = state.materials[index % state.materials.length];
       mesh.isPickable = false;
 
-      const skeleton = createSkeleton(scene, index, sway, nod);
+      const skeleton = createCharacterSkeleton(scene, CHARACTER_PREFIX, index, animations);
       mesh.skeleton = skeleton;
       state.skeletons.push(skeleton);
       state.meshes.push(mesh);
@@ -543,11 +398,11 @@ export const charactersScenario: ScenarioDefinition = {
       const animatable = scene.beginAnimation(
         skeleton,
         0,
-        ANIMATION_FRAMES,
+        CHARACTER_ANIMATION_FRAMES,
         true,
         0.85 + random() * 0.3,
       );
-      animatable.goToFrame(random() * ANIMATION_FRAMES);
+      animatable.goToFrame(random() * CHARACTER_ANIMATION_FRAMES);
     }
 
     // 原型本身不参与渲染；几何体由 300 个角色共享。

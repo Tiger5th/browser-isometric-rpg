@@ -1,0 +1,144 @@
+{
+  "schemaVersion": 1,
+  "harness": "P0Harness",
+  "scenario": "region-gate",
+  "status": "passed",
+  "startedAt": "2026-10-17T04:46:10.880Z",
+  "finishedAt": "2026-10-17T04:46:16.891Z",
+  "durationMs": 6011,
+  "environment": {
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "renderBackend": "webgl2",
+    "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+    "capturedAt": "2026-10-17T04:46:16.890Z",
+    "devicePixelRatio": 2,
+    "hardwareConcurrency": 10
+  },
+  "metrics": [
+    {
+      "name": "gateAddRegionAMs",
+      "value": 0.10000014305114746,
+      "unit": "ms"
+    },
+    {
+      "name": "gateAverageFrameMsA",
+      "value": 25.428378379022753,
+      "unit": "ms"
+    },
+    {
+      "name": "gateAverageFrameMsB",
+      "value": 26.81594202829444,
+      "unit": "ms"
+    },
+    {
+      "name": "gateExitedCleanly",
+      "value": 1,
+      "unit": "boolean"
+    },
+    {
+      "name": "gateFrameCountA",
+      "value": 74,
+      "unit": "frames"
+    },
+    {
+      "name": "gateFrameCountB",
+      "value": 69,
+      "unit": "frames"
+    },
+    {
+      "name": "gateMaskInTotalMs",
+      "value": 842.5999999046326,
+      "unit": "ms"
+    },
+    {
+      "name": "gateMaskOutTotalMs",
+      "value": 1029.7999999523163,
+      "unit": "ms"
+    },
+    {
+      "name": "gateMaskedDuringSwap",
+      "value": 1,
+      "unit": "boolean"
+    },
+    {
+      "name": "gateMaskedWarmupAMs",
+      "value": 1028.5,
+      "unit": "ms"
+    },
+    {
+      "name": "gateMaskedWarmupBMs",
+      "value": 33.30000019073486,
+      "unit": "ms"
+    },
+    {
+      "name": "gateMaxFrameMsA",
+      "value": 35.5,
+      "unit": "ms"
+    },
+    {
+      "name": "gateMaxFrameMsB",
+      "value": 50.299999952316284,
+      "unit": "ms"
+    },
+    {
+      "name": "gatePreloadBothMs",
+      "value": 39.69999980926514,
+      "unit": "ms"
+    },
+    {
+      "name": "gatePreloadedOutsideScene",
+      "value": 1,
+      "unit": "boolean"
+    },
+    {
+      "name": "gateRegionCount",
+      "value": 2,
+      "unit": "regions"
+    },
+    {
+      "name": "gateRemoveAndDisposeMs",
+      "value": 2.799999952316284,
+      "unit": "ms"
+    },
+    {
+      "name": "gateRevealAMs",
+      "value": 366.2999999523163,
+      "unit": "ms"
+    },
+    {
+      "name": "gateRevealBMs",
+      "value": 333.09999990463257,
+      "unit": "ms"
+    },
+    {
+      "name": "gateSceneMeshesAfterExit",
+      "value": 73,
+      "unit": "meshes"
+    },
+    {
+      "name": "gateSceneMeshesAfterSwap",
+      "value": 106,
+      "unit": "meshes"
+    },
+    {
+      "name": "gateSceneMeshesBaseline",
+      "value": 73,
+      "unit": "meshes"
+    },
+    {
+      "name": "gateSwapMs",
+      "value": 0.2999999523162842,
+      "unit": "ms"
+    },
+    {
+      "name": "gateTotalTransitionMs",
+      "value": 42.799999713897705,
+      "unit": "ms"
+    },
+    {
+      "name": "gateVisibleHoldMs",
+      "value": 1500,
+      "unit": "ms"
+    }
+  ]
+}

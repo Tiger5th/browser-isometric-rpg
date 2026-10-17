@@ -1,0 +1,217 @@
+{
+  "schemaVersion": 1,
+  "harness": "P0Harness",
+  "scenario": "region-loading",
+  "status": "passed",
+  "startedAt": "2026-10-17T04:45:51.257Z",
+  "finishedAt": "2026-10-17T04:45:56.273Z",
+  "durationMs": 5016,
+  "environment": {
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "renderBackend": "webgl2",
+    "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+    "capturedAt": "2026-10-17T04:45:56.273Z",
+    "devicePixelRatio": 2,
+    "hardwareConcurrency": 10
+  },
+  "metrics": [
+    {
+      "name": "containerAddAttachedToScene",
+      "value": 1,
+      "unit": "boolean"
+    },
+    {
+      "name": "containerAddToSceneMs",
+      "value": 0.39999985694885254,
+      "unit": "ms"
+    },
+    {
+      "name": "containerDisposeMs",
+      "value": 6,
+      "unit": "ms"
+    },
+    {
+      "name": "containerMaterialCount",
+      "value": 4,
+      "unit": "materials"
+    },
+    {
+      "name": "containerMeshCount",
+      "value": 33,
+      "unit": "meshes"
+    },
+    {
+      "name": "containerPreloadMs",
+      "value": 55.299999952316284,
+      "unit": "ms"
+    },
+    {
+      "name": "containerPreloadedOutsideScene",
+      "value": 1,
+      "unit": "boolean"
+    },
+    {
+      "name": "containerRemoveDetachedFromScene",
+      "value": 1,
+      "unit": "boolean"
+    },
+    {
+      "name": "containerRemoveFromSceneMs",
+      "value": 0.2999999523162842,
+      "unit": "ms"
+    },
+    {
+      "name": "containerVertexCount",
+      "value": 882838,
+      "unit": "vertices"
+    },
+    {
+      "name": "gateMaskInBeforeRemoveMs",
+      "value": 249.5,
+      "unit": "ms"
+    },
+    {
+      "name": "gateMaskInMs",
+      "value": 249.29999995231628,
+      "unit": "ms"
+    },
+    {
+      "name": "gateMaskOutAfterDisposeMs",
+      "value": 277,
+      "unit": "ms"
+    },
+    {
+      "name": "gateMaskOutMs",
+      "value": 281.5,
+      "unit": "ms"
+    },
+    {
+      "name": "gateMaskedDuringSwap",
+      "value": 1,
+      "unit": "boolean"
+    },
+    {
+      "name": "jsHeapAfterCycleMB",
+      "value": 323.832933,
+      "unit": "MB"
+    },
+    {
+      "name": "jsHeapBaselineMB",
+      "value": 72.808005,
+      "unit": "MB"
+    },
+    {
+      "name": "jsHeapPeakDeltaMB",
+      "value": 251.024928,
+      "unit": "MB"
+    },
+    {
+      "name": "jsHeapPeakMB",
+      "value": 323.832933,
+      "unit": "MB"
+    },
+    {
+      "name": "maskedWarmupMs",
+      "value": 1140.6000001430511,
+      "unit": "ms"
+    },
+    {
+      "name": "memorySampleCount",
+      "value": 64,
+      "unit": "samples"
+    },
+    {
+      "name": "memorySamplingEnabled",
+      "value": 1,
+      "unit": "boolean"
+    },
+    {
+      "name": "regionAssetCached",
+      "value": 0,
+      "unit": "boolean"
+    },
+    {
+      "name": "regionChunkCount",
+      "value": 10,
+      "unit": "chunks"
+    },
+    {
+      "name": "regionChunkSubdivisions",
+      "value": 296,
+      "unit": "subdivisions"
+    },
+    {
+      "name": "regionExportMs",
+      "value": 1516.5999999046326,
+      "unit": "ms"
+    },
+    {
+      "name": "regionGlbSizeBytes",
+      "value": 49314044,
+      "unit": "bytes"
+    },
+    {
+      "name": "regionGlbSizeMB",
+      "value": 49.314044,
+      "unit": "MB",
+      "threshold": 50,
+      "comparison": "lte",
+      "passed": true
+    },
+    {
+      "name": "regionGlbSizeMiB",
+      "value": 47.029537200927734,
+      "unit": "MiB"
+    },
+    {
+      "name": "regionSourceMeshCount",
+      "value": 32,
+      "unit": "meshes"
+    },
+    {
+      "name": "regionTriangleCount",
+      "value": 1752864,
+      "unit": "triangles"
+    },
+    {
+      "name": "regionVertexCount",
+      "value": 882838,
+      "unit": "vertices"
+    },
+    {
+      "name": "revealAverageFrameMs",
+      "value": 24.173809522674198,
+      "unit": "ms"
+    },
+    {
+      "name": "revealFrameCount",
+      "value": 42,
+      "unit": "frames"
+    },
+    {
+      "name": "revealMaxFrameMs",
+      "value": 36,
+      "unit": "ms"
+    },
+    {
+      "name": "sceneMeshesAfterAdd",
+      "value": 106,
+      "unit": "meshes"
+    },
+    {
+      "name": "sceneMeshesAfterPreload",
+      "value": 73,
+      "unit": "meshes"
+    },
+    {
+      "name": "sceneMeshesAfterRemove",
+      "value": 73,
+      "unit": "meshes"
+    },
+    {
+      "name": "sceneMeshesBeforePreload",
+      "value": 73,
+      "unit": "meshes"
+    }
+  ]
+}

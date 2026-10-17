@@ -1,0 +1,357 @@
+{
+  "schemaVersion": 1,
+  "harness": "P0Harness",
+  "scenario": "occlusion-outline",
+  "status": "passed",
+  "startedAt": "2026-10-17T05:10:48.716Z",
+  "finishedAt": "2026-10-17T05:11:05.922Z",
+  "durationMs": 17206,
+  "environment": {
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "renderBackend": "webgl2",
+    "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+    "capturedAt": "2026-10-17T05:11:05.922Z",
+    "devicePixelRatio": 2,
+    "hardwareConcurrency": 10
+  },
+  "metrics": [
+    {
+      "name": "baseline.detectionMsAverage",
+      "value": 0,
+      "unit": "ms/frame"
+    },
+    {
+      "name": "baseline.detectionMsMax",
+      "value": 0,
+      "unit": "ms"
+    },
+    {
+      "name": "baseline.drawCallsAverage",
+      "value": 36,
+      "unit": "calls"
+    },
+    {
+      "name": "baseline.drawCallsMax",
+      "value": 36,
+      "unit": "calls"
+    },
+    {
+      "name": "baseline.fps",
+      "value": 60.1,
+      "unit": "fps"
+    },
+    {
+      "name": "baseline.fpsMin",
+      "value": 54.9,
+      "unit": "fps"
+    },
+    {
+      "name": "baseline.frameTimeAvgMs",
+      "value": 16.6,
+      "unit": "ms"
+    },
+    {
+      "name": "baseline.frameTimeP95Ms",
+      "value": 17.5,
+      "unit": "ms"
+    },
+    {
+      "name": "baseline.highlightMsAverage",
+      "value": 0,
+      "unit": "ms/frame"
+    },
+    {
+      "name": "baseline.highlightMsMax",
+      "value": 0,
+      "unit": "ms"
+    },
+    {
+      "name": "baseline.longFrames",
+      "value": 0,
+      "unit": "frames"
+    },
+    {
+      "name": "baseline.sampledFrames",
+      "value": 241,
+      "unit": "frames"
+    },
+    {
+      "name": "baseline.sceneRenderMsAverage",
+      "value": 0.96,
+      "unit": "ms/frame"
+    },
+    {
+      "name": "comparison.drawCallsDelta",
+      "value": 40,
+      "unit": "calls"
+    },
+    {
+      "name": "comparison.fpsDelta",
+      "value": -0.1,
+      "unit": "fps"
+    },
+    {
+      "name": "comparison.frameTimeDeltaMs",
+      "value": 0,
+      "unit": "ms"
+    },
+    {
+      "name": "comparison.highlightMarginalFrameTimeMs",
+      "value": 0,
+      "unit": "ms"
+    },
+    {
+      "name": "detectionOnly.detectionMsAverage",
+      "value": 0.017,
+      "unit": "ms/frame"
+    },
+    {
+      "name": "detectionOnly.detectionMsMax",
+      "value": 0.2,
+      "unit": "ms"
+    },
+    {
+      "name": "detectionOnly.drawCallsAverage",
+      "value": 36,
+      "unit": "calls"
+    },
+    {
+      "name": "detectionOnly.drawCallsMax",
+      "value": 36,
+      "unit": "calls"
+    },
+    {
+      "name": "detectionOnly.fps",
+      "value": 60,
+      "unit": "fps"
+    },
+    {
+      "name": "detectionOnly.fpsMin",
+      "value": 55.2,
+      "unit": "fps"
+    },
+    {
+      "name": "detectionOnly.frameTimeAvgMs",
+      "value": 16.7,
+      "unit": "ms"
+    },
+    {
+      "name": "detectionOnly.frameTimeP95Ms",
+      "value": 17.4,
+      "unit": "ms"
+    },
+    {
+      "name": "detectionOnly.highlightMsAverage",
+      "value": 0,
+      "unit": "ms/frame"
+    },
+    {
+      "name": "detectionOnly.highlightMsMax",
+      "value": 0,
+      "unit": "ms"
+    },
+    {
+      "name": "detectionOnly.longFrames",
+      "value": 0,
+      "unit": "frames"
+    },
+    {
+      "name": "detectionOnly.sampledFrames",
+      "value": 241,
+      "unit": "frames"
+    },
+    {
+      "name": "detectionOnly.sceneRenderMsAverage",
+      "value": 0.77,
+      "unit": "ms/frame"
+    },
+    {
+      "name": "occlusion.boneCount",
+      "value": 90,
+      "unit": "bones"
+    },
+    {
+      "name": "occlusion.characterCount",
+      "value": 30,
+      "unit": "characters",
+      "threshold": 30,
+      "comparison": "eq",
+      "passed": true
+    },
+    {
+      "name": "occlusion.highlightLayerEnabled",
+      "value": 1,
+      "unit": "boolean",
+      "threshold": 1,
+      "comparison": "eq",
+      "passed": true
+    },
+    {
+      "name": "occlusion.minViableFps",
+      "value": 57,
+      "unit": "fps"
+    },
+    {
+      "name": "occlusion.occludedCharacters",
+      "value": 24,
+      "unit": "characters",
+      "threshold": 10,
+      "comparison": "gte",
+      "passed": true
+    },
+    {
+      "name": "occlusion.occluderCount",
+      "value": 3,
+      "unit": "occluders"
+    },
+    {
+      "name": "occlusion.outlineAddTransitionsDuringMeasure",
+      "value": 0,
+      "unit": "transitions"
+    },
+    {
+      "name": "occlusion.outlineRemoveTransitionsDuringMeasure",
+      "value": 0,
+      "unit": "transitions"
+    },
+    {
+      "name": "occlusion.outlineViable",
+      "value": 1,
+      "unit": "boolean",
+      "threshold": 1,
+      "comparison": "eq",
+      "passed": true
+    },
+    {
+      "name": "occlusion.outlineWarmupMs",
+      "value": 34.6,
+      "unit": "ms"
+    },
+    {
+      "name": "occlusion.outlinedCharacters",
+      "value": 24,
+      "unit": "characters",
+      "threshold": 10,
+      "comparison": "gte",
+      "passed": true
+    },
+    {
+      "name": "occlusion.rayBackoff",
+      "value": 25,
+      "unit": "units"
+    },
+    {
+      "name": "occlusion.skeletonCount",
+      "value": 30,
+      "unit": "skeletons"
+    },
+    {
+      "name": "occlusion.spineRotationRangeRad",
+      "value": 0.319,
+      "unit": "rad",
+      "threshold": 0.1,
+      "comparison": "gte",
+      "passed": true
+    },
+    {
+      "name": "occlusion.targetPointY",
+      "value": 0.55,
+      "unit": "units"
+    },
+    {
+      "name": "occlusion.wallCameraOffset",
+      "value": 1.3,
+      "unit": "units"
+    },
+    {
+      "name": "occlusion.wallHeight",
+      "value": 1.55,
+      "unit": "units"
+    },
+    {
+      "name": "outline.detectionMsAverage",
+      "value": 0.019,
+      "unit": "ms/frame"
+    },
+    {
+      "name": "outline.detectionMsMax",
+      "value": 0.1,
+      "unit": "ms"
+    },
+    {
+      "name": "outline.drawCallsAverage",
+      "value": 76,
+      "unit": "calls"
+    },
+    {
+      "name": "outline.drawCallsMax",
+      "value": 76,
+      "unit": "calls"
+    },
+    {
+      "name": "outline.fps",
+      "value": 60,
+      "unit": "fps"
+    },
+    {
+      "name": "outline.fpsMin",
+      "value": 55.2,
+      "unit": "fps"
+    },
+    {
+      "name": "outline.frameTimeAvgMs",
+      "value": 16.7,
+      "unit": "ms"
+    },
+    {
+      "name": "outline.frameTimeP95Ms",
+      "value": 17.5,
+      "unit": "ms"
+    },
+    {
+      "name": "outline.highlightMsAverage",
+      "value": 0.652,
+      "unit": "ms/frame"
+    },
+    {
+      "name": "outline.highlightMsMax",
+      "value": 1.2,
+      "unit": "ms"
+    },
+    {
+      "name": "outline.longFrames",
+      "value": 0,
+      "unit": "frames"
+    },
+    {
+      "name": "outline.sampledFrames",
+      "value": 301,
+      "unit": "frames"
+    },
+    {
+      "name": "outline.sceneRenderMsAverage",
+      "value": 1.14,
+      "unit": "ms/frame"
+    },
+    {
+      "name": "renderHeight",
+      "value": 1458,
+      "unit": "px"
+    },
+    {
+      "name": "renderPixelsMP",
+      "value": 3.73,
+      "unit": "MP"
+    },
+    {
+      "name": "renderWidth",
+      "value": 2560,
+      "unit": "px"
+    },
+    {
+      "name": "renderWidthPinned",
+      "value": 2560,
+      "unit": "px"
+    }
+  ]
+}

@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 1,
+  "kind": "editor-git-friendliness",
+  "tool": {
+    "name": "Babylon.js Editor",
+    "version": "5.5.2",
+    "platform": "macOS arm64",
+    "package": "BabylonJS Editor-5.5.2-arm64.dmg",
+    "source": "https://babylonjs-editor.fra1.cdn.digitaloceanspaces.com/updates/BabylonJS%20Editor-5.5.2-arm64.dmg",
+    "installMode": "copied .app to /tmp, launched without system-wide install; quarantine flag not modified"
+  },
+  "experiment": {
+    "projectPath": "/tmp/babylon-editor-experiment/projects/minimal-region",
+    "projectTemplate": "vanillajs",
+    "projectFile": "project.bjseditor",
+    "scenePath": "assets/example.scene",
+    "objectsAddedViaMcp": [
+      { "name": "p0-crate", "type": "box", "position": [0, 50, 0] },
+      { "name": "p0-orb", "type": "sphere", "position": [200, 150, 0] },
+      { "name": "p0-column", "type": "cylinder", "position": [-200, 150, 0] },
+      { "name": "p0-ring", "type": "torus", "position": [0, 150, 200] }
+    ],
+    "saveMethod": "Editor MCP endpoint save_scene (confirmation dialog accepted in the Editor UI)",
+    "automation": "Renderer driven through the Editor's own remote debugging port (8315); MCP HTTP server started on 127.0.0.1:3712"
+  },
+  "fileFormat": {
+    "layout": "One directory per scene (assets/<name>.scene). Inside: cameras/, lights/, meshes/, geometries/, shadowGenerators/, config.json, preview.png. Each object is a separate JSON file named by its UUID; geometry payloads are separate binary files.",
+    "trackedFiles": 37,
+    "textFiles": {
+      "json": 14,
+      "material": 2,
+      "project": 1,
+      "typescript": 5,
+      "html": 1,
+      "css": 1,
+      "markdown": 1
+    },
+    "binaryFiles": {
+      "babylonbinarymeshdata": 7,
+      "env": 1,
+      "png": 2,
+      "jpg": 1
+    },
+    "bytesByExtension": {
+      "json": 223758,
+      "material": 16199,
+      "bjseditor": 596,
+      "babylonbinarymeshdata": 201196,
+      "env": 3805646,
+      "png": 1607668,
+      "jpg": 593,
+      "ts": 4911,
+      "html": 555,
+      "css": 24,
+      "md": 78
+    }
+  },
+  "measurements": {
+    "firstSaveAfterAddingObjects": {
+      "trackedFilesModified": 11,
+      "insertions": 309,
+      "deletions": 204,
+      "binaryFilesModified": ["assets/example.scene/preview.png"],
+      "newMeshJsonFiles": 4,
+      "newGeometryBinaryFiles": 4,
+      "note": "The template declares version 5.0.0 and was saved by 5.5.2, so existing JSON gained/changed default fields and key order. This is one-time upgrade churn, not per-save noise."
+    },
+    "noOpSave": {
+      "changedFiles": 0,
+      "idempotent": true,
+      "note": "Saving again without edits leaves the working tree clean."
+    },
+    "moveOneObject": {
+      "changedTextFiles": 1,
+      "changedTextLines": 1,
+      "changedValue": "position[1] 50 -> 80 in meshes/9bfe8d43-...json",
+      "binaryNoiseFiles": ["assets/example.scene/preview.png"],
+      "note": "A real object edit produces a one-line JSON diff; only the regenerated preview thumbnail is binary noise."
+    }
+  },
+  "diffNoiseSources": [
+    "preview.png is regenerated on every save (binary thumbnail, not needed for runtime).",
+    "Geometry payloads (*.babylonbinarymeshdata) and environment/image assets are binary and cannot be line-diffed.",
+    "Object/scene files are named by UUID; reviewers must read the name field inside JSON to identify an object.",
+    "First save after an Editor/Babylon version upgrade rewrites defaults and key order across existing JSON files."
+  ],
+  "conclusion": {
+    "gitFriendly": true,
+    "ldktDowngradeTriggered": false,
+    "rationale": "Scene data is stored as one human-readable JSON file per object with stable key order and idempotent saves. A single object edit is a one-line text diff. The remaining noise is limited to the generated preview.png and expected binary geometry/asset payloads, which can be handled with .gitignore, Git LFS or an export step.",
+    "recommendations": [
+      "Keep the Babylon.js Editor + Node Geometry dual-track plan; do not trigger the LDtk fallback for git-friendliness reasons.",
+      "Add assets/**/preview.png to .gitignore (generated thumbnail only).",
+      "Use Git LFS (or ignore regenerable exports) for *.babylonbinarymeshdata, *.env, PNG/JPEG if the repository grows.",
+      "Pin the Editor version per project and avoid mixing Editor versions in one branch to prevent one-time default/key-order churn.",
+      "When reviewing, use the JSON name field rather than the UUID filename to locate an object; a generated index file could be added later if needed."
+    ]
+  },
+  "blockers": [],
+  "notes": [
+    "The Editor was launched from a copied .app under /tmp with DEBUG=true because it was automated headlessly; this changed Havok's WASM lookup path, so the preview engine had to be initialized manually. This is an automation detail, not a project-format limitation.",
+    "The first launch without DEBUG showed the dashboard; the project was opened through the Editor's IPC channel after setting the editor app path.",
+    "The full 998MB app and the 232MB project node_modules stay outside the repository; only report, screenshots and small samples are committed."
+  ]
+}
