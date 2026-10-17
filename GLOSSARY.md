@@ -30,6 +30,12 @@
 - **lint（资产校验）**：对 .glb 自动检查命名、三角数、贴图尺寸、材质数。CI 中每 PR 运行。
 - **AI 生成资产**：美术生产方式（已决策）。跨资产**一致性**靠技术方案（统一 base mesh、贴图统一调色、shader 风格化拉齐），不靠运气。
 
+## 表现与体验
+
+- **反馈层（Feedback Layer）**：表现层中把 GameSession 结算事实（伤害/死亡/拾取/升级/状态变化）转译为视觉与听觉信号的部分。只消费事件、不改变游戏状态。事件流：`damage-dealt`/`health-changed`/`player-level-up`/`item-gained` 等一等订阅事件（与 `enemy-killed` 同级）。
+- **两段式对话**：对话交互约定——点击 NPC 只触发寻路靠近；到达后 NPC 头顶气泡按钮出现；点击气泡才进入对话。移动意图随时打断。
+- **角色色板卡（Character Palette Card）**：每个主要角色一张的颜色规范（主色/辅色/点缀色 + 发色服装关键词）。3D 贴图、立绘、头像同卡生成，保证资产间不漂移。
+
 ## 测试与流程
 
 - **测试五层（L1–L5）**：L1 逻辑单测（vitest）→ L2 内容校验 → L3 资产 lint → L4 浏览器冒烟（**优先 ego-browser**，Playwright 仅 CI 后备）→ L5 性能/视觉夜测（只报告不阻塞）。见 `docs/agents/testing-workflow.md`。

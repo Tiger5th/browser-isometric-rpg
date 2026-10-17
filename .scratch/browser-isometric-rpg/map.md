@@ -64,3 +64,7 @@
 - **美术方向二次修订（2026-10-17，用户确认）**：环境贴图化（Gemini 生图为主，ego-browser 驱动）+ 角色保持 3D（占位角色顶 P1）；VRoid/Mixamo 手做作废、Blender 暂缓（票 15/17 遗留关闭）；风格锚定图先行，锚定后批量生成环境贴图集。
 - **26 号票决策记录（2026-10-17）**：正式场景的 **点击敌人 = 提交攻击意图**（GameSession 自动接近），不是「走近」；遮挡检测单帧 max 阈值放宽到 0.5ms（`performance.now()` 量化下限导致 0.1ms 偶发误报），均值仍按 ≤0.05ms 判定；调试 API drawCalls 改在 after-render 采集。
 - **P1 正式收尾（2026-10-17）——P1 全部 8 张票（19–26）完成。** 最终报告：`artifacts/p1-final-report.md`；人工验收清单：`artifacts/p1-manual-checklist.md`；闭环与 L5 报告：`reports/p1-acceptance-smoke.json`。L4 完整闭环 13/13 通过；L5 `fpsAverage 60.00 / fpsMin 54.64 / drawCallsMax 35 / jsHeapUsedMB 99.33`，动态分辨率 auto 生效。遗留：VRoid 真人资产（用户手做约 15 分钟）、Blender 安装、生产构建首屏/Lighthouse、移动端与 Safari/KTX2 复测、p95 帧时间夜间固定协议；区域布局仍在渲染层常量（P2 再进 content/）。下一步：项目所有者按清单人工试玩，然后进入 P2 规格。
+- **P2 第一批规格发布（2026-10-17）**：`specs/p2-gameplay.md` → tickets 27–30（27 战斗反馈层+重击技能；28 世界质感——网格化硬碰撞+边界景观环带+光照氛围；29 对话与 NPC 体验——两段式对话+galgame 立绘+角色色板卡；30 真实角色接入——VRM+Blender+Mixamo，agent 全程，blocked by 29）。27/28/29 可并行。grilling 设计树 26 问全部收空。
+- **体验关键决策（grilling 2026-10-17）**：走 A = 移动指令打断攻击意图；两段式对话（点击 NPC 只寻路，头顶气泡按钮点击才开对话）；立绘 galgame 式全屏（说话方亮）；伤害飘字 MMO 式配色；敌人血条受击显示 5 秒淡出+目标圈常显；树/墙/桶/箱硬碰撞不可穿、灌木可穿（草丛机制预留）；边界景观 = 固定环带+雾（程序化远景推后）；主光左上 45°+暖色明亮+暗部紫灰；重击技能纳入反馈层票（8s 冷却 1.5 倍）；反馈层只消费 GameSession 一等订阅事件（damage-dealt/health-changed/player-level-up/item-gained），快照 v2→v3。
+- **Harness 面板修复**：正式场景默认不挂 P0Harness DOM，`?harness=1` 显式开启——随票 27 场景改动落地，不单独开票。
+- **真实角色路线定案（2026-10-17）**：Booth 高精度免费 VRM + Blender 脚本换贴图/绑骨 + Mixamo 重定向（方向 1）；图生 3D 保留为方向 2。音效：公有领域库（打击/UI）+ Gemini 生成（BGM）。Blender 解冻（脚本化使用）。

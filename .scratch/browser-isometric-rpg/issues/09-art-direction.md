@@ -160,3 +160,10 @@ artifacts/style-anchor/tiles/ 共 9 张，全部通过 md5 去重校验：
 - 地面平铺（1024²、正俯视、可平铺）：grass / stone-path / dirt-path / water
 - 立面物件（1024×765、45° 等距、白底单件）：stone-wall / tree-large / bush / barrel / crate
 生成流程固化：同一会话喂 anchor-v1 参考图 + 风格前缀提示词 → 等待生成完成（轮询"正在创建您的图片"消失 + blob 数增加）→ canvas 导出 → md5 去重。坑：连续生成时"最后一张 blob"可能未刷新导致重复保存，必须 hash 校验。
+
+### 2026-10-17 · 三次修订：真实角色路线定案（用户确认）
+
+- **角色 = 方向 1「现成高模 + 换贴图」**：Booth 免费高精度 VRM 模型（授权逐个核对，自用）→ Blender 脚本换贴图（Gemini 出角色贴图）/调色 → Mixamo 动作重定向 → 现有管线。方向 2（图生 3D 冲高）保留备用，双轨共用 Blender 绑骨/动画脚本。
+- **音效定案**：打击/UI 短音效 = 公有领域音效库（ego-browser 挑选下载）；BGM = Gemini 音乐生成（免费额度）。
+- **Blender 解冻**：仅脚本化（headless Python API）用于角色绑骨/重定向/烘焙/导出，用户无需手动操作。需安装 Blender（brew）。
+- **Gemini 无 3D 生成能力**（确认事实）；图生 3D 需 Tripo/Meshy 免费档或本地 Hunyuan3D，属方向 2 范畴暂不启动。
