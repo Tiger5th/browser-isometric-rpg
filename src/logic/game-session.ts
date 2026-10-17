@@ -67,8 +67,27 @@ import type {
   DropDefinition,
   ItemDefinition,
   QuestDefinition,
+  VendorDefinition,
 } from "./content/types";
+import { insideAnySafeZone, type SafeZoneDefinition } from "./safe-zone";
 import { interactionTarget } from "./interaction";
+import {
+  createPatrolState,
+  DEFAULT_PATROL_DWELL_MS,
+  patrolSample,
+  reanchorPatrol,
+  restorePatrolState,
+  setPatrolPaused,
+  stepPatrol,
+  type PatrolState,
+} from "./npc-patrol";
+import {
+  COIN_ITEM_ID,
+  quoteBuy,
+  quoteSell,
+  tradeRows,
+  type TradeRow,
+} from "./trade";
 import {
   levelForXp,
   modifiersForLevel,
@@ -188,6 +207,27 @@ export interface IntentResult {
   message?: string;
 }
 
+/** 一次交易的结果（vendorOffer 之外的结构化返回值）。 */
+export interface TradeIntentResult {
+  ok: boolean;
+  /** 实际成交数量；拒绝时为 0。 */
+  quantity?: number;
+  /** 金币变化：正数 = 玩家收到金币，负数 = 玩家付出金币。 */
+  coinDelta?: number;
+  /** 部分成交（金币只够买几件）或拒绝原因。 */
+  message?: string;
+}
+
+/** 交易面板一次刷新所需的全部数据。 */
+export interface TradeOfferView {
+  npcId: EntityId;
+  displayName: string;
+  /** 买卖两栏的行；面板直接渲染，无需自己算价格。 */
+  rows: TradeRow[];
+  /** 玩家当前金币数。 */
+  coins: number;
+}
+
 export interface GameSessionOptions {
   /** [0,1) 随机源；默认确定性序列，测试可注入固定值。 */
   random?: () => number;
@@ -241,6 +281,11 @@ export interface EntitySnapshot {
   container: { items: ItemInstance[] };
   /** 一次性奖励领取账本，保证任务奖励不会重复发放。 */
   claimedRewardIds: string[];
+  /**
+   * NPC 巡逻进度（票 33）：当前所在/正在走向的点位索引。
+   * 实时位置由 position 携带；只有 NPC 有巡逻路线时才有这个可选字段。
+   */
+  patrolIndex?: number;
 }
 
 /** 进行中的对话；story 的 ink 执行状态可完整序列化。 */
@@ -571,6 +616,21 @@ export class GameSession implements GameSessionIntents {
   private playerLevel = 1;
   private cumulativeXp = 0;
   private worldState: Record<string, JsonValue> = {};
+  /** 票 33：当前区域的安全区（敌人 AI 拒止进入）。空数组 = 无安全区。 */
+  private safeZones: SafeZoneDefinition[] = [];
+  /** 票 33：NPC 巡逻进度，键为有巡逻路线的 NPC 实体 id。 */
+  private readonly patrols = new Map<EntityId, PatrolState>();
+  /** 票 33：NPC 的巡逻点位表（读档恢复与表现层采样共用）。 */
+  private readonly patrolRoutes = new Map<EntityId, Vec3[]>();
+  /** 票 33：NPC 的停留时长（内容可覆盖）。 */
+  private readonly patrolDwellMs = new Map<EntityId, number>();
+  /** 票 33：NPC 的商人价格表（npc.vendor）。 */
+  private readonly vendors = new Map<EntityId, VendorDefinition>();
+  /** 票 33：NPC 的换锚点声明（任务 id → 新巡逻路线）。 */
+  private readonly reanchors = new Map<
+    EntityId,
+    Array<{ questId: string; waypoints: Vec3[]; dwellMs?: number }>
+  >();
 
   /** 世界状态容器的当前值（深拷贝，调用方改动不穿透会话状态）。 */
   getWorldState(): Record<string, JsonValue> {
@@ -715,6 +775,44 @@ export class GameSession implements GameSessionIntents {
       });
     }
 
+    // 票 33：安全区 / 商人 / 巡逻路线（region 已在上方取过）。
+    this.safeZones = (region.safeZones ?? []).map((zone) => ({
+      id: zone.id,
+      shape: zone.shape,
+      center: cloneVec3(zone.center),
+      halfExtents: { ...zone.halfExtents },
+    }));
+    for (const npc of index.npcs.values()) {
+      if (npc.regionId !== regionId) {
+        continue;
+      }
+      const npcId = npc.id as EntityId;
+      if (npc.vendor !== undefined) {
+        this.vendors.set(npcId, structuredClone(npc.vendor));
+      }
+      if (npc.patrol !== undefined && this.entities.has(npcId)) {
+        const entity = this.entities.get(npcId)!;
+        this.patrolRoutes.set(npcId, npc.patrol.waypoints.map(cloneVec3));
+        this.patrolDwellMs.set(npcId, npc.patrol.dwellMs ?? DEFAULT_PATROL_DWELL_MS);
+        this.patrols.set(
+          npcId,
+          createPatrolState(
+            npc.patrol.waypoints,
+            entity.state.position,
+            npc.patrol.dwellMs ?? DEFAULT_PATROL_DWELL_MS,
+          ),
+        );
+      }
+      const reanchors = (npc.reanchors ?? []).map((entry) => ({
+        questId: entry.questId,
+        waypoints: entry.waypoints.map(cloneVec3),
+        dwellMs: entry.dwellMs,
+      }));
+      if (reanchors.length > 0) {
+        this.reanchors.set(npcId, reanchors);
+      }
+    }
+
     const curves = bundle.levelCurves ?? [];
     if (curves.length > 1) {
       throw new Error(`内容包提供了 ${curves.length} 条等级曲线，P2 只支持一条`);
@@ -805,6 +903,8 @@ export class GameSession implements GameSessionIntents {
       text: "",
       choices: [],
     };
+    // 票 33：对话开始 → 对方停下巡逻（对话中站着不动、面朝玩家）。
+    this.setNpcPaused(id, true);
     this.publish({ type: "dialogue-started", npcId: id, dialogueId });
     this.continueDialogueState();
   }
@@ -857,11 +957,247 @@ export class GameSession implements GameSessionIntents {
       return;
     }
     this.dialogue = null;
+    this.setNpcPaused(dialogue.npcId, false);
     this.publish({
       type: "dialogue-ended",
       npcId: dialogue.npcId,
       dialogueId: dialogue.dialogueId,
     });
+  }
+
+  // -------------------------------------------------------------------------
+  // 村庄经济与 NPC 行为（票 33）
+  // -------------------------------------------------------------------------
+
+  /**
+   * 直接发放物品（任务奖励/掉落/调试造物的统一入口）。
+   * 金币走这里也就等于「发币」——金币就是背包里的 item:old_coin（票 34 口径）。
+   */
+  grantItem(entityId: EntityId | string, itemId: string, quantity: number): string[] {
+    const entity = this.requireEntity(entityId);
+    if (typeof itemId !== "string" || !this.itemDefinitions.has(itemId)) {
+      throw new Error(`未知物品：${String(itemId)}`);
+    }
+    const normalized = Math.floor(quantity);
+    if (!Number.isFinite(normalized) || normalized <= 0) {
+      throw new Error("发放数量必须是正数");
+    }
+    const created = this.addItem(entity, itemId, normalized);
+    this.publishItemGained(entity, itemId, normalized);
+    return created;
+  }
+
+  /** 实体背包里某物品的总数。 */
+  itemCountOf(entityId: EntityId | string, itemId: string): number {
+    const entity = this.requireEntity(entityId);
+    return entity.container.items
+      .filter((item) => item.templateId === itemId)
+      .reduce((sum, item) => sum + item.quantity, 0);
+  }
+
+  /** 实体持有的金币数（= 背包里旧铜币的数量，票 34 的金币口径）。 */
+  coinsOf(entityId: EntityId | string): number {
+    return this.itemCountOf(entityId, COIN_ITEM_ID);
+  }
+
+  /** 背包 itemId → 数量的只读视图（交易报价用）。 */
+  inventoryCounts(entityId: EntityId | string): ReadonlyMap<string, number> {
+    const entity = this.requireEntity(entityId);
+    const counts = new Map<string, number>();
+    for (const item of entity.container.items) {
+      counts.set(item.templateId, (counts.get(item.templateId) ?? 0) + item.quantity);
+    }
+    return counts;
+  }
+
+  /** 玩家当前是否处于某个安全区内（无安全区的区域恒为 false）。 */
+  playerIsSheltered(playerId = this.playerId): boolean {
+    if (playerId === null) {
+      return false;
+    }
+    return this.isPointInSafeZone(this.requireEntity(playerId).state.position);
+  }
+
+  /** 点是否落在当前区域的安全区内。 */
+  isPointInSafeZone(point: Vec3): boolean {
+    return insideAnySafeZone(this.safeZones, point);
+  }
+
+  /** 当前区域的安全区定义（表现层画地面色块/调试用；空数组 = 无安全区）。 */
+  getSafeZones(): readonly SafeZoneDefinition[] {
+    return this.safeZones;
+  }
+
+  /** NPC 是否是商人（有 vendor 价格表）。 */
+  isVendor(npcId: EntityId | string): boolean {
+    return this.vendors.has(npcId as EntityId);
+  }
+
+  /**
+   * 交易面板数据：商人买卖两栏的行（价格来自价格表）。
+   * 非商人 / 未知 NPC 返回 null。面板与结算共用 quoteBuy/quoteSell 的价格，
+   * 因此显示价与成交价不可能漂移。
+   */
+  vendorOffer(npcId: EntityId | string, playerId = this.playerId): TradeOfferView | null {
+    const vendor = this.vendors.get(npcId as EntityId);
+    if (vendor === undefined || playerId === null) {
+      return null;
+    }
+    const player = this.entities.get(playerId);
+    const entity = this.entities.get(npcId as EntityId);
+    if (!player || !entity) {
+      return null;
+    }
+    const rows = tradeRows(
+      {
+        vendor,
+        inventory: this.inventoryCounts(playerId),
+        coins: this.coinsOf(playerId),
+      },
+      (itemId) => this.itemDefinitions.get(itemId)?.displayName ?? itemId,
+      (itemId) => this.itemDefinitions.get(itemId)?.maxStack ?? 1,
+    );
+    return {
+      npcId: entity.id,
+      displayName: entity.identity.displayName,
+      rows,
+      coins: this.coinsOf(playerId),
+    };
+  }
+
+  /** 卖出（战利品换金币）。返回结构化结果，不抛可预期的业务拒绝。 */
+  trySellToVendor(
+    npcId: EntityId | string,
+    itemId: string,
+    quantity: number,
+    playerId = this.playerId,
+  ): TradeIntentResult {
+    return this.runTradeIntent(playerId, npcId, "sell", itemId, quantity);
+  }
+
+  /** 买入（金币换物品）。金币不足时按可负担件数下调，绝不产生负金币。 */
+  tryBuyFromVendor(
+    npcId: EntityId | string,
+    itemId: string,
+    quantity: number,
+    playerId = this.playerId,
+  ): TradeIntentResult {
+    return this.runTradeIntent(playerId, npcId, "buy", itemId, quantity);
+  }
+
+  private runTradeIntent(
+    playerId: EntityId | null,
+    npcId: EntityId | string,
+    kind: "sell" | "buy",
+    itemId: string,
+    quantity: number,
+  ): TradeIntentResult {
+    const vendor = this.vendors.get(npcId as EntityId);
+    if (vendor === undefined) {
+      return { ok: false, message: "对方不是商人", quantity: 0 };
+    }
+    if (playerId === null) {
+      return { ok: false, message: "没有玩家实体", quantity: 0 };
+    }
+    const player = this.entities.get(playerId);
+    if (!player) {
+      return { ok: false, message: "没有玩家实体", quantity: 0 };
+    }
+    const context = {
+      vendor,
+      inventory: this.inventoryCounts(playerId),
+      coins: this.coinsOf(playerId),
+    };
+    const maxStack = this.itemDefinitions.get(itemId)?.maxStack ?? 1;
+    const quote = kind === "sell" ? quoteSell(context, itemId, quantity) : quoteBuy(context, itemId, quantity, maxStack);
+    if (!quote.ok || quote.quantity <= 0) {
+      return { ok: false, message: quote.message ?? "交易未达成", quantity: 0 };
+    }
+
+    if (kind === "sell") {
+      this.removeItems(player, itemId, quote.quantity);
+      this.addItem(player, COIN_ITEM_ID, quote.coinDelta);
+      this.publishItemGained(player, COIN_ITEM_ID, quote.coinDelta);
+      this.publish({ type: "trade-completed", npcId: `${npcId}`, itemId, kind, quantity: quote.quantity, coinDelta: quote.coinDelta });
+      return { ok: true, quantity: quote.quantity, coinDelta: quote.coinDelta, message: quote.message };
+    }
+
+    this.removeItems(player, COIN_ITEM_ID, -quote.coinDelta);
+    this.addItem(player, itemId, quote.quantity);
+    this.publishItemGained(player, itemId, quote.quantity);
+    this.publish({ type: "trade-completed", npcId: `${npcId}`, itemId, kind, quantity: quote.quantity, coinDelta: quote.coinDelta });
+    return { ok: true, quantity: quote.quantity, coinDelta: quote.coinDelta, message: quote.message };
+  }
+
+  /** 背包扣减；扣成 0 的实例从背包移除。 */
+  private removeItems(entity: Entity, itemId: string, quantity: number): void {
+    let remaining = Math.max(0, Math.floor(quantity));
+    for (const item of entity.container.items) {
+      if (remaining <= 0) {
+        break;
+      }
+      if (item.templateId !== itemId) {
+        continue;
+      }
+      const taken = Math.min(item.quantity, remaining);
+      item.quantity -= taken;
+      remaining -= taken;
+    }
+    entity.container.items = entity.container.items.filter((item) => item.quantity > 0);
+  }
+
+  /**
+   * 换锚点（票 33，user story 16）：任务状态变化时把 NPC 移到新的默认位置。
+   * 逻辑层直接落位（世界事实），走向新锚点的过渡演出由表现层插值。
+   */
+  private applyReanchors(questId: string): void {
+    for (const [npcId, entries] of this.reanchors) {
+      const entity = this.entities.get(npcId);
+      if (!entity) {
+        continue;
+      }
+      for (const entry of entries) {
+        if (entry.questId !== questId || entry.waypoints.length === 0) {
+          continue;
+        }
+        const anchor = entry.waypoints[0];
+        entity.state.position = cloneVec3(anchor);
+        this.patrols.set(npcId, reanchorPatrol(this.patrols.get(npcId) ?? createPatrolState(entry.waypoints, anchor), entry.waypoints, entry.dwellMs));
+        this.publish({ type: "npc-reanchored", npcId, questId, position: cloneVec3(anchor) });
+      }
+    }
+  }
+
+  /**
+   * 任务「完成」的唯一入口（换锚点 hook）。
+   * 只挂在交付（completed）上：接取时把 NPC 搬走没有叙事理由，
+   * 完成才是「世界因你而变」兑现的那一刻。战斗驱动的目标推进不换锚点。
+   */
+  private onQuestCompleted(questId: string): void {
+    this.applyReanchors(questId);
+  }
+
+  /** NPC 当前巡逻位置/朝向采样（表现层每帧插值用）。 */
+  patrolSampleOf(npcId: EntityId | string): { position: Vec3; yaw: number; moving: boolean } | null {
+    const state = this.patrols.get(npcId as EntityId);
+    if (!state) {
+      return null;
+    }
+    const waypoints = this.patrolWaypoints(npcId as EntityId);
+    return patrolSample(state, waypoints);
+  }
+
+  private patrolWaypoints(npcId: EntityId): Vec3[] {
+    return this.patrolRoutes.get(npcId) ?? [];
+  }
+
+  /** NPC 对话中暂停/恢复巡逻（票 33：对话时停下面向玩家，结束后继续）。 */
+  setNpcPaused(npcId: EntityId | string, paused: boolean): void {
+    const state = this.patrols.get(npcId as EntityId);
+    if (!state) {
+      return;
+    }
+    this.patrols.set(npcId as EntityId, setPatrolPaused(state, paused));
   }
 
   /** 无异常版本的 useItem；过期实例等可预期失败返回 ok=false。 */
@@ -1321,6 +1657,7 @@ export class GameSession implements GameSessionIntents {
     }
 
     const ids = [...this.entities.keys()].sort() as EntityId[];
+    this.stepPatrols(stepMs);
     for (const id of ids) {
       this.updateBehavior(id, stepMs);
     }
@@ -1328,6 +1665,28 @@ export class GameSession implements GameSessionIntents {
     this.stepProjectiles(stepMs);
     for (const id of ids) {
       this.resolveAttackIfReady(id);
+    }
+  }
+
+  /**
+   * NPC 巡逻推进（票 33）：每个模拟步走一小段，位置直接写实体状态
+   * （世界事实要进快照），表现层只负责插值与演出，不持有权威位置。
+   */
+  private stepPatrols(stepMs: number): void {
+    for (const [npcId, state] of this.patrols) {
+      const entity = this.entities.get(npcId);
+      const waypoints = this.patrolRoutes.get(npcId);
+      if (!entity || waypoints === undefined || waypoints.length === 0) {
+        continue;
+      }
+      const dwellMs = this.patrolDwellMs.get(npcId) ?? DEFAULT_PATROL_DWELL_MS;
+      const next = stepPatrol(state, waypoints, stepMs, dwellMs);
+      this.patrols.set(npcId, next);
+      entity.state.position = cloneVec3(next.position);
+      if (!next.paused && next.phase === "walk") {
+        const sample = patrolSample(next, waypoints);
+        entity.state.rotation.y = sample.yaw;
+      }
     }
   }
 
@@ -1463,6 +1822,17 @@ export class GameSession implements GameSessionIntents {
     const aggroRadius = Math.max(0, attributes.aggroRadius ?? DEFAULT_AGGRO_RADIUS);
     const patrolRadius = Math.max(0, attributes.patrolRadius ?? DEFAULT_PATROL_RADIUS);
     const idleDuration = Math.max(0, attributes.idleMs ?? DEFAULT_IDLE_MS);
+    // 票 33：安全区拒止。玩家在安全区内时，敌人不追入——既不进圈，
+    // 也不因为玩家点过一次攻击（forcedTarget）而破例。这条优先级高于
+    // 感知半径，是「村庄是安全区」这条玩家承诺的兑现点。
+    const playerSheltered = this.playerIsSheltered();
+    if (playerSheltered) {
+      runtime.targetId = null;
+      runtime.aiState = "idle";
+      runtime.idleMs = 0;
+      this.movements.delete(entity.id);
+      return;
+    }
     const forcedTarget = runtime.targetId === player.id;
     const aggro = forcedTarget || distance <= aggroRadius;
 
@@ -2381,6 +2751,14 @@ export class GameSession implements GameSessionIntents {
     }
   }
 
+  /** 统一发布 item-gained（掉落/任务奖励/买卖共用同一条通道）。 */
+  private publishItemGained(entity: Entity, itemId: string, quantity: number): void {
+    if (quantity <= 0) {
+      return;
+    }
+    this.publish({ type: "item-gained", entityId: entity.id, itemId, quantity });
+  }
+
   /** 背包入栈：按 maxStack 合并，返回实际创建的实例 id。 */
   private addItem(entity: Entity, itemId: string, quantity: number): string[] {
     const definition = this.itemDefinitions.get(itemId);
@@ -2453,6 +2831,9 @@ export class GameSession implements GameSessionIntents {
             items: entity.container.items.map((item) => ({ ...item })),
           },
           claimedRewardIds: [...entity.claimedRewardIds],
+          ...(this.patrols.has(entity.id)
+            ? { patrolIndex: this.patrols.get(entity.id)!.waypointIndex }
+            : {}),
         };
       });
 
@@ -2592,6 +2973,12 @@ export class GameSession implements GameSessionIntents {
       ) {
         throw new Error(`快照实体 ${entitySnapshot.id} 的背包结构非法`);
       }
+      if (
+        entitySnapshot.patrolIndex !== undefined &&
+        (!Number.isInteger(entitySnapshot.patrolIndex) || entitySnapshot.patrolIndex < 0)
+      ) {
+        throw new Error(`快照实体 ${entitySnapshot.id} 的 patrolIndex 必须是非负整数`);
+      }
       if (entitySnapshot.movement !== null) {
         assertFiniteVec3(
           entitySnapshot.movement.target,
@@ -2716,6 +3103,23 @@ export class GameSession implements GameSessionIntents {
       runtime.aiState = entitySnapshot.combat.aiState;
       runtime.idleMs = 0;
       runtime.patrolIndex = 0;
+
+      // 票 33：NPC 巡逻进度与实时位置一起恢复（不回到出生点重来）。
+      const patrolState = this.patrols.get(entity.id);
+      if (patrolState !== undefined) {
+        const waypoints = this.patrolRoutes.get(entity.id) ?? [];
+        const source = entitySnapshot.patrolIndex;
+        const restoredPatrol = restorePatrolState(
+          {
+            waypointIndex: typeof source === "number" ? source : patrolState.waypointIndex,
+            phase: patrolState.phase,
+          },
+          waypoints,
+          this.patrolDwellMs.get(entity.id) ?? DEFAULT_PATROL_DWELL_MS,
+          entitySnapshot.position,
+        );
+        this.patrols.set(entity.id, restoredPatrol);
+      }
       // 冲锋链路与投射物是瞬态（同前摇）：快照 v3 不记录，读档后从头开始。
       runtime.chargeWindupMs = 0;
       runtime.chargeRemaining = 0;
@@ -2727,6 +3131,13 @@ export class GameSession implements GameSessionIntents {
     this.projectiles.clear();
 
     this.dialogue = restoredDialogue;
+    // 读档后：保存时在对话中的 NPC 仍然是暂停的（对话快照带着就是对话中）。
+    for (const [npcId, state] of this.patrols) {
+      const shouldPause = restoredDialogue !== null && restoredDialogue.npcId === npcId;
+      if (state.paused !== shouldPause) {
+        this.patrols.set(npcId, setPatrolPaused(state, shouldPause));
+      }
+    }
     this.questLog.restore(snapshot.quests);
     this.events.length = 0;
   }
@@ -2768,6 +3179,7 @@ export class GameSession implements GameSessionIntents {
 
     if (step.ended) {
       this.dialogue = null;
+      this.setNpcPaused(dialogue.npcId, false);
       this.publish({
         type: "dialogue-ended",
         npcId: dialogue.npcId,
@@ -2802,6 +3214,7 @@ export class GameSession implements GameSessionIntents {
     this.grantQuestRewards(questId);
     this.questLog.turnIn(questId);
     this.publish({ type: "quest-completed", questId, npcId });
+    this.onQuestCompleted(questId);
   }
 
   /**

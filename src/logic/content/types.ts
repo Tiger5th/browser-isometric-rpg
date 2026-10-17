@@ -58,6 +58,8 @@ export interface RegionDefinition {
   };
   player: PlayerDefinition;
   exits?: RegionExitDefinition[];
+  /** 区域内敌人 AI 拒止进入的地带（票 33）。缺省 = 无安全区。 */
+  safeZones?: SafeZoneDefinitionContent[];
 }
 
 export interface NpcDefinition {
@@ -77,6 +79,17 @@ export interface NpcDefinition {
   paletteId?: string;
   /** 立绘资源引用（表现层解释）；未生成时可缺省，UI 用程序化占位。 */
   portrait?: PortraitReference;
+  /**
+   * 商人价格表（票 33）：itemId → 单价（金币/个）。
+   * `sell` = 商人从玩家手里买（玩家把战利品换成金币）；
+   * `buy` = 商人卖给玩家（玩家花金币买药）。两者都必须为正整数（L2 校验）。
+   * 运行时解释口在 src/logic/trade.ts。
+   */
+  vendor?: VendorDefinition;
+  /** 巡逻路线（票 33）：走→停留张望→下一点；纯表现层驱动，位置进快照。 */
+  patrol?: PatrolRouteDefinition;
+  /** 任务状态变化时的换锚点（票 33，「世界因你而变」的最小实现）。 */
+  reanchors?: ReanchorDefinition[];
 }
 
 /** 立绘引用：资源路径 + 画面锚点（说话方/站位由表现层排布）。 */
@@ -85,6 +98,42 @@ export interface PortraitReference {
   image: string;
   /** 生图提示词关键词留档，便于同卡重新生成时复用。 */
   keywords?: string[];
+}
+
+/**
+ * 商人价格表（票 33）。键是 itemId，值是单价（金币/个，必须为正整数）。
+ * 卖出与买入的差值就是商人的利差。
+ */
+export interface VendorDefinition {
+  sell: Record<string, number>;
+  buy: Record<string, number>;
+}
+
+/** 巡逻路线（票 33）：至少 2 个点位，首点建议等于 NPC 初始位置。 */
+export interface PatrolRouteDefinition {
+  waypoints: Vec3[];
+  /** 到点后停留张望的毫秒数；缺省 2500。 */
+  dwellMs?: number;
+}
+
+/** 换锚点声明（票 33）：任务完成/状态变化时 NPC 换到的新巡逻路线。 */
+export interface ReanchorDefinition {
+  /** 触发换锚点的任务 id。 */
+  questId: string;
+  waypoints: Vec3[];
+  dwellMs?: number;
+}
+
+/**
+ * 安全区（票 33）：区域内敌人 AI 拒止进入的矩形地带。
+ * 挂在区域定义上（region.safeZones），挂在 npc 上是错的——安全区的边界
+ * 属于关卡地形，不属于某个 NPC。
+ */
+export interface SafeZoneDefinitionContent {
+  id: string;
+  shape: "rect";
+  center: Vec3;
+  halfExtents: { x: number; z: number };
 }
 
 export interface DropDefinition {

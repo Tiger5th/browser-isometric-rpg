@@ -1,0 +1,11 @@
+{
+  "id": "character_palette:smith_qi",
+  "displayName": "铁七",
+  "role": "翠谷铁匠兼看炉人，话少手重；氛围位，暗示山里还有矿",
+  "primary": "#38bdf8",
+  "secondary": "#1e3a5f",
+  "accent": "#bae6fd",
+  "hairKeywords": "black shaved head, short stubble",
+  "costumeKeywords": "soot dark leather apron, one bare shoulder, hammer at hip",
+  "status": "pending"
+}
