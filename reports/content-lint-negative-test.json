@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "purpose": "L2 负向测试：确认色板卡/立绘引用（票 29）、等级曲线（票 34）、村庄经济（票 33：vendor/patrol/reanchors/safeZones）、区域出口/敌人掉落引用（票 35）与宝箱/收集品（票 37）的 schema、引用与结构规则会拦截坏数据",
+  "purpose": "L2 负向测试：确认色板卡/立绘引用与资产文件存在性（票 29）、等级曲线（票 34）、村庄经济（票 33：vendor/patrol/reanchors/safeZones）、区域出口/敌人掉落引用（票 35）与宝箱/收集品（票 37）的 schema、引用与结构规则会拦截坏数据",
   "exitExpectation": "failed",
   "status": "passed",
   "control": {
@@ -12,7 +12,7 @@
       "id": "bad-palette-color",
       "label": "色板卡 primary 不是 #rrggbb",
       "expectation": "schema 错误指向 /primary",
-      "status": "failed",
+      "status": "passed",
       "issues": [
         {
           "code": "schema",
@@ -27,7 +27,7 @@
       "id": "missing-palette-keywords",
       "label": "色板卡缺少 hairKeywords",
       "expectation": "schema 错误",
-      "status": "failed",
+      "status": "passed",
       "caught": true,
       "issues": [
         {
@@ -48,7 +48,7 @@
       "id": "npc-bad-palette-ref",
       "label": "NPC paletteId 指向不存在的色板卡",
       "expectation": "reference 错误指向 /paletteId",
-      "status": "failed",
+      "status": "passed",
       "caught": true,
       "issues": [
         {
@@ -63,7 +63,7 @@
       "id": "portrait-missing-image",
       "label": "portrait 缺少 image 字段",
       "expectation": "schema 错误指向 /portrait",
-      "status": "failed",
+      "status": "passed",
       "caught": true,
       "issues": [
         {
@@ -78,7 +78,7 @@
       "id": "region-exit-unknown-target",
       "label": "区域出口指向未知区域",
       "expectation": "reference 错误指向 /exits/0/targetRegionId",
-      "status": "failed",
+      "status": "passed",
       "caught": true,
       "issues": [
         {
@@ -93,7 +93,7 @@
       "id": "enemy-drop-unknown-item",
       "label": "敌人掉落引用不存在的物品",
       "expectation": "reference 错误指向 /drops/1/itemId",
-      "status": "failed",
+      "status": "passed",
       "caught": true,
       "issues": [
         {
@@ -108,7 +108,7 @@
       "id": "level-curve-non-monotonic",
       "label": "等级曲线 xpRequired 倒退",
       "expectation": "level-curve 错误指向 /levels",
-      "status": "failed",
+      "status": "passed",
       "caught": true,
       "issues": [
         {
@@ -123,7 +123,7 @@
       "id": "level-curve-empty-modifiers",
       "label": "等级曲线 defaultModifiers 为空",
       "expectation": "schema 或 level-curve 错误",
-      "status": "failed",
+      "status": "passed",
       "caught": true,
       "issues": [
         {
@@ -138,7 +138,7 @@
       "id": "chest-bad-loot-ref",
       "label": "宝箱 loot 引用不存在的物品",
       "expectation": "reference 错误指向 /loot/0/itemId",
-      "status": "failed",
+      "status": "passed",
       "caught": true,
       "issues": [
         {
@@ -153,7 +153,7 @@
       "id": "chest-empty-loot",
       "label": "宝箱 loot 为空数组",
       "expectation": "schema 错误指向 /loot",
-      "status": "failed",
+      "status": "passed",
       "caught": true,
       "issues": [
         {
@@ -168,7 +168,7 @@
       "id": "collectible-bad-set-ref",
       "label": "收集品 setId 指向不存在的收集集",
       "expectation": "reference 错误指向 /setId",
-      "status": "failed",
+      "status": "passed",
       "caught": true,
       "issues": [
         {
@@ -183,7 +183,7 @@
       "id": "collect-set-bad-reward-ref",
       "label": "收集集奖励物品不存在",
       "expectation": "reference 错误指向 /rewardItemId",
-      "status": "failed",
+      "status": "passed",
       "caught": true,
       "issues": [
         {
@@ -198,7 +198,7 @@
       "id": "vendor-bad-item-ref",
       "label": "vendor.sell 引用不存在的物品",
       "expectation": "reference 错误指向 /vendor/sell/<itemId>",
-      "status": "failed",
+      "status": "passed",
       "caught": true,
       "issues": [
         {
@@ -213,7 +213,7 @@
       "id": "vendor-zero-price",
       "label": "vendor 价格为 0",
       "expectation": "schema 错误指向 /vendor/buy",
-      "status": "failed",
+      "status": "passed",
       "caught": true,
       "issues": [
         {
@@ -228,7 +228,7 @@
       "id": "vendor-no-spread",
       "label": "同一物品同时 sell 与 buy",
       "expectation": "range 错误指向 /vendor/buy",
-      "status": "failed",
+      "status": "passed",
       "caught": true,
       "issues": [
         {
@@ -243,7 +243,7 @@
       "id": "patrol-single-waypoint",
       "label": "巡逻路线只有一个点位",
       "expectation": "schema 错误指向 /patrol/waypoints",
-      "status": "failed",
+      "status": "passed",
       "caught": true,
       "issues": [
         {
@@ -258,7 +258,7 @@
       "id": "patrol-anchor-mismatch",
       "label": "巡逻首点与 NPC 初始位置不一致",
       "expectation": "range 错误指向 /patrol/waypoints/0",
-      "status": "failed",
+      "status": "passed",
       "caught": true,
       "issues": [
         {
@@ -273,7 +273,7 @@
       "id": "reanchor-bad-quest-ref",
       "label": "reanchors 引用不存在的任务",
       "expectation": "reference 错误指向 /reanchors/0/questId",
-      "status": "failed",
+      "status": "passed",
       "caught": true,
       "issues": [
         {
@@ -288,7 +288,7 @@
       "id": "safe-zone-zero-extent",
       "label": "安全区 halfExtents 为 0",
       "expectation": "schema 错误指向 /safeZones/0/halfExtents",
-      "status": "failed",
+      "status": "passed",
       "caught": true,
       "issues": [
         {
@@ -296,6 +296,21 @@
           "file": "content/regions/green_hollow.json",
           "path": "/safeZones/0/halfExtents/x",
           "message": "must be > 0"
+        }
+      ]
+    },
+    {
+      "id": "npc-missing-portrait-asset",
+      "label": "NPC portrait.image 指向不存在的资产文件",
+      "expectation": "asset 错误指向 /portrait/image",
+      "status": "passed",
+      "caught": true,
+      "issues": [
+        {
+          "code": "asset",
+          "file": "content/npcs/smith_qi.json",
+          "path": "/portrait/image",
+          "message": "引用的资产文件不存在：assets/portraits/does_not_exist.png"
         }
       ]
     }

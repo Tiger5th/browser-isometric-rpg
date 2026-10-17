@@ -14,7 +14,8 @@
  * 无参数时扫描 assets/*.glb 与 assets/textures/*.png；结果写入 reports/pipeline-lint.json。
  */
 import { readFile, readdir, writeFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { statSync } from "node:fs";
+import { basename, join, resolve } from "node:path";
 
 import { NodeIO } from "@gltf-transform/core";
 import {
@@ -62,6 +63,27 @@ const EXTERNAL_LIMITS = {
 
 const NAME_PATTERN =
   /^(b_[a-z0-9_]+|(character|environment|prop|material|texture|anim|collider|light|camera|scene|skin|primitive|attr|morph|sampler|node)_[a-z0-9_]+)$/;
+
+/**
+ * 报告时间戳：保证可复现（Windows 路径分隔符/时间戳会让两次运行输出不一致）。
+ * 优先级：SOURCE_DATE_EPOCH（秒，https://reproducible-builds.org）>
+ * 环境变量 LINT_TIMESTAMP（ISO 字符串，负向测试固定期望用）> 当前时间。
+ */
+export function reportTimestamp(sourcePath) {
+  const sourceDateEpoch = process.env.SOURCE_DATE_EPOCH;
+  if (sourceDateEpoch !== undefined && sourceDateEpoch !== "") {
+    return new Date(Number(sourceDateEpoch) * 1000).toISOString();
+  }
+  const fixed = process.env.LINT_TIMESTAMP;
+  if (fixed !== undefined && fixed !== "") {
+    return fixed;
+  }
+  if (sourcePath !== undefined) {
+    // 缺省取源文件 mtime，同输入产出同报告。
+    return statSync(sourcePath).mtime.toISOString();
+  }
+  return new Date().toISOString();
+}
 
 function violation(rule, severity, path, message) {
   return { rule, severity, path, message };
@@ -445,7 +467,7 @@ export async function lintAssets(paths) {
   const files = [];
   for (const path of paths) {
     const document = await io.read(path);
-    const baseName = path.split("/").pop() ?? path;
+    const baseName = basename(path);
     files.push(
       lintDocument(document, path, { external: EXTERNAL_ASSETS.has(baseName) }),
     );
@@ -453,7 +475,7 @@ export async function lintAssets(paths) {
 
   return {
     schemaVersion: 1,
-    generatedAt: new Date().toISOString(),
+    generatedAt: reportTimestamp(paths[0]),
     files,
     summary: {
       files: files.length,
@@ -501,7 +523,7 @@ export async function lintTextures(paths) {
   for (const path of paths) {
     const violations = [];
     const buffer = await readFile(path);
-    const fileName = path.split("/").pop() ?? path;
+    const fileName = basename(path);
     const header = parsePngHeader(buffer);
     if (!header) {
       violations.push(violation("format", "error", fileName, "不是可解析的 PNG"));
@@ -589,7 +611,7 @@ export async function lintTextures(paths) {
 
   return {
     schemaVersion: 1,
-    generatedAt: new Date().toISOString(),
+    generatedAt: reportTimestamp(paths[0]),
     files,
     summary: {
       files: files.length,
@@ -626,7 +648,7 @@ async function main() {
       ? await lintAssets(glbPaths)
       : {
           schemaVersion: 1,
-          generatedAt: new Date().toISOString(),
+          generatedAt: reportTimestamp(),
           files: [],
           summary: { files: 0, passed: 0, failed: 0, errors: 0, warnings: 0 },
         }),

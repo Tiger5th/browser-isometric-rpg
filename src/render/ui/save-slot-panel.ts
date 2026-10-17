@@ -60,7 +60,8 @@ export function createSaveSlotPanel(options: SaveSlotPanelOptions): SaveSlotPane
     [
       "position:absolute",
       "top:16px",
-      "right:16px",
+      "left:50%",
+      "transform:translateX(-50%)",
       "min-width:260px",
       "padding:10px 12px",
       `color:${PANEL_COLOR}`,

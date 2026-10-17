@@ -41,6 +41,7 @@ import {
   SAMPLE_CONTENT_BUNDLE,
 } from "../../logic/content/sample-content";
 import type { ContentBundle } from "../../logic/content/types";
+import type { CollectProgress } from "../../logic/exploration";
 import type { LevelCurveDefinition } from "../../logic/leveling";
 import {
   GameSession,
@@ -159,6 +160,11 @@ import {
   type LandscapeVisuals,
 } from "../presentation/landscape-ring";
 import { NpcIdleController } from "../presentation/npc-idle";
+import {
+  bushesOf,
+  planEntityVisualRebuild,
+  type RegionContext,
+} from "../presentation/region-context";
 import { OcclusionOutlineController } from "../presentation/occlusion-controller";
 import {
   DynamicResolutionController,
@@ -195,7 +201,6 @@ import {
   resolveMoveWithColliders,
   validateKeyLight,
   validateLandscape,
-  type PropCollider,
 } from "../presentation/world-physics";
 
 const SCENARIO_NAME = "p1-world";
@@ -270,8 +275,11 @@ interface P1WorldState {
   traveling: boolean;
   /** 全场唯一主光（票 28；main.ts 的默认双光源已关闭）。 */
   keyLight: DirectionalLight | null;
-  /** 硬碰撞体（树/墙/桶/箱；灌木可穿）；切区时整体换掉。 */
-  colliders: readonly PropCollider[];
+  /**
+   * 区域上下文（code-review 收敛项）：regionId + bounds + colliders + 灌木缓存。
+   * 切区时整体替换，区域相关判定不再各自引用翠谷常量。
+   */
+  regionContext: RegionContext;
   /** NPC 待机演出（呼吸/踱步）。 */
   npcIdle: Map<string, NpcIdleController>;
   materials: Material[];
@@ -361,6 +369,8 @@ interface P1WorldState {
   explorationSpriteRatio: number;
   /** 票 37：收集计数 HUD。 */
   collectHud: CollectHud | null;
+  /** code-review #32：收集进度缓存（结构性开销大，事件后置脏再算）。 */
+  collectProgressCache: CollectProgress[] | null;
   /** 票 37：相机复位插值的起点；null 表示当前不在复位动画中。 */
   cameraReset: CameraResetStart | null;
   /** 票 37：复位动画已推进的时长（毫秒）。 */
@@ -373,8 +383,11 @@ interface P1WorldState {
   detachCameraInput: () => void;
 }
 
-/** 探索进度证据（L4 冒烟断言用）。 */
-export interface ExplorationEvidence {
+/**
+ * 探索进度证据（L4 冒烟断言用；window.P1WorldDebug 的返回结构，
+ * 仓库内无 TS 引用，故不导出——code-review #34）。
+ */
+interface ExplorationEvidence {
   chests: Array<{
     id: string;
     opened: boolean;
@@ -391,16 +404,16 @@ export interface ExplorationEvidence {
   rewardInBag: boolean;
 }
 
-/** 相机机位证据（L4 冒烟断言用）。 */
-export interface CameraFramingEvidence {
+/** 相机机位证据（同上，不导出）。 */
+interface CameraFramingEvidence {
   alpha: number;
   beta: number;
   radius: number;
   verticalSpan: number;
 }
 
-/** ego-browser 验证入口：只经 snapshot 读取、只经意图写入。 */
-export interface P1WorldDebugApi {
+/** ego-browser 验证入口：只经 snapshot 读取、只经意图写入（不导出）。 */
+interface P1WorldDebugApi {
   scenario: string;
   getSnapshot(): GameSessionSnapshot;
   moveTo(x: number, z: number): void;
@@ -1316,6 +1329,7 @@ function interactWithCollectible(state: P1WorldState, collectibleId: string): vo
   }
   const result = state.session.tryCollectCollectible(PLAYER_ID, collectibleId);
   if (result.ok) {
+    invalidateCollectProgressCache(state);
     return;
   }
   walkToExploration(state, collectible.position);
@@ -1340,7 +1354,7 @@ function updateExplorationVisuals(state: P1WorldState, elapsedMs: number, dtMs: 
  * 探索事实签名：worldState 里 chest:/collectible: 条目的摘要。
  * 冒烟脚本用它判断「这次交互是否真的落地了开箱/拾草」。
  */
-export function explorationSignature(worldState: Record<string, unknown>): string {
+function explorationSignature(worldState: Record<string, unknown>): string {
   return Object.keys(worldState)
     .filter((key) => key.startsWith("chest:") || key.startsWith("collectible:"))
     .sort()
@@ -1416,6 +1430,12 @@ function installCameraInput(state: P1WorldState, scene: Scene): () => void {
     state.cameraDragButton = null;
   };
 
+  // code-review #12：拖拽中断兜底——pointercancel（触摸被系统接管）
+  // 与窗口失焦时把拖拽状态清零，否则相机停在拖拽中、点击交互被永久吞掉。
+  const cancelDrag = (): void => {
+    state.cameraDragButton = null;
+  };
+
   const onContextMenu = (event: Event): void => {
     // 右键拖拽旋转需要吃掉默认右键菜单，否则每次旋转都弹菜单。
     event.preventDefault();
@@ -1432,6 +1452,8 @@ function installCameraInput(state: P1WorldState, scene: Scene): () => void {
   target.addEventListener("pointerdown", onPointerDown as EventListener);
   window.addEventListener("pointermove", onPointerMove);
   window.addEventListener("pointerup", onPointerUp);
+  window.addEventListener("pointercancel", cancelDrag);
+  window.addEventListener("blur", cancelDrag);
   target.addEventListener("contextmenu", onContextMenu);
   window.addEventListener("keydown", onKeyDown);
 
@@ -1440,6 +1462,8 @@ function installCameraInput(state: P1WorldState, scene: Scene): () => void {
     target.removeEventListener("pointerdown", onPointerDown as EventListener);
     window.removeEventListener("pointermove", onPointerMove);
     window.removeEventListener("pointerup", onPointerUp);
+    window.removeEventListener("pointercancel", cancelDrag);
+    window.removeEventListener("blur", cancelDrag);
     target.removeEventListener("contextmenu", onContextMenu);
     window.removeEventListener("keydown", onKeyDown);
   };
@@ -1574,6 +1598,7 @@ async function loadFromStorage(state: P1WorldState): Promise<boolean> {
       }
     }
     state.session.restoreSnapshot(snapshot);
+    invalidateCollectProgressCache(state);
     clearWaypoints(state);
     // 读档不保留「靠近中/气泡待点」这类会话内交互阶段；对话本身由
     // ink 快照恢复，下一帧 updateInteraction 会重新判定气泡显隐。
@@ -1649,6 +1674,7 @@ async function restoreSlot(state: P1WorldState, slotId: SaveSlotId): Promise<boo
       }
     }
     state.session.restoreSnapshot(contents.snapshot);
+    invalidateCollectProgressCache(state);
     clearWaypoints(state);
     state.deadEnemies.clear();
     for (const entity of contents.snapshot.entities) {
@@ -1720,6 +1746,7 @@ function startNewGame(state: P1WorldState): { playerLevel: number; elapsedMs: nu
   const snapshot = fresh.snapshot();
 
   state.session.restoreSnapshot(snapshot);
+  invalidateCollectProgressCache(state);
   clearWaypoints(state);
   state.deadEnemies.clear();
   state.dyingEnemies.clear();
@@ -1866,7 +1893,9 @@ function installDebugApi(scene: Scene, state: P1WorldState): void {
       const current = state.session.snapshot();
       const position = current.entities.find((entity) => entity.id === PLAYER_ID)?.position;
       if (position !== undefined) {
-        const resolved = resolveMoveWithColliders(position, { x, z }, state.colliders);
+        const resolved = resolveMoveWithColliders(position, { x, z }, state.regionContext.colliders, {
+          bounds: state.regionContext.bounds,
+        });
         const final = state.session.snapshot();
         const finalPlayer = final.entities.find((entity) => entity.id === PLAYER_ID);
         if (finalPlayer !== undefined) {
@@ -2138,7 +2167,7 @@ function installDebugApi(scene: Scene, state: P1WorldState): void {
         })),
         enemySpriteTransparentRatio: round(state.enemySpriteRatio, 4),
         enemySpriteTextures: [...state.enemySprites.values()].map((texture) => texture.name),
-        colliderCount: state.colliders.length,
+        colliderCount: state.regionContext.colliders.length,
         coins:
           player?.container.items
             .filter((item) => item.templateId === "item:old_coin")
@@ -2332,8 +2361,8 @@ function installDebugApi(scene: Scene, state: P1WorldState): void {
       }
       return {
         meshedPartCount: state.runtime.environment.meshedParts.length,
-        colliderCount: state.colliders.length,
-        colliderKinds: [...new Set(state.colliders.map((collider) => collider.kind))].sort(),
+        colliderCount: state.regionContext.colliders.length,
+        colliderKinds: [...new Set(state.regionContext.colliders.map((collider) => collider.kind))].sort(),
         bushCount: propsForRegion(state.session.currentRegionId).filter(
           (prop) => prop.kind === "bush",
         ).length,
@@ -2368,8 +2397,10 @@ function installDebugApi(scene: Scene, state: P1WorldState): void {
         x: state.player.rootNode.position.x,
         z: state.player.rootNode.position.z,
       };
-      const resolved = resolveMoveWithColliders(from, { x, z }, state.colliders);
-      const inside = state.colliders.some((collider) =>
+      const resolved = resolveMoveWithColliders(from, { x, z }, state.regionContext.colliders, {
+        bounds: state.regionContext.bounds,
+      });
+      const inside = state.regionContext.colliders.some((collider) =>
         isBlockedByCollider(collider, x, z),
       );
       return {
@@ -2381,7 +2412,7 @@ function installDebugApi(scene: Scene, state: P1WorldState): void {
       };
     },
     probePassable: (x, z) => {
-      const blocker = state.colliders.find((collider) => isBlockedByCollider(collider, x, z));
+      const blocker = state.regionContext.colliders.find((collider) => isBlockedByCollider(collider, x, z));
       return { passable: blocker === undefined, blockedBy: blocker?.id ?? null };
     },
     getRenderEvidence: () => ({
@@ -2490,6 +2521,14 @@ export const p1WorldScenario: ScenarioDefinition = {
     const keyLight = installUnifiedKeyLight(scene);
     installLandscapeFog(scene);
     // 硬碰撞体：树/石墙/木桶/木箱（灌木可穿，见 world-physics）。
+    // 区域上下文（code-review 收敛项）：regionId/bounds/colliders/灌木
+    // 一起进一个对象，切区时整体替换。
+    const regionContext: RegionContext = {
+      regionId: runtime.regionId,
+      bounds: runtime.bounds,
+      colliders: runtime.colliders,
+      bushes: bushesOf(REGION_RUNTIME_LAYOUTS[GREEN_HOLLOW_REGION_ID].props),
+    };
     const colliders = runtime.colliders;
     const pipeline = createGradingPipeline(scene);
     const whiteTexture = createWhiteTexture(scene);
@@ -2607,7 +2646,7 @@ export const p1WorldScenario: ScenarioDefinition = {
       landscape,
       traveling: false,
       keyLight,
-      colliders,
+      regionContext,
       npcIdle,
       materials,
       layer,
@@ -2695,6 +2734,7 @@ export const p1WorldScenario: ScenarioDefinition = {
       collectibleVisuals: new Map(),
       explorationSpriteRatio: 0,
       collectHud: null,
+      collectProgressCache: null,
       cameraReset: null,
       cameraResetElapsedMs: 0,
       cameraDragButton: null,
@@ -2852,7 +2892,36 @@ export const p1WorldScenario: ScenarioDefinition = {
     let restoredFromAuto = false;
     try {
       restoredFromAuto = await state.autoSaver.hasAutoSnapshot();
-      if (restoredFromAuto && (await state.autoSaver.restoreAuto())) {
+      // code-review #15：自动槽快照可能属于另一个区域（票 35 之后）。
+      // 与 loadFromStorage/restoreSlot 一样先切区域再恢复，否则 restoreSnapshot
+      // 会因「快照区域与当前已加载区域不一致」而拒绝。
+      let autoSnapshot: GameSessionSnapshot | null = null;
+      if (restoredFromAuto) {
+        autoSnapshot = await state.slotService
+          .readSlot("auto")
+          .then((contents) => contents?.snapshot ?? null);
+        if (
+          autoSnapshot !== null &&
+          autoSnapshot.regionId !== null &&
+          autoSnapshot.regionId !== state.session.currentRegionId
+        ) {
+          const entered = await enterRegionForSnapshot(state, autoSnapshot.regionId);
+          if (entered === null) {
+            state.ui.setSaveStatus(
+              `自动存档属于 ${autoSnapshot.regionId}，但该区域没有渲染布局`,
+              "error",
+            );
+            autoSnapshot = null;
+            restoredFromAuto = false;
+          }
+        }
+      }
+      // code-review #15：恢复失败（快照损坏等）不得让 autoSaver 用空快照覆盖
+      // auto 槽——直接放弃 restoreAuto，保持 auto 槽原样等下一次关键节点。
+      if (restoredFromAuto && autoSnapshot !== null && !(await safeRestoreAuto(state, autoSnapshot))) {
+        restoredFromAuto = false;
+      }
+      if (restoredFromAuto) {
         // 自动槽恢复后视觉要跟上：宝箱盖子按 worldState 决定开合，
         // 已捡的萤光草整组隐藏，HUD 计数立刻反映进度。
         clearWaypoints(state);
@@ -2869,9 +2938,10 @@ export const p1WorldScenario: ScenarioDefinition = {
         }
         syncVisualToSnapshot(state, restored);
         state.ui.update(restored);
+        invalidateCollectProgressCache(state);
         state.collectHud?.update({
           displayNames: COLLECT_SET_NAMES,
-          progress: state.session.allCollectProgress(),
+          progress: allCollectProgressCached(state),
         });
         state.ui.setSaveStatus("已恢复自动存档进度", "ok");
       } else {
@@ -2879,6 +2949,7 @@ export const p1WorldScenario: ScenarioDefinition = {
       }
     } catch (error) {
       state.ui.setSaveStatus(`自动存档不可用：${errorMessage(error)}`, "error");
+      restoredFromAuto = false;
     }
     if (!restoredFromAuto) {
       await state.autoSaver.notifyRegionChanged();
@@ -2942,7 +3013,7 @@ export const p1WorldScenario: ScenarioDefinition = {
     });
     state.collectHud.update({
       displayNames: COLLECT_SET_NAMES,
-      progress: session.allCollectProgress(),
+      progress: allCollectProgressCached(state),
     });
     state.detachCameraInput = installCameraInput(state, scene);
 
@@ -3095,6 +3166,19 @@ export const p1WorldScenario: ScenarioDefinition = {
       // 反馈层先消费：顿帧会削减本帧实际推进给逻辑层的时间。
       const effectiveDelta = state.feedback.update(scene, deltaMs, now);
       session.advance(effectiveDelta);
+      // 跨区复活（票 36 死亡轻惩罚）：respawn 事件走 drainEvents 通道，
+      // respawnRegionId 非 null 表示要回村——表现层负责切区。
+      for (const event of session.drainEvents()) {
+        if (event.type !== "respawn" || event.respawnRegionId === null) {
+          continue;
+        }
+        void enterRegionForSnapshot(state, event.respawnRegionId).then((entered) => {
+          if (entered !== null) {
+            invalidateCollectProgressCache(state);
+            syncVisualToSnapshot(state, state.session.snapshot());
+          }
+        });
+      }
       const snapshot = session.snapshot();
       // 路点队列：上一个 moveTo 到达（movement=null）后继续下一个。
       if (state.waypoints.length > 0) {
@@ -3180,7 +3264,8 @@ export const p1WorldScenario: ScenarioDefinition = {
         const resolved = resolveMoveWithColliders(
           { x: previousX, z: previousZ },
           { x: player.rootNode.position.x, z: player.rootNode.position.z },
-          state.colliders,
+          state.regionContext.colliders,
+          { bounds: state.regionContext.bounds },
         );
         if (resolved.x !== player.rootNode.position.x) {
           player.rootNode.position.x = resolved.x;
@@ -3202,18 +3287,12 @@ export const p1WorldScenario: ScenarioDefinition = {
         });
       }
 
-      // 灌木进入反馈：玩家在灌木内时轻微半透明（草丛机制视觉预留）。
-      const bushes = propsForRegion(state.session.currentRegionId)
-        .filter((prop) => prop.kind === "bush")
-        .map((prop) => ({
-          id: prop.id,
-          x: prop.x,
-          z: prop.z,
-        }));
+      // 灌木进入反馈（code-review #31：灌木列表在切区时缓存进 regionContext，
+      // 帧内不再每次 filter/map 重建）。
       const proximity = bushOcclusionAt(
         player.rootNode.position.x,
         player.rootNode.position.z,
-        bushes,
+        state.regionContext.bushes,
       );
       state.bushOcclusion = proximity;
       const alpha = bushAlphaForOcclusion(proximity.occlusion);
@@ -3248,7 +3327,7 @@ export const p1WorldScenario: ScenarioDefinition = {
         // 票 37：收集计数 HUD 与任务 HUD 同步刷新（同样 10Hz）。
         state.collectHud?.update({
           displayNames: COLLECT_SET_NAMES,
-          progress: state.session.allCollectProgress(),
+          progress: allCollectProgressCached(state),
         });
       }
     });
@@ -3848,6 +3927,7 @@ async function loadRegionVisuals(
   state.dyingEnemies.clear();
   state.hitReacts.clear();
   state.selectEnemy(null);
+  invalidateCollectProgressCache(state);
   state.session.endDialogue();
   setInteractionPhase(state.interaction, createInteractionState());
   closeDialoguePresentation(state);
@@ -3856,10 +3936,22 @@ async function loadRegionVisuals(
   state.runtime.dispose();
   state.landscape.dispose();
   state.runtime = runtime;
-  state.colliders = runtime.colliders.slice();
+  // 区域上下文整体替换（code-review #4/#13）：colliders 与 bounds 随新区
+  // 一起换掉，硬碰撞求解与 NPC 踱步钳制不再沿用旧区域的数值。
+  state.regionContext = {
+    regionId: runtime.regionId,
+    bounds: runtime.bounds,
+    colliders: runtime.colliders,
+    bushes: bushesOf(layout.props),
+  };
+  // 逻辑层的冲锋挡停/投射物撞墙用同一份新区域 collider（code-review #4）。
+  state.session.setWorldObstacles(runtime.colliders);
   state.landscape = createLandscapeRing(scene, state.root, landscapeOptionsFor(layout.regionId));
   state.navigation = runtime.navigation;
   rebuildRegionVisuals(state, scene, runtime);
+  // 实体视觉重建（code-review #3）：上一区域的 NPC/敌人 mesh 必须清掉，
+  // 新区域的敌人必须有 visual。玩家跨区域保留。
+  rebuildEntityVisuals(state, scene, layout);
 }
 
 /**
@@ -3918,6 +4010,61 @@ async function travelToRegion(
   }
 }
 
+/**
+ * 切区后的实体视觉重建（code-review #3）：
+ * - 清掉快照里不存在的旧视觉（上一区域的 NPC/敌人 mesh 不能残留）；
+ * - 为新区域的 NPC/敌人新建视觉并挂 NPC 待机演出（踱步钳制用新区域 bounds）；
+ * - 反馈层锚点同步重建（旧锚点指向已销毁节点）。
+ */
+function rebuildEntityVisuals(
+  state: P1WorldState,
+  scene: Scene,
+  layout: RegionRuntimeLayout,
+): void {
+  const snapshot = state.session.snapshot();
+  const plan = planEntityVisualRebuild(
+    snapshot.entities,
+    new Set(state.visuals.keys()),
+  );
+  for (const id of plan.disposeIds) {
+    const visual = state.visuals.get(id);
+    if (visual !== undefined) {
+      visual.procedural?.dispose();
+      visual.node.dispose(false, true);
+    }
+    state.visuals.delete(id);
+    state.npcIdle.get(id)?.dispose();
+    state.npcIdle.delete(id);
+    state.feedback.trackEntity(id, null, 0);
+  }
+  for (const entity of plan.create) {
+    const visual = createEntityVisual(scene, state.root, state, entity);
+    state.visuals.set(entity.id, visual);
+    if (entity.identity.type === "npc") {
+      state.npcIdle.set(
+        entity.id,
+        new NpcIdleController({
+          scene,
+          node: visual.node,
+          home: { x: entity.position.x, z: entity.position.z },
+          seed: entity.id.length * 131 + state.visuals.size * 37,
+          bounds: layout.bounds,
+        }),
+      );
+    }
+    state.feedback.trackEntity(entity.id, visual.node, visual.targetY + 0.35);
+  }
+  // 遮挡描边目标表重建（视觉表变了）。
+  state.occlusionTargets = [...state.visuals.entries()]
+    .map(([id, visual]) => ({
+      id,
+      mesh: visual.mesh as Mesh,
+      anchor: visual.node.position,
+      targetY: visual.targetY,
+    }))
+    .filter((target) => scene.getMeshByName(target.mesh.name) !== null);
+}
+
 /** 新区域的遮挡描边与灌木遮挡目标重建（旧的指向已销毁网格）。 */
 function rebuildRegionVisuals(
   state: P1WorldState,
@@ -3973,6 +4120,37 @@ function forwardVector(scene: Scene): Vector3 {
   return camera
     ? camera.getDirection(new Vector3(0, 0, 1)).normalize()
     : new Vector3(-0.408, -0.816, 0.408).normalize();
+}
+
+/**
+ * code-review #15：恢复自动槽但**不用空快照覆盖 auto 槽**。
+ * restoreSnapshot 抛错（快照损坏/区域不一致）时直接返回 false，
+ * 不调用 notifyRegionChanged——后者会把刚建好的空会话写进 auto 槽，
+ * 把玩家上次的世界事实（宝箱/收集计数）全部盖掉。
+ */
+function safeRestoreAuto(state: P1WorldState, snapshot: GameSessionSnapshot): boolean {
+  try {
+    state.session.restoreSnapshot(snapshot);
+    // 不调 notifyRegionChanged：恢复路径在 setup 里走 `restoredFromAuto=true`
+    // 分支跳过首次写入，auto 槽保持原样（code-review #15 的防覆盖点）。
+    return true;
+  } catch (error) {
+    state.ui.setSaveStatus(`自动存档恢复失败：${errorMessage(error)}`, "error");
+    return false;
+  }
+}
+
+/** 收集进度（code-review #32）：惰性缓存，脏了重算、其余帧直接复用。 */
+function allCollectProgressCached(state: P1WorldState): CollectProgress[] {
+  if (state.collectProgressCache === null) {
+    state.collectProgressCache = state.session.allCollectProgress();
+  }
+  return state.collectProgressCache;
+}
+
+/** 收集进度置脏（拾取/读档/切区后调用，下次读取重算）。 */
+function invalidateCollectProgressCache(state: P1WorldState): void {
+  state.collectProgressCache = null;
 }
 
 function snapshotEntities(session: GameSession): string[] {

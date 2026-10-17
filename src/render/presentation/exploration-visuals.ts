@@ -234,8 +234,10 @@ export function createCollectibleVisual(
       scene,
     );
     leaf.position.set(Math.cos(angle) * 0.11, 0.17, Math.sin(angle) * 0.11);
-    leaf.rotation.z = Math.cos(angle) * 0.45;
-    leaf.rotation.x = Math.sin(angle) * 0.45;
+    // 叶片应向外倒（顶端背离簇心）：绕 Z 正旋转把 +Y 顶端推向 -X、
+    // 绕 X 正旋转推向 +Z，所以这里取负号（原来的 +cos/+sin 会全部内倾）。
+    leaf.rotation.z = -Math.cos(angle) * 0.45;
+    leaf.rotation.x = -Math.sin(angle) * 0.45;
     parts.push(leaf);
   }
   const cluster = Mesh.MergeMeshes(parts, true, true) as Mesh;

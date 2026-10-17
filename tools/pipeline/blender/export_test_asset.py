@@ -141,15 +141,18 @@ def build_mesh() -> bpy.types.Object:
                 )
             )
 
-    for face in bm.faces:
-        face.smooth = True
-
-    # 必须在 to_mesh 之前：bmesh 面序跨进程不稳定（见函数 docstring）。
+    # 平滑必须在面重建（sort_bmesh_faces_deterministic 删除并重插面）之后设置：
+    # bmesh.ops.delete + faces.new 产生的新 face.smooth 会重置为默认 False，
+    # 先设置会在重建时丢失。
     sort_bmesh_faces_deterministic(bm)
 
     mesh = bpy.data.meshes.new("character_test_lod0")
     bm.to_mesh(mesh)
     bm.free()
+    mesh.update()
+
+    for polygon in mesh.polygons:
+        polygon.use_smooth = True
     mesh.update()
 
     obj = bpy.data.objects.new("character_test_lod0", mesh)

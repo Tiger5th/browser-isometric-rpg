@@ -5,9 +5,12 @@
 //       存档 → 读档后等级/经验/属性不丢。
 //
 // 用法（需先 `npm run dev -- --port 5199`）：
-//   在 ego-browser skill 会话里执行本文件（它调用 taskSpace/page API）。
-// 本仓的 agent 环境没有 ego-browser 运行时，因此脚本已就绪但未在本机执行；
-// 报告文件 reports/ticket34-l4-smoke.json 由脚本运行时写出。
+//   ego-browser nodejs -e 'await import("file://<绝对路径>/本文件")'
+// （task.page(label) 只引用已存在的 Page，所以用 task.newPage()；
+//   taskSpace 名带时间戳，避免与既有 task space 冲突。）
+// 执行：
+//   (npm run dev -- --port 5199 &) && ego-browser nodejs <本文件>
+// 报告写入 reports/ticket34-l4-smoke.json。
 const BASE = "http://localhost:5199";
 const SCENARIO_URL = `${BASE}/?scenario=p1-world&harness=1`;
 const ROOT = import.meta.dirname.replace(/\/smoke$/, "");
@@ -15,9 +18,11 @@ const ARTIFACTS = `${ROOT}/artifacts`;
 const REPORT = `${ROOT}/reports/ticket34-l4-smoke.json`;
 const fs = await import("node:fs/promises");
 
-const task = await taskSpace("ticket34 level system");
-const page = task.page("p1-world");
-console.log({ spaceId: task.spaceId });
+const task = await taskSpace(`ticket34 level system ${Date.now()}`);
+// task.page(label) 只引用**已存在**的 Page；新标签由 task.newPage() 创建，
+// 标签由 ego 自动分配（不保证是 "p1-world"），所以直接用返回值。
+const page = await task.newPage();
+console.log({ spaceId: task.spaceId, page: page.label });
 
 await page.goto(SCENARIO_URL);
 await page.evaluate(() => {
@@ -34,6 +39,14 @@ await page.waitForFunction(
 );
 await page.waitForTimeout(3_000);
 
+// 上一轮冒烟留下的存档会把等级/经验带进这一轮（auto 槽开局自动恢复），
+// 断言「打怪→升级」就会从别的起点跑。先清掉再开始。
+await page.evaluate(async () => {
+  await window.P1WorldDebug.clearSave();
+  await window.P1WorldDebug.startNewGame();
+});
+await page.waitForTimeout(1500);
+
 const results = {};
 
 // ---------- 初始等级 ----------
@@ -43,25 +56,41 @@ console.log("before", JSON.stringify(results.before));
 // ---------- 打怪：真实击杀拿经验 ----------
 // 内容里只有 3 只史莱姆、每只 10 经验（阈值 100），所以先真打几只，
 // 剩下的阈值用 grantExperience 补——它走的是与击杀完全相同的结算路径。
-results.kills = await page.evaluate(async () => {
-  const w = window.P1WorldDebug;
-  const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r()));
-
-  const xpBeforeKills = w.getLevelProgress().cumulativeXp;
+results.kills = { xpBeforeKills: await page.evaluate(() => window.P1WorldDebug.getLevelProgress().cumulativeXp), afterKills: null, killsGainedXp: 0, attacks: 0, killed: 0 };
+{
+  const enemies = await page.evaluate(() =>
+    window.P1WorldDebug.getSnapshot().entities
+      .filter((e) => e.identity.type === "enemy" && e.combat.alive)
+      .map((e) => ({ id: e.id, x: e.position.x, z: e.position.z })),
+  );
   let attacks = 0;
-  for (const enemy of w
-    .getSnapshot()
-    .entities.filter((e) => e.identity.type === "enemy" && e.combat.alive)) {
-    for (let i = 0; i < 8 && w.getSnapshot().entities.find((e) => e.id === enemy.id)?.combat.alive; i += 1) {
-      w.attackEnemy(enemy.id);
+  let killed = 0;
+  for (const enemy of enemies) {
+    await page.evaluate((e) => window.P1WorldDebug.teleportTo(e.x, e.z), enemy);
+    for (let i = 0; i < 20; i += 1) {
+      const alive = await page.evaluate(
+        (id) => window.P1WorldDebug.getSnapshot().entities.find((e) => e.id === id)?.combat.alive === true,
+        enemy.id,
+      );
+      if (!alive) {
+        killed += 1;
+        break;
+      }
+      await page.evaluate((id) => window.P1WorldDebug.attackEnemy(id), enemy.id);
       attacks += 1;
-      await nextFrame();
-      await nextFrame();
+      // 普攻有攻击间隔 + 前摇：从 Node 侧等真实时间，让帧循环推进逻辑层。
+      await page.waitForTimeout(400);
     }
   }
-  const afterKills = w.getLevelProgress().cumulativeXp;
-  return { xpBeforeKills, afterKills, killsGainedXp: afterKills - xpBeforeKills, attacks };
-});
+  const afterKills = await page.evaluate(() => window.P1WorldDebug.getLevelProgress().cumulativeXp);
+  results.kills = {
+    xpBeforeKills: results.kills.xpBeforeKills,
+    afterKills,
+    killsGainedXp: afterKills - results.kills.xpBeforeKills,
+    attacks,
+    killed,
+  };
+}
 console.log("kills", JSON.stringify(results.kills, null, 2));
 
 // ---------- 升级：补足阈值，验证属性与事件 ----------

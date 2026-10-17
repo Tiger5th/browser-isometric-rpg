@@ -93,7 +93,9 @@ describe("宝箱/收集品/收集集 L2 校验（票 37）", () => {
     const result = validateContent(files, schemas, dialogueInputs());
     expect(result.issues).toEqual([]);
     expect(result.valid).toBe(true);
-    expect(files.filter((file) => file.kind === "chest")).toHaveLength(3);
+    // green_hollow 3 个（hollow_stone / market_crate / pond_shore）
+    // + slime_den 1 个（den_ledger）= 4。
+    expect(files.filter((file) => file.kind === "chest")).toHaveLength(4);
     // 萤光草 8 件 = HUD 的 0/8 计数口径（issue 要求收集计数有终点）。
     expect(files.filter((file) => file.kind === "collectible")).toHaveLength(8);
   });

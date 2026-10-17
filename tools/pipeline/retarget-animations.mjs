@@ -614,6 +614,16 @@ export function retargetAnimations(sourceBuffer, targetBuffer, mapName) {
       const floats = readAccessorFloats(sourceJson, sourceBin, accessor);
       transformFloats(floats, components);
       outputBytes = new Uint8Array(floats.buffer, floats.byteOffset, floats.byteLength);
+    } else if ((accessor.byteOffset ?? 0) !== 0) {
+      // 源 accessor 不是 view 起始（非紧凑布局）：拷贝必须跳过 byteOffset，
+      // 否则输出会整体错位一个偏移量。
+      const start = accessor.byteOffset;
+      const componentSize = 4; // 动画采样数据只处理 FLOAT（见 readAccessorFloats）
+      const elementSize = (view.byteStride ?? components * componentSize);
+      outputBytes = bytes.subarray(
+        start,
+        start + (accessor.count - 1) * elementSize + components * componentSize,
+      );
     }
     const pad = (4 - (binCursor % 4)) % 4;
     if (pad > 0) {

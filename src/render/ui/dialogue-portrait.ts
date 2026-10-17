@@ -34,6 +34,8 @@ export interface DialogueUiOptions {
   onActivateBubble(npcId: string): void;
   /** 选择对话选项。 */
   onChoose(index: number): void;
+  /** UI 点击音效（气泡/对话选项点击）；播放由调用方（反馈层）接管。 */
+  onUiClick?(): void;
 }
 
 export interface BubbleAnchor {
@@ -115,6 +117,9 @@ export function createDialogueUi(options: DialogueUiOptions): DialogueUi {
     "position:absolute;inset:0;background:rgba(4,6,12,0.55);pointer-events:none;",
   );
   dim.dataset.testid = "dialogue-dim";
+  // 关闭对话后要还原的初始背景（closeDialogue 曾直接清空成 ""，
+  // 若宿主层预置了背景就会丢掉）。
+  const dimInitialBackground = dim.style.background;
 
   // galgame 全屏立绘：左右两个全高画格，底部对齐（立绘从屏幕底部长出）。
   const portraits = element(
@@ -245,7 +250,10 @@ export function createDialogueUi(options: DialogueUiOptions): DialogueUi {
       node.type = "button";
       node.dataset.testid = "dialogue-choice";
       node.dataset.choiceIndex = String(index);
-      node.addEventListener("click", () => options.onChoose(index));
+      node.addEventListener("click", () => {
+        options.onUiClick?.();
+        options.onChoose(index);
+      });
       choiceList.append(node);
     });
   };
@@ -264,7 +272,10 @@ export function createDialogueUi(options: DialogueUiOptions): DialogueUi {
       bubble.dataset.npcId = next.npcId;
       bubble.dataset.kind = next.kind;
       bubble.style.display = isQuest ? "flex" : "inline-flex";
-      bubble.onclick = () => options.onActivateBubble(next.npcId);
+      bubble.onclick = () => {
+        options.onUiClick?.();
+        options.onActivateBubble(next.npcId);
+      };
     },
 
     openDialogue(nextNpcId, nextPlayerId, text, choices) {
@@ -295,7 +306,7 @@ export function createDialogueUi(options: DialogueUiOptions): DialogueUi {
       activeSpeaker = null;
       stage.style.display = "none";
       delete stage.dataset.open;
-      dim.style.background = "";
+      dim.style.background = dimInitialBackground;
       portraits.replaceChildren();
       choiceList.replaceChildren();
     },

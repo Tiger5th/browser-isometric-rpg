@@ -313,4 +313,62 @@ describe("extract → retarget 端到端（合成 GLB）", () => {
       /humanoid map/,
     );
   });
+
+  it("非紧凑布局（accessor 带 byteOffset / view 带 byteStride）拷贝不错位", () => {
+    // 构造源：bufferView 前面垫了一段 padding，accessor 带 byteOffset 落在
+    // padding 之后；rotation output 走交错布局（byteStride）。
+    const source = buildSourceGlb({
+      upperarmRest: [0, 0, 0, 1],
+      animQuat: [0, 0, 0, 1],
+      hipsTranslation: [0, 1, 0],
+    });
+    // 直接改源 json：把 times/rotations/translations 全塞进同一个 view，
+    // 每个 accessor 用 byteOffset 指向自己那一段（模拟外部工具的非紧凑输出）。
+    const { json, buffer } = source;
+    const binView = json.bufferViews;
+    // 重新拼一个共享 bin：times(8B) | rot(32B) | trans(24B) + 头部 4B padding
+    const padding = new Uint8Array(4); // 故意让 accessor.byteOffset 非 0
+    const times = new Float32Array([0, 1]);
+    const rotations = new Float32Array([0, 0, 0, 1, 0, 0, 0, 1]);
+    const translations = new Float32Array([0, 2, 0, 0, 2.2, 0]);
+    const parts = [padding, new Uint8Array(times.buffer), new Uint8Array(rotations.buffer), new Uint8Array(translations.buffer)];
+    const total = parts.reduce((sum, part) => sum + part.byteLength, 0);
+    const bin = new Uint8Array(total);
+    let cursor = 0;
+    for (const part of parts) {
+      bin.set(part, cursor);
+      cursor += part.byteLength;
+    }
+    json.bufferViews = [{ buffer: 0, byteOffset: 0, byteLength: total }];
+    json.buffers = [{ byteLength: total }];
+    json.accessors[0].bufferView = 0;
+    json.accessors[0].byteOffset = padding.byteLength; // times @ 4
+    json.accessors[1].bufferView = 0;
+    json.accessors[1].byteOffset = padding.byteLength + times.byteLength; // rotations @ 12
+    json.accessors[2].bufferView = 0;
+    json.accessors[2].byteOffset = padding.byteLength + times.byteLength + rotations.byteLength; // translations @ 44
+    const sharedSource = { buffer: writeGlb(json, bin), json };
+
+    const { glb: animsGlb } = extractAnimations(sharedSource.buffer, ["Walk_Loop"]);
+    const target = buildTargetGlb({ hipsRest: [0, 0.8, 0], upperarmRest: [0, 0, 0, 1] });
+    const { glb: resultGlb } = retargetAnimations(animsGlb, target.buffer, "vrm");
+
+    const { json: out, bin: outBin } = parseGlb(resultGlb);
+    const walk = out.animations[0];
+    const translationChannel = walk.channels.find((ch) => ch.target.path === "translation");
+    const tAccessor = out.accessors[walk.samplers[translationChannel.sampler].output];
+    const tView = out.bufferViews[tAccessor.bufferView];
+    const tFloats = new Float32Array(
+      outBin.buffer,
+      outBin.byteOffset + tView.byteOffset + tAccessor.byteOffset,
+      tAccessor.count * 3,
+    );
+    // 错位的话这里读到的会是 padding/times 字节而不是平移数据
+    expect(tFloats[0]).toBeCloseTo(0, 5);
+    expect(tFloats[1]).toBeCloseTo(2 * 0.8, 5);
+    expect(tFloats[2]).toBeCloseTo(0, 5);
+    expect(tFloats[3]).toBeCloseTo(0, 5);
+    expect(tFloats[4]).toBeCloseTo(2.2 * 0.8, 5);
+    expect(tFloats[5]).toBeCloseTo(0, 5);
+  });
 });

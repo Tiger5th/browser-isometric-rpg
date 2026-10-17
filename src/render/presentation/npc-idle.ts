@@ -14,6 +14,7 @@ import type { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import type { Scene } from "@babylonjs/core/scene";
 
 import { mulberry32 } from "../character-proto";
+import { GREEN_HOLLOW_BOUNDS } from "./green-hollow-layout";
 import {
   NPC_BREATH_PERIOD_MS,
   NPC_PACE_MAX_INTERVAL_MS,
@@ -30,6 +31,11 @@ export interface NpcIdleConfig {
   home: { x: number; z: number };
   /** 确定性种子：同一 NPC 每次进区域演出一致。 */
   seed: number;
+  /**
+   * 区域边界（code-review #13）：踱步钳制按当前区域的可行走区算，
+   * 不再永远用翠谷 bounds。缺省翠谷（老调用方兼容）。
+   */
+  bounds?: { minX: number; maxX: number; minZ: number; maxZ: number };
 }
 
 /** 踱步移动速度（m/s）：比玩家慢，避免视觉上「NPC 在赶路」。 */
@@ -38,6 +44,7 @@ const PACE_SPEED = 0.9;
 export class NpcIdleController {
   private readonly node: TransformNode;
   private readonly home: { x: number; z: number };
+  private readonly bounds: { minX: number; maxX: number; minZ: number; maxZ: number };
   private state: NpcIdleState;
   private elapsedMs = 0;
   /** 踱步中的剩余目标；null 表示站着不动。 */
@@ -51,6 +58,7 @@ export class NpcIdleController {
   constructor(config: NpcIdleConfig) {
     this.node = config.node;
     this.home = config.home;
+    this.bounds = config.bounds ?? GREEN_HOLLOW_BOUNDS;
     this.state = {
       yaw: config.node.rotation.y,
       paceCooldownMs:
@@ -84,6 +92,7 @@ export class NpcIdleController {
       this.elapsedMs,
       deltaMs,
       this.home,
+      this.bounds,
     );
     this.state = next;
 

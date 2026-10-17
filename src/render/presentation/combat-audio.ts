@@ -275,13 +275,15 @@ export class CombatAudio {
     if (now - last < this.minIntervalMs) {
       return;
     }
-    this.lastPlayedAt.set(request.name, now);
 
     const buffer = this.buffers.get(request.name);
     const context = this.ensureContext();
     if (!buffer || context.state !== "running") {
       return;
     }
+    // 通过间隔检查且确认能发声后才记时间戳：否则缺 buffer / 上下文未就绪
+    // 的请求会白白占掉节流名额，解锁瞬间真正该响的那一声反被吞掉。
+    this.lastPlayedAt.set(request.name, now);
 
     const source = context.createBufferSource();
     source.buffer = buffer;

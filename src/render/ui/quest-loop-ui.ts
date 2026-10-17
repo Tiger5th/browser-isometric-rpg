@@ -54,6 +54,11 @@ export interface QuestLoopUiOptions {
    * HUD 只抛出意图——黑场过场与标题重挂由 main.ts 的标题流程负责。
    */
   onBackToTitle?(): void;
+  /**
+   * UI 点击音效（票 27）：HUD 上的按钮/开关点击时回调，
+   * 播放由表现层反馈层接管（playUiSound("ui-click")），UI 不持有音频。
+   */
+  onUiClick?(): void;
 }
 
 export type SaveStatusKind = "idle" | "ok" | "error";
@@ -116,11 +121,19 @@ function element<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
-function button(label: string, action: string, handler: () => void): HTMLButtonElement {
+function button(
+  label: string,
+  action: string,
+  handler: () => void,
+  onClicked?: () => void,
+): HTMLButtonElement {
   const node = element("button", BUTTON_STYLE, label);
   node.type = "button";
   node.dataset.action = action;
-  node.addEventListener("click", handler);
+  node.addEventListener("click", () => {
+    onClicked?.();
+    handler();
+  });
   return node;
 }
 
@@ -140,6 +153,8 @@ function modifierSummary(definition: ItemDefinition): string {
 
 export function createQuestLoopUi(options: QuestLoopUiOptions): QuestLoopUi {
   const { mount, bundle } = options;
+  /** 统一出口：HUD 上的所有按钮点击都触发一次 UI 音效。 */
+  const click = (): void => options.onUiClick?.();
   const enemyNames = new Map(
     bundle.enemyTemplates.map((template) => [template.id, template.displayName]),
   );
@@ -243,7 +258,7 @@ export function createQuestLoopUi(options: QuestLoopUiOptions): QuestLoopUi {
       element("strong", "font-size:14px;color:#fbbf24;letter-spacing:0.04em;", "背包"),
       element("span", "font-size:11px;color:#94a3b8;", "按 I 或 Esc 关闭"),
     );
-    const closeButton = button("关闭", "close-inventory", () => toggleInventory());
+    const closeButton = button("关闭", "close-inventory", () => toggleInventory(), click);
     closeButton.dataset.testid = "inventory-close";
     header.append(closeButton);
     inventory.append(header);
@@ -365,8 +380,11 @@ export function createQuestLoopUi(options: QuestLoopUiOptions): QuestLoopUi {
       row.append(info);
 
       if (definition?.kind === "consumable" && options.onUseItem !== undefined) {
-        const useButton = button("使用", "use", () =>
-          submit(() => options.onUseItem?.(item.instanceId)),
+        const useButton = button(
+          "使用",
+          "use",
+          () => submit(() => options.onUseItem?.(item.instanceId)),
+          click,
         );
         useButton.dataset.instanceId = item.instanceId;
         useButton.dataset.testid = "inventory-use";
@@ -374,15 +392,21 @@ export function createQuestLoopUi(options: QuestLoopUiOptions): QuestLoopUi {
       }
       if (definition?.kind === "equipment") {
         if (item.equipped && options.onUnequipItem !== undefined) {
-          const unequipButton = button("卸下", "unequip", () =>
-            submit(() => options.onUnequipItem?.(item.instanceId)),
+          const unequipButton = button(
+            "卸下",
+            "unequip",
+            () => submit(() => options.onUnequipItem?.(item.instanceId)),
+            click,
           );
           unequipButton.dataset.instanceId = item.instanceId;
           unequipButton.dataset.testid = "inventory-unequip";
           row.append(unequipButton);
         } else if (!item.equipped && options.onEquipItem !== undefined) {
-          const equipButton = button("装备", "equip", () =>
-            submit(() => options.onEquipItem?.(item.instanceId)),
+          const equipButton = button(
+            "装备",
+            "equip",
+            () => submit(() => options.onEquipItem?.(item.instanceId)),
+            click,
           );
           equipButton.dataset.instanceId = item.instanceId;
           equipButton.dataset.testid = "inventory-equip";
@@ -528,7 +552,7 @@ export function createQuestLoopUi(options: QuestLoopUiOptions): QuestLoopUi {
     }
 
     const toggleRow = element("div", "display:flex;margin-top:10px;");
-    const toggle = button("背包 (I)", "toggle-inventory", () => toggleInventory());
+    const toggle = button("背包 (I)", "toggle-inventory", () => toggleInventory(), click);
     toggle.dataset.testid = "inventory-toggle";
     toggle.style.width = "100%";
     toggle.style.background = "#233044";
@@ -558,9 +582,14 @@ export function createQuestLoopUi(options: QuestLoopUiOptions): QuestLoopUi {
 
     // 票 32：返回标题画面（黑场过场由标题流程做，这里只抛意图）。
     if (options.onBackToTitle !== undefined) {
-      const backButton = button("返回标题", "back-to-title", () => {
-        submit(options.onBackToTitle ?? (() => undefined));
-      });
+      const backButton = button(
+        "返回标题",
+        "back-to-title",
+        () => {
+          submit(options.onBackToTitle ?? (() => undefined));
+        },
+        click,
+      );
       backButton.dataset.testid = "back-to-title-button";
       backButton.style.cssText += "width:100%;margin-top:8px;background:#233044;";
       hud.append(backButton);
@@ -579,6 +608,7 @@ export function createQuestLoopUi(options: QuestLoopUiOptions): QuestLoopUi {
         ready ? "重击 (1.5×)" : `重击 ${(heavyCooldownMs / 1000).toFixed(1)}s`,
         "heavy-attack",
         () => submit(() => options.onHeavyAttack?.()),
+        click,
       );
       skillButton.dataset.testid = "heavy-attack-button";
       skillButton.dataset.ready = ready ? "true" : "false";
@@ -618,6 +648,7 @@ export function createQuestLoopUi(options: QuestLoopUiOptions): QuestLoopUi {
         "调试：攻击最近的史莱姆（走真实战斗）",
         "debug-kill",
         () => submit(() => options.onDebugKill?.()),
+        click,
       );
       debugButton.style.marginTop = "10px";
       debugButton.style.width = "100%";
@@ -717,6 +748,9 @@ export function createQuestLoopUi(options: QuestLoopUiOptions): QuestLoopUi {
         quests: snapshot.quests,
         hp: player?.combat.hp ?? null,
         maxHp: player?.combat.maxHp ?? null,
+        // 重击冷却也进变更键：冷却每帧推进，但只在整秒跨越时重渲染按钮文案。
+        heavyCooldownSec:
+          player === undefined ? null : Math.floor(player.combat.heavyCooldownMs / 1000),
         attack: player?.attributes.attack ?? null,
         defense: player?.attributes.defense ?? null,
         xp: player?.attributes.xp ?? null,

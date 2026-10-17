@@ -70,7 +70,7 @@ export const SLIME_DEN_PLAYER_SPAWN = { x: 0, y: 0, z: -6 } as const;
 export const SLIME_DEN_GROUND_PATCHES: readonly GroundPatch[] = [
   {
     id: "den.ground.cave-floor",
-    // 巢穴专用暗色调瓦片（artifacts/region2/ground-c1 → assets/textures/region2_ground_tile.png）。
+    // 巢穴专用暗色调瓦片（artifacts/region2/ground-c1 → assets/textures/environment_cave_floor.png）。
     texture: "cave-floor" as GroundTextureId,
     x: 0,
     z: 0,

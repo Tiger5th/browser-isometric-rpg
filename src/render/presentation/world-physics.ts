@@ -688,6 +688,7 @@ export function sampleNpcIdle(
   elapsedMs: number,
   deltaMs: number,
   home: { x: number; z: number },
+  bounds: { minX: number; maxX: number; minZ: number; maxZ: number } = GREEN_HOLLOW_BOUNDS,
 ): { sample: NpcIdleSample; next: NpcIdleState } {
   const phase = (elapsedMs % NPC_BREATH_PERIOD_MS) / NPC_BREATH_PERIOD_MS;
   const sway = Math.sin(phase * Math.PI * 2) * NPC_BREATH_AMPLITUDE;
@@ -710,6 +711,7 @@ export function sampleNpcIdle(
         z: home.z + Math.sin(angle) * distance,
       },
       home,
+      bounds,
     );
     faceYaw = Math.atan2(paceTarget.x - home.x, paceTarget.z - home.z);
     next.yaw = faceYaw;
@@ -729,15 +731,16 @@ export function sampleNpcIdle(
 function clampPaceTarget(
   target: { x: number; z: number },
   home: { x: number; z: number },
+  bounds: { minX: number; maxX: number; minZ: number; maxZ: number },
 ): { x: number; z: number } {
   const margin = CHARACTER_COLLIDER_RADIUS + 0.2;
   const clampedX = Math.min(
-    GREEN_HOLLOW_BOUNDS.maxX - margin,
-    Math.max(GREEN_HOLLOW_BOUNDS.minX + margin, target.x),
+    bounds.maxX - margin,
+    Math.max(bounds.minX + margin, target.x),
   );
   const clampedZ = Math.min(
-    GREEN_HOLLOW_BOUNDS.maxZ - margin,
-    Math.max(GREEN_HOLLOW_BOUNDS.minZ + margin, target.z),
+    bounds.maxZ - margin,
+    Math.max(bounds.minZ + margin, target.z),
   );
   // 若被钳制回原位（home 本身贴界），保持原地不动：faceYaw 仍指向原方向，
   // 但目标与 home 重合，表现层的位移为 0。

@@ -274,8 +274,11 @@ def rename_objects(objects, prefix: str, report: Report) -> None:
 
     for armature in armature_objects():
         for bone in armature.data.bones:
-            new_name = f"b_{_sanitize(bone.name)}"
-            if not bone.name.startswith("b_"):
+            base = _sanitize(bone.name)
+            # 已有 b_ 前缀（合法骨骼名 / 已处理过的骨骼）不重复加，
+            # 否则会得到 b_b_xxx。与 _has_valid_prefix 同理但只认 b_。
+            new_name = base if base.startswith("b_") else f"b_{base}"
+            if bone.name != new_name:
                 report.data["renamed"].append({"from": bone.name, "to": new_name})
             bone.name = new_name
 

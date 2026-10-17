@@ -130,6 +130,17 @@ describe("限时 buff", () => {
     expect(effectiveAttributes(capped, 1000).attack).toBeCloseTo(15);
     expect(effectiveAttributes(capped, 1400).attack).toBeCloseTo(10);
   });
+
+  it("stack 模式未声明 maxStacks 时有兜底上限，不会无界增长", () => {
+    const unbounded: BuffDefinition = { ...haste, stacking: "stack" };
+
+    let hero = makeHero();
+    for (let index = 0; index < 100; index += 1) {
+      hero = applyBuff(hero, unbounded, index);
+    }
+    // 兜底 DEFAULT_MAX_BUFF_STACKS = 32 层 × 每层 1 条修饰器
+    expect(hero.modifiers).toHaveLength(32);
+  });
 });
 
 describe("任务奖励", () => {

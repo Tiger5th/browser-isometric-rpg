@@ -316,9 +316,34 @@ async function bootstrap(): Promise<void> {
     dispose: () => titleFlow.dispose(),
   };
 
+  // 游戏内「返回标题」：场景留着（回标题不必重建），只把标题层挂上来。
+  // 游戏内 HUD 层（DOM）也要一并藏起来——它们挂在 document.body 上，
+  // 不处理的话会一直叠在标题画面上。
+  const hideGameHud = (): void => {
+    for (const testid of [
+      "quest-hud",
+      "dialogue-ui",
+      "exploration-hud",
+      "trade-panel",
+      "combat-feedback-layer",
+      "save-slot-panel",
+      "inventory-panel",
+    ]) {
+      document.querySelector<HTMLElement>(`[data-testid="${testid}"]`)?.style.setProperty("display", "none");
+    }
+  };
   window.addEventListener("game:back-to-title", () => {
-    // 游戏内「返回标题」：场景留着（回标题不必重建），只把标题层挂上来。
+    hideGameHud();
     void titleFlow.show();
+  });
+
+  // 页面卸载清理必须先注册再走任何 return 路径——标题路径此前在这里
+  // return，下面的 beforeunload/dispose 注册被跳过。
+  window.addEventListener("beforeunload", () => {
+    void harness.disposeActiveScenario();
+    region.dispose();
+    scene.dispose();
+    engine.dispose();
   });
 
   try {
@@ -347,12 +372,6 @@ async function bootstrap(): Promise<void> {
     throw error;
   }
 
-  window.addEventListener("beforeunload", () => {
-    void harness.disposeActiveScenario();
-    region.dispose();
-    scene.dispose();
-    engine.dispose();
-  });
 }
 
 void bootstrap().catch((error: unknown) => {

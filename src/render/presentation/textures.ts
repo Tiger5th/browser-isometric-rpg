@@ -13,9 +13,11 @@ import { Texture } from "@babylonjs/core/Materials/Textures/texture";
 import type { Scene } from "@babylonjs/core/scene";
 
 import {
-  keyOutNearWhiteBackground,
-  type KeyOutResult,
-} from "./texture-key";
+  loadKeyedTexture,
+  resolvePngUrl,
+  type KeyedTextureUrlLookup,
+} from "./keyed-texture";
+import type { KeyOutResult } from "./texture-key";
 import type { GroundTextureId, PropKind } from "./green-hollow-layout";
 
 const TEXTURE_URLS = import.meta.glob("../../../assets/textures/*.png", {
@@ -30,7 +32,7 @@ export const GROUND_TEXTURE_FILES: Record<GroundTextureId, string> = {
   "dirt-path": "environment_dirt_path_tile.png",
   water: "environment_water_tile.png",
   // 巢穴地面（票 35）：artifacts/region2/ground-c1 落到 assets/textures/。
-  "cave-floor": "region2_ground_tile.png",
+  "cave-floor": "environment_cave_floor.png",
 };
 
 /**
@@ -71,26 +73,19 @@ export interface EnvironmentTextures {
   dispose(): void;
 }
 
+const TEXTURE_LOOKUP: KeyedTextureUrlLookup = {
+  urls: TEXTURE_URLS,
+  assetsDir: "assets/textures",
+};
+
 function resolveTextureUrl(fileName: string): string {
-  const entry = Object.entries(TEXTURE_URLS).find(([path]) =>
-    path.endsWith(`/${fileName}`),
-  );
-  if (!entry) {
+  try {
+    return resolvePngUrl(TEXTURE_LOOKUP, fileName);
+  } catch (error) {
     throw new Error(
-      `缺少环境贴图 assets/textures/${fileName}（先运行 npm run assets:lint 检查资产清单）`,
+      `${(error as Error).message}（先运行 npm run assets:lint 检查资产清单）`,
     );
   }
-  return entry[1];
-}
-
-function loadImage(url: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const image = new Image();
-    image.crossOrigin = "anonymous";
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error(`贴图加载失败：${url}`));
-    image.src = url;
-  });
 }
 
 function createTiledTexture(
@@ -115,35 +110,13 @@ async function createKeyedTexture(
   name: string,
   fileName: string,
 ): Promise<{ texture: DynamicTexture; stats: TextureLoadStats }> {
-  const image = await loadImage(resolveTextureUrl(fileName));
-  const width = image.naturalWidth;
-  const height = image.naturalHeight;
-  const dynamic = new DynamicTexture(name, { width, height }, scene, true);
-  const context = dynamic.getContext() as CanvasRenderingContext2D;
-  context.clearRect(0, 0, width, height);
-  // DynamicTexture 的 canvas 坐标 Y 向下，而 plane UV 原点在左下（Y 向上），
-  // 直接 drawImage 会垂直翻转贴图（树冠朝下、石墙倒挂）；此处预翻转抵消。
-  context.translate(0, height);
-  context.scale(1, -1);
-  context.drawImage(image, 0, 0);
-  context.setTransform(1, 0, 0, 1, 0, 0);
-
-  const imageData = context.getImageData(0, 0, width, height);
-  const result = keyOutNearWhiteBackground({
-    width,
-    height,
-    data: imageData.data,
-  });
-  context.putImageData(imageData, 0, 0);
-  dynamic.update(false);
-  dynamic.hasAlpha = true;
-  dynamic.wrapU = Texture.CLAMP_ADDRESSMODE;
-  dynamic.wrapV = Texture.CLAMP_ADDRESSMODE;
-
-  return {
-    texture: dynamic,
-    stats: { file: fileName, ...result },
-  };
+  const { texture, stats } = await loadKeyedTexture(
+    scene,
+    name,
+    resolveTextureUrl(fileName),
+    `贴图加载失败：${fileName}`,
+  );
+  return { texture, stats: { file: fileName, ...stats } };
 }
 
 export async function loadEnvironmentTextures(

@@ -162,15 +162,32 @@ export class GameSaveSlotService {
     return meta;
   }
 
-  /** 读指定槽位；空槽返回 null。 */
+  /**
+   * 读指定槽位；空槽返回 null。
+   *
+   * 槽内数据损坏（迁移失败/结构不合法）时**不向上抛**：列表页走
+   * Promise.all，一个坏档曾把整个列表读锁死、标题画面卡住。这里降级
+   * 成 null（与空槽同路），调用方据此把该槽显示为空、其余槽照常。
+   */
   async readSlot(slotId: SaveSlotId): Promise<SaveSlotContents | null> {
     assertSlotId(slotId);
-    const raw = await this.storage.read(slotId);
+    let raw: SaveFile | null;
+    try {
+      raw = await this.storage.read(slotId);
+    } catch {
+      // 存储读取本身失败（IndexedDB 不可用/配额异常等）同样按空槽降级。
+      return null;
+    }
     if (raw === null) {
       return null;
     }
-    const snapshot = this.migrate(raw);
-    return { meta: metaOf(slotId, raw) ?? synthesizeMeta(slotId, snapshot), snapshot };
+    try {
+      const snapshot = this.migrate(raw);
+      return { meta: metaOf(slotId, raw) ?? synthesizeMeta(slotId, snapshot), snapshot };
+    } catch {
+      // 坏档：降级为空槽而不是拒绝整份列表。
+      return null;
+    }
   }
 
   /** 删除指定槽位；删除空槽是幂等空操作。 */

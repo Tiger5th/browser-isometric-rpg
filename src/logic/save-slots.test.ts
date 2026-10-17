@@ -12,7 +12,6 @@ import {
   type SaveSlotId,
   type SaveSlotStorage,
 } from "./save-slots";
-import { SaveMigrationError } from "./save";
 import type { GameSessionSnapshot } from "./game-session";
 
 /** 内存槽位存储（测试替身；结构与 IndexedDB 实现一致）。 */
@@ -101,16 +100,26 @@ describe("GameSaveSlotService：写入与读回", () => {
     );
   });
 
-  it("负向：迁移缺失的中间版本在读槽时显式报错", async () => {
+  it("坏档（迁移缺失中间版本）读槽时降级为 null，不再抛错锁死列表", async () => {
+    // code review 修复：此前 readSlot 把 SaveMigrationError 往上抛，
+    // listSlots 的 Promise.all 被一个坏档整体 reject、标题画面卡住。
     const { storage, slots } = service();
-    // 手写一份「声称 v3 但快照内层还是 v2」的档。
     const broken = {
       version: 3,
       sections: { session: { version: 2 } },
     };
     storage.records.set("slot-1", broken);
+    await slots.writeSlot("slot-2", snapshot());
 
-    await expect(slots.readSlot("slot-1")).rejects.toThrow(SaveMigrationError);
+    const entries = await slots.listSlots();
+
+    expect(entries.find((entry) => entry.slotId === "slot-1")).toEqual({
+      slotId: "slot-1",
+      meta: null,
+      snapshot: null,
+    });
+    // 好档不受影响。
+    expect(entries.find((entry) => entry.slotId === "slot-2")?.meta).not.toBeNull();
   });
 });
 

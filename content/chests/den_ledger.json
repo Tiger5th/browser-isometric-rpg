@@ -1,0 +1,11 @@
+{
+  "id": "chest:den_ledger",
+  "displayName": "矿工的储物箱",
+  "regionId": "region:slime_den",
+  "position": { "x": 9, "y": 0, "z": -7 },
+  "rotation": { "x": 0, "y": -1.1, "z": 0 },
+  "loot": [
+    { "itemId": "item:slime_core", "quantity": 1 },
+    { "itemId": "item:old_coin", "quantity": 10 }
+  ]
+}

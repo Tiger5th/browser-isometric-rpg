@@ -148,3 +148,29 @@ describe("CombatAudio 首次交互解锁", () => {
     expect(audio.isUnlocked).toBe(true);
   });
 });
+
+describe("节流时间戳", () => {
+  it("播放请求因 buffer 缺失被丢弃时，不占用节流名额", async () => {
+    // 回归：lastPlayedAt 曾在通过间隔检查后立刻写入，若随后因
+    // buffer 缺失/上下文未就绪提前返回，那一次请求就白白占掉了节流名额。
+    const context = fakeContext();
+    // 只让 ui_click 有 buffer；attack_hit 缺 buffer（preload 失败被吞）。
+    const audio = new CombatAudio({
+      createContext: () => context,
+      loadSound: async (name) =>
+        name === "attack_hit" ? Promise.reject(new Error("404")) : new ArrayBuffer(8),
+      minIntervalMs: 1000,
+      now: () => 0,
+    });
+    await audio.preloadAll();
+    await audio.unlock();
+
+    // attack_hit 没有 buffer：第一次请求被丢弃，不应记录时间戳。
+    audio.handleEvent({ type: "damage-dealt", heavy: false, incoming: false });
+
+    const lastPlayedAt = (audio as unknown as {
+      lastPlayedAt: Map<string, number>;
+    }).lastPlayedAt;
+    expect(lastPlayedAt.get("attack_hit")).toBeUndefined();
+  });
+});

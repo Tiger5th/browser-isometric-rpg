@@ -203,9 +203,12 @@ export interface BuffDefinition {
   modifiers: ModifierTemplate[];
   /** 缺省 refresh：再次施加刷新持续时间；stack：叠加层数。 */
   stacking?: BuffStacking;
-  /** 仅 stack 模式生效；缺省不限层数。 */
+  /** 仅 stack 模式生效；缺省 DEFAULT_MAX_BUFF_STACKS（防无界增长兜底）。 */
   maxStacks?: number;
 }
+
+/** stack 模式未声明 maxStacks 时的兜底层数：防止 buff 无限叠加撑爆修饰器数组。 */
+export const DEFAULT_MAX_BUFF_STACKS = 32;
 
 /**
  * 施加 buff。expiresAt 使用绝对游戏时间，可直接随存档序列化。
@@ -234,7 +237,7 @@ export function applyBuff(entity: Entity, buff: BuffDefinition, now: number): En
     (modifier) => modifier.source.kind === "buff" && modifier.source.id === buff.id,
   );
   const stackCount = Math.floor(existing.length / buff.modifiers.length);
-  if (stackCount >= (buff.maxStacks ?? Number.POSITIVE_INFINITY)) {
+  if (stackCount >= (buff.maxStacks ?? DEFAULT_MAX_BUFF_STACKS)) {
     return cleaned;
   }
 

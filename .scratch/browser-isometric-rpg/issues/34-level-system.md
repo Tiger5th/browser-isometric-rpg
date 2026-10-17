@@ -11,7 +11,7 @@
 - [x] L1：升级状态快照往返（等级/cumulativeXp 不丢）
 - [x] L2：等级曲线 content schema 正负向
 - [x] HUD 显示等级 + 升级时属性飘字数据就绪（消费在票 27）
-- [x] L4：打怪升级→读档→等级保持 冒烟（reports/）——脚本就绪，环境跑不了，见 Answer
+- [x] L4：打怪升级→读档→等级保持 冒烟（reports/）——已跑通 10/10 断言通过，报告 `.scratch/browser-isometric-rpg/reports/ticket34-l4-smoke.json`，截图 `artifacts/p1-world-34-level-up.png` / `p1-world-34-after-load.png`
 
 ## Answer（实现记录，2026-10-17）
 
@@ -60,11 +60,14 @@
 
 ### 遗留
 
-- **L4 未在本机执行**：本仓 agent 环境没有 ego-browser 运行时。脚本已就绪
-  `.scratch/browser-isometric-rpg/smoke/round-03-level-system.mjs`（真实击杀拿经验 →
-  `grantExperience` 补足阈值 → 校验属性/HUD 徽标/升级金光 → 存档 → 读档等级保持 →
-  写 `reports/ticket34-l4-smoke.json`），需先 `npm run dev -- --port 5199` 再在
-  ego-browser 会话里跑。
+- ~~**L4 未在本机执行**~~（2026-10-18 已补跑）：ego-browser 运行时可用，
+  `npm run dev -- --port 5199` 起服务后
+  `ego-browser nodejs -e 'await import("file:///<仓库绝对路径>/.scratch/browser-isometric-rpg/smoke/round-03-level-system.mjs")'`
+  即可复现。跑之前要修三处脚本问题（都已修进脚本）：
+  `task.page("p1-world")` 只引用**已存在**的 Page（改 `task.newPage()`）；
+  taskSpace 名要带时间戳避免与既有 space 冲突；打怪前必须 `teleportTo`
+  到怪身上并从 Node 侧等真实时间——否则 `tryAttack` 因超出射程静默拒绝，
+  一只也打不死，`killsGrantXp` 断言会假红。
 - 内容里只有 3 只史莱姆 × 10 经验，凑不满 100 阈值；L4 用 `grantExperience` 补足，
   它与击杀完全同路径。后续想真打升级，得给区域加怪或调 `xp`。
 - `ContentBundle.levelCurves` 目前只支持一条曲线（多于一条显式报错）。

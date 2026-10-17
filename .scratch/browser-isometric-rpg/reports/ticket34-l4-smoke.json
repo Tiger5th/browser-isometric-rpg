@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 1,
+  "ticket": "34-level-system",
+  "layer": "L4-ego-browser",
+  "generatedAt": "2026-10-17T17:53:40.510Z",
+  "scenario": "p1-world",
+  "status": "passed",
+  "environment": {
+    "url": "http://localhost:5199/?scenario=p1-world&harness=1",
+    "viewport": {
+      "width": 1438,
+      "height": 780,
+      "devicePixelRatio": 2
+    }
+  },
+  "results": {
+    "before": {
+      "level": 1,
+      "cumulativeXp": 0,
+      "xpToNext": 100
+    },
+    "kills": {
+      "xpBeforeKills": 0,
+      "afterKills": 59,
+      "killsGainedXp": 59,
+      "attacks": 58,
+      "killed": 5
+    },
+    "grind": {
+      "startLevel": 1,
+      "endLevel": 3,
+      "startAttributes": {
+        "maxHp": 100,
+        "hp": 100,
+        "attack": 12,
+        "defense": 4,
+        "moveSpeed": 5.5,
+        "xpToNext": 100,
+        "level": 1,
+        "xp": 59
+      },
+      "endAttributes": {
+        "maxHp": 120,
+        "hp": 100,
+        "attack": 16,
+        "defense": 8,
+        "moveSpeed": 5.5,
+        "xpToNext": 100,
+        "level": 3,
+        "xp": 250
+      },
+      "startMaxHp": 100,
+      "endMaxHp": 120,
+      "cumulativeXp": 250,
+      "xpToNext": 200
+    },
+    "levelUpFeedback": {
+      "flashPresent": true,
+      "opacity": "0.650111"
+    },
+    "hud": {
+      "badgeText": "Lv.3",
+      "badgeLevel": "3",
+      "xpText": "经验 250 / 450",
+      "fillWidth": "0%",
+      "logic": {
+        "level": 3,
+        "cumulativeXp": 250,
+        "xpToNext": 200
+      }
+    },
+    "saveLoad": {
+      "loadReturned": true,
+      "saved": {
+        "progress": {
+          "level": 3,
+          "cumulativeXp": 250,
+          "xpToNext": 200
+        },
+        "attack": 16,
+        "maxHp": 120
+      },
+      "drifted": {
+        "level": 3,
+        "cumulativeXp": 300,
+        "xpToNext": 150
+      },
+      "afterLoad": {
+        "progress": {
+          "level": 3,
+          "cumulativeXp": 250,
+          "xpToNext": 200
+        },
+        "attack": 16,
+        "maxHp": 120
+      }
+    },
+    "pageErrors": []
+  },
+  "assertions": {
+    "killsGrantXp": true,
+    "leveledUp": true,
+    "multiLevelJump": true,
+    "levelUpFlashShown": true,
+    "attributesGrew": true,
+    "hudBadgeMatchesLogic": true,
+    "hudXpBarPresent": true,
+    "levelPersistAcrossLoad": true,
+    "loadAdvancedBeforeReload": true,
+    "noPageErrors": true
+  }
+}
