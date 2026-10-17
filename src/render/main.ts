@@ -8,7 +8,11 @@ import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { Scene } from "@babylonjs/core/scene";
 
 import { serializeMeasurementReport, type MeasurementReport } from "../logic/report";
-import { createIsometricCamera, updateOrthographicFrustum } from "./camera";
+import {
+  DEFAULT_CAMERA_VERTICAL_SPAN,
+  createIsometricCamera,
+  updateOrthographicFrustum,
+} from "./camera";
 import { collectEnvironmentInfo } from "./environment";
 import { createGreyboxRegion } from "./greybox";
 import { P0Harness, type ScenarioSummary } from "./harness";
@@ -19,6 +23,7 @@ export type RenderPath = "webgl2" | "webgpu";
 export interface P0HarnessApi {
   listScenarios(): ScenarioSummary[];
   runScenario(name: string): Promise<MeasurementReport>;
+  disposeActiveScenario(): Promise<void>;
   getLastReport(): MeasurementReport | null;
   serialize(report: MeasurementReport): string;
   getEnvironment(): ReturnType<typeof collectEnvironmentInfo>;
@@ -37,7 +42,7 @@ declare global {
   }
 }
 
-const CAMERA_VERTICAL_SPAN = 20;
+const CAMERA_VERTICAL_SPAN = DEFAULT_CAMERA_VERTICAL_SPAN;
 
 function requireElement<T extends HTMLElement>(id: string): T {
   const element = document.getElementById(id);
@@ -193,6 +198,7 @@ async function bootstrap(): Promise<void> {
   window.P0Harness = {
     listScenarios: () => harness.listScenarios(),
     runScenario: (name) => runScenario(name),
+    disposeActiveScenario: () => harness.disposeActiveScenario(),
     getLastReport: () => harness.getLastReport(),
     serialize: (report) => harness.serialize(report),
     getEnvironment: () => collectEnvironmentInfo(engine),
@@ -224,6 +230,7 @@ async function bootstrap(): Promise<void> {
   }
 
   window.addEventListener("beforeunload", () => {
+    void harness.disposeActiveScenario();
     region.dispose();
     scene.dispose();
     engine.dispose();

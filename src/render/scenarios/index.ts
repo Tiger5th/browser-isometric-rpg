@@ -1,5 +1,7 @@
 import type { P0Harness } from "../harness";
 import { charactersScenario } from "./characters";
+import { crowdHotSwapScenario } from "./crowd-hot-swap";
+import { crowdNavScenario } from "./crowd-nav";
 import { helloScenario } from "./hello";
 
 /**
@@ -9,4 +11,6 @@ import { helloScenario } from "./hello";
 export function registerBuiltinScenarios(harness: P0Harness): void {
   harness.registerScenario(helloScenario);
   harness.registerScenario(charactersScenario);
+  harness.registerScenario(crowdNavScenario);
+  harness.registerScenario(crowdHotSwapScenario);
 }

@@ -29,6 +29,11 @@ export interface ScenarioDefinition {
   /** 场景在 Harness 中的唯一具名标识。 */
   name: string;
   description: string;
+  /**
+   * 交互式场景：measure 结束后保留场景（点击/动画可继续演示），
+   * 直到运行下一个 scenario 或显式调用 disposeActiveScenario 时才执行 teardown。
+   */
+  interactive?: boolean;
   setup(context: ScenarioContext): void | Promise<void>;
   measure(context: ScenarioContext): Metric[] | Promise<Metric[]>;
   teardown?(context: ScenarioContext): void | Promise<void>;
@@ -75,6 +80,10 @@ function createScenarioContext(scene: Scene, engine: AbstractEngine): MutableSce
 export class P0Harness {
   private readonly scenarios = new Map<string, ScenarioDefinition>();
   private lastReport: MeasurementReport | null = null;
+  private activeScenario: {
+    definition: ScenarioDefinition;
+    context: MutableScenarioContext;
+  } | null = null;
 
   constructor(
     private readonly scene: Scene,
@@ -103,14 +112,27 @@ export class P0Harness {
     return serializeMeasurementReport(report);
   }
 
+  /** 交互式场景的延迟 teardown；运行其它场景或页面卸载时调用。 */
+  async disposeActiveScenario(): Promise<void> {
+    const active = this.activeScenario;
+    if (!active) {
+      return;
+    }
+    this.activeScenario = null;
+    await active.definition.teardown?.(active.context);
+  }
+
   async runScenario(name: string): Promise<MeasurementReport> {
     const scenario = this.scenarios.get(name);
     if (!scenario) {
       throw new Error(`未知 scenario：${name}`);
     }
 
+    await this.disposeActiveScenario();
+
     const startedAt = new Date();
     const context = createScenarioContext(this.scene, this.engine);
+    let keepAlive = false;
 
     try {
       await scenario.setup(context);
@@ -124,9 +146,17 @@ export class P0Harness {
       });
       assertValidMeasurementReport(report);
       this.lastReport = report;
+
+      if (scenario.interactive) {
+        keepAlive = true;
+        this.activeScenario = { definition: scenario, context };
+      }
+
       return report;
     } finally {
-      await scenario.teardown?.(context);
+      if (!keepAlive) {
+        await scenario.teardown?.(context);
+      }
     }
   }
 }
