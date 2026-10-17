@@ -1,0 +1,674 @@
+{
+  "schemaVersion": 1,
+  "ticket": "28-world-texture",
+  "layer": "L4-ego-browser",
+  "generatedAt": "2026-10-17T13:21:44.102Z",
+  "scenario": "p1-world",
+  "status": "passed",
+  "environment": {
+    "url": "http://localhost:5199/?scenario=p1-world&harness=1",
+    "viewport": {
+      "width": 1438,
+      "height": 780,
+      "devicePixelRatio": 2
+    }
+  },
+  "results": {
+    "measure": {
+      "schemaVersion": 1,
+      "harness": "P0Harness",
+      "scenario": "p1-world",
+      "status": "passed",
+      "startedAt": "2026-10-17T13:21:21.338Z",
+      "finishedAt": "2026-10-17T13:21:28.039Z",
+      "durationMs": 6701,
+      "environment": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+        "renderBackend": "webgl2",
+        "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+        "capturedAt": "2026-10-17T13:21:28.039Z",
+        "devicePixelRatio": 2,
+        "hardwareConcurrency": 10
+      },
+      "metrics": [
+        {
+          "name": "fpsAverage",
+          "value": 60,
+          "unit": "fps",
+          "threshold": 59.5,
+          "comparison": "gte",
+          "passed": true
+        },
+        {
+          "name": "fpsMin",
+          "value": 43.67,
+          "unit": "fps"
+        },
+        {
+          "name": "frameTimeP95Ms",
+          "value": 17.7,
+          "unit": "ms"
+        },
+        {
+          "name": "drawCallsAverage",
+          "value": 182.16,
+          "unit": "calls"
+        },
+        {
+          "name": "drawCallsMax",
+          "value": 257,
+          "unit": "calls",
+          "threshold": 350,
+          "comparison": "lte",
+          "passed": true
+        },
+        {
+          "name": "renderWidth",
+          "value": 1955,
+          "unit": "px"
+        },
+        {
+          "name": "renderHeight",
+          "value": 1060,
+          "unit": "px"
+        },
+        {
+          "name": "renderPixelsMP",
+          "value": 2.07,
+          "unit": "MP"
+        },
+        {
+          "name": "renderScale",
+          "value": 0.68,
+          "unit": "ratio"
+        },
+        {
+          "name": "dynamicResolutionAuto",
+          "value": 1,
+          "unit": "boolean"
+        },
+        {
+          "name": "dynamicResolutionAdjustments",
+          "value": 0,
+          "unit": "adjustments"
+        },
+        {
+          "name": "gameSession.entityCount",
+          "value": 6,
+          "unit": "entities",
+          "threshold": 6,
+          "comparison": "eq",
+          "passed": true
+        },
+        {
+          "name": "quest.total",
+          "value": 1,
+          "unit": "quests",
+          "threshold": 1,
+          "comparison": "eq",
+          "passed": true
+        },
+        {
+          "name": "toonCharacterCount",
+          "value": 6,
+          "unit": "characters",
+          "threshold": 6,
+          "comparison": "eq",
+          "passed": true
+        },
+        {
+          "name": "environmentTextureCount",
+          "value": 9,
+          "unit": "textures",
+          "threshold": 9,
+          "comparison": "eq",
+          "passed": true
+        },
+        {
+          "name": "environmentKeyedTransparentRatio",
+          "value": 0.6849,
+          "unit": "ratio",
+          "threshold": 0.3,
+          "comparison": "gte",
+          "passed": true
+        },
+        {
+          "name": "occluderCount",
+          "value": 23,
+          "unit": "occluders",
+          "threshold": 20,
+          "comparison": "gte",
+          "passed": true
+        },
+        {
+          "name": "meshedPartCount",
+          "value": 52,
+          "unit": "meshes",
+          "threshold": 1,
+          "comparison": "gte",
+          "passed": true
+        },
+        {
+          "name": "colliderCount",
+          "value": 17,
+          "unit": "colliders",
+          "threshold": 15,
+          "comparison": "gte",
+          "passed": true
+        },
+        {
+          "name": "landscapeMeshCount",
+          "value": 49,
+          "unit": "meshes",
+          "threshold": 45,
+          "comparison": "gte",
+          "passed": true
+        },
+        {
+          "name": "enabledLightCount",
+          "value": 1,
+          "unit": "lights",
+          "threshold": 1,
+          "comparison": "eq",
+          "passed": true
+        },
+        {
+          "name": "fogEnabled",
+          "value": 1,
+          "unit": "boolean",
+          "threshold": 1,
+          "comparison": "eq",
+          "passed": true
+        },
+        {
+          "name": "keyLightElevationDegrees",
+          "value": 37.67,
+          "unit": "degrees"
+        },
+        {
+          "name": "keyLightAzimuthDegrees",
+          "value": -135,
+          "unit": "degrees"
+        },
+        {
+          "name": "npcIdleCount",
+          "value": 2,
+          "unit": "npcs",
+          "threshold": 2,
+          "comparison": "gte",
+          "passed": true
+        },
+        {
+          "name": "occlusionOutlined",
+          "value": 0,
+          "unit": "meshes"
+        },
+        {
+          "name": "occlusionDetectionMsAverage",
+          "value": 0.0066,
+          "unit": "ms/frame",
+          "threshold": 0.05,
+          "comparison": "lte",
+          "passed": true
+        },
+        {
+          "name": "occlusionDetectionMsMax",
+          "value": 0.1,
+          "unit": "ms",
+          "threshold": 0.5,
+          "comparison": "lte",
+          "passed": true
+        },
+        {
+          "name": "occlusionProbeOutlined",
+          "value": 1,
+          "unit": "meshes",
+          "threshold": 1,
+          "comparison": "gte",
+          "passed": true
+        },
+        {
+          "name": "morphTargetCount",
+          "value": 1,
+          "unit": "targets",
+          "threshold": 1,
+          "comparison": "gte",
+          "passed": true
+        },
+        {
+          "name": "morphInfluenceMax",
+          "value": 1,
+          "unit": "influence",
+          "threshold": 0.9,
+          "comparison": "gte",
+          "passed": true
+        },
+        {
+          "name": "morphShaderReady",
+          "value": 1,
+          "unit": "boolean",
+          "threshold": 1,
+          "comparison": "eq",
+          "passed": true
+        },
+        {
+          "name": "toonPlayerMaterialActive",
+          "value": 1,
+          "unit": "boolean",
+          "threshold": 1,
+          "comparison": "eq",
+          "passed": true
+        },
+        {
+          "name": "imageProcessingEnabled",
+          "value": 1,
+          "unit": "boolean",
+          "threshold": 1,
+          "comparison": "eq",
+          "passed": true
+        },
+        {
+          "name": "sampledFrames",
+          "value": 241,
+          "unit": "frames"
+        },
+        {
+          "name": "longFrames",
+          "value": 0,
+          "unit": "frames"
+        },
+        {
+          "name": "jsHeapUsedMB",
+          "value": 148.44,
+          "unit": "MB",
+          "threshold": 1500,
+          "comparison": "lte",
+          "passed": true
+        }
+      ]
+    },
+    "metrics": [
+      {
+        "name": "fpsAverage",
+        "value": 60,
+        "threshold": 59.5,
+        "comparison": "gte",
+        "passed": true
+      },
+      {
+        "name": "fpsMin",
+        "value": 43.67
+      },
+      {
+        "name": "frameTimeP95Ms",
+        "value": 17.7
+      },
+      {
+        "name": "drawCallsAverage",
+        "value": 182.16
+      },
+      {
+        "name": "drawCallsMax",
+        "value": 257,
+        "threshold": 350,
+        "comparison": "lte",
+        "passed": true
+      },
+      {
+        "name": "renderWidth",
+        "value": 1955
+      },
+      {
+        "name": "renderHeight",
+        "value": 1060
+      },
+      {
+        "name": "renderPixelsMP",
+        "value": 2.07
+      },
+      {
+        "name": "renderScale",
+        "value": 0.68
+      },
+      {
+        "name": "dynamicResolutionAuto",
+        "value": 1
+      },
+      {
+        "name": "dynamicResolutionAdjustments",
+        "value": 0
+      },
+      {
+        "name": "gameSession.entityCount",
+        "value": 6,
+        "threshold": 6,
+        "comparison": "eq",
+        "passed": true
+      },
+      {
+        "name": "quest.total",
+        "value": 1,
+        "threshold": 1,
+        "comparison": "eq",
+        "passed": true
+      },
+      {
+        "name": "toonCharacterCount",
+        "value": 6,
+        "threshold": 6,
+        "comparison": "eq",
+        "passed": true
+      },
+      {
+        "name": "environmentTextureCount",
+        "value": 9,
+        "threshold": 9,
+        "comparison": "eq",
+        "passed": true
+      },
+      {
+        "name": "environmentKeyedTransparentRatio",
+        "value": 0.6849,
+        "threshold": 0.3,
+        "comparison": "gte",
+        "passed": true
+      },
+      {
+        "name": "occluderCount",
+        "value": 23,
+        "threshold": 20,
+        "comparison": "gte",
+        "passed": true
+      },
+      {
+        "name": "meshedPartCount",
+        "value": 52,
+        "threshold": 1,
+        "comparison": "gte",
+        "passed": true
+      },
+      {
+        "name": "colliderCount",
+        "value": 17,
+        "threshold": 15,
+        "comparison": "gte",
+        "passed": true
+      },
+      {
+        "name": "landscapeMeshCount",
+        "value": 49,
+        "threshold": 45,
+        "comparison": "gte",
+        "passed": true
+      },
+      {
+        "name": "enabledLightCount",
+        "value": 1,
+        "threshold": 1,
+        "comparison": "eq",
+        "passed": true
+      },
+      {
+        "name": "fogEnabled",
+        "value": 1,
+        "threshold": 1,
+        "comparison": "eq",
+        "passed": true
+      },
+      {
+        "name": "keyLightElevationDegrees",
+        "value": 37.67
+      },
+      {
+        "name": "keyLightAzimuthDegrees",
+        "value": -135
+      },
+      {
+        "name": "npcIdleCount",
+        "value": 2,
+        "threshold": 2,
+        "comparison": "gte",
+        "passed": true
+      },
+      {
+        "name": "occlusionOutlined",
+        "value": 0
+      },
+      {
+        "name": "occlusionDetectionMsAverage",
+        "value": 0.0066,
+        "threshold": 0.05,
+        "comparison": "lte",
+        "passed": true
+      },
+      {
+        "name": "occlusionDetectionMsMax",
+        "value": 0.1,
+        "threshold": 0.5,
+        "comparison": "lte",
+        "passed": true
+      },
+      {
+        "name": "occlusionProbeOutlined",
+        "value": 1,
+        "threshold": 1,
+        "comparison": "gte",
+        "passed": true
+      },
+      {
+        "name": "morphTargetCount",
+        "value": 1,
+        "threshold": 1,
+        "comparison": "gte",
+        "passed": true
+      },
+      {
+        "name": "morphInfluenceMax",
+        "value": 1,
+        "threshold": 0.9,
+        "comparison": "gte",
+        "passed": true
+      },
+      {
+        "name": "morphShaderReady",
+        "value": 1,
+        "threshold": 1,
+        "comparison": "eq",
+        "passed": true
+      },
+      {
+        "name": "toonPlayerMaterialActive",
+        "value": 1,
+        "threshold": 1,
+        "comparison": "eq",
+        "passed": true
+      },
+      {
+        "name": "imageProcessingEnabled",
+        "value": 1,
+        "threshold": 1,
+        "comparison": "eq",
+        "passed": true
+      },
+      {
+        "name": "sampledFrames",
+        "value": 241
+      },
+      {
+        "name": "longFrames",
+        "value": 0
+      },
+      {
+        "name": "jsHeapUsedMB",
+        "value": 148.44,
+        "threshold": 1500,
+        "comparison": "lte",
+        "passed": true
+      }
+    ],
+    "world": {
+      "meshedPartCount": 52,
+      "colliderCount": 17,
+      "colliderKinds": [
+        "barrel",
+        "crate",
+        "stone-wall",
+        "tree-large"
+      ],
+      "bushCount": 6,
+      "fogEnabled": true,
+      "fogStart": 22,
+      "fogEnd": 48,
+      "landscapeMeshCount": 49,
+      "keyLight": {
+        "name": "light.key.world",
+        "direction": [
+          -0.5597,
+          0.6111,
+          -0.5597
+        ],
+        "enabled": true
+      },
+      "enabledLightCount": 1,
+      "keyLightElevationDegrees": 37.67,
+      "keyLightAzimuthDegrees": -135,
+      "npcIdleCount": 2,
+      "npcPacingCount": 1,
+      "bushOcclusion": {
+        "bushId": null,
+        "occlusion": 0
+      },
+      "playerAlpha": 1
+    },
+    "treeProbe": {
+      "requested": {
+        "x": -20,
+        "z": -15.5
+      },
+      "resolved": {
+        "x": -20,
+        "z": -14.485
+      },
+      "blocked": true,
+      "blockedBy": "prop.tree.north-west",
+      "insideCollider": true
+    },
+    "bushWalk": {
+      "position": {
+        "x": -5.5,
+        "y": 0,
+        "z": 6
+      },
+      "bushOcclusion": {
+        "bushId": "prop.bush.south-west",
+        "occlusion": 1
+      },
+      "playerAlpha": 0.55
+    },
+    "moveCheck": {
+      "start": {
+        "x": -5.5,
+        "y": 0,
+        "z": 6
+      },
+      "end": {
+        "x": 15,
+        "y": 0,
+        "z": -0.5
+      },
+      "moved": 21.506,
+      "stuck": false,
+      "samples": 241
+    },
+    "npcIdle": {
+      "start": {
+        "ma": {
+          "x": 5.985604055544585,
+          "y": 0,
+          "z": 4.003995044514393
+        },
+        "lin": {
+          "x": -5.993222307081552,
+          "y": 0,
+          "z": 2.986685854284311
+        }
+      },
+      "end": {
+        "ma": {
+          "x": 5.985298643584122,
+          "y": 0,
+          "z": 3.9986855715816194
+        },
+        "lin": {
+          "x": -5.997807106651884,
+          "y": 0,
+          "z": 3.0145961920135873
+        }
+      },
+      "paced": 2,
+      "npcIdleCount": 2
+    },
+    "corners": [
+      {
+        "direction": "north",
+        "luminance": {
+          "bottomLeft": 0.428,
+          "bottomRight": 0.424,
+          "bottomCenter": 0.753,
+          "topLeft": 0.497,
+          "topRight": 0.497,
+          "topCenter": 0.768
+        },
+        "path": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a055d22c1ffc929e3/artifacts/p1-world-28-landscape-north.png"
+      },
+      {
+        "direction": "east",
+        "luminance": {
+          "bottomLeft": 0.456,
+          "bottomRight": 0.456,
+          "bottomCenter": 0.468,
+          "topLeft": 0.497,
+          "topRight": 0.497,
+          "topCenter": 0.556
+        },
+        "path": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a055d22c1ffc929e3/artifacts/p1-world-28-landscape-east.png"
+      },
+      {
+        "direction": "south",
+        "luminance": {
+          "bottomLeft": 0.424,
+          "bottomRight": 0.428,
+          "bottomCenter": 0.766,
+          "topLeft": 0.497,
+          "topRight": 0.497,
+          "topCenter": 0.757
+        },
+        "path": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a055d22c1ffc929e3/artifacts/p1-world-28-landscape-south.png"
+      },
+      {
+        "direction": "west",
+        "luminance": {
+          "bottomLeft": 0.456,
+          "bottomRight": 0.456,
+          "bottomCenter": 0.436,
+          "topLeft": 0.497,
+          "topRight": 0.497,
+          "topCenter": 0.556
+        },
+        "path": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a055d22c1ffc929e3/artifacts/p1-world-28-landscape-west.png"
+      }
+    ],
+    "pageErrors": []
+  },
+  "assertions": {
+    "meshedFourKinds": true,
+    "treeBlocks": true,
+    "bushPassable": true,
+    "movementNotStuck": true,
+    "npcIdle": true,
+    "fogOn": true,
+    "singleKeyLight": true,
+    "noBlackVoid": true,
+    "budget": true
+  }
+}

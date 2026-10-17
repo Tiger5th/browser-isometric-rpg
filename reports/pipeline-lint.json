@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-17T08:26:33.988Z",
+  "generatedAt": "2026-10-17T14:10:10.775Z",
   "files": [
     {
-      "file": "/Users/joule/Desktop/code/game kaifa/assets/character_anime_placeholder.glb",
+      "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-abe6c788802baa7c6/assets/character_anime_placeholder.glb",
       "status": "passed",
       "stats": {
         "triangles": 11236,
@@ -30,7 +30,7 @@
       "warningCount": 0
     },
     {
-      "file": "/Users/joule/Desktop/code/game kaifa/assets/character_test_draco.glb",
+      "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-abe6c788802baa7c6/assets/character_test_draco.glb",
       "status": "passed",
       "stats": {
         "triangles": 11488,
@@ -57,7 +57,7 @@
       "warningCount": 0
     },
     {
-      "file": "/Users/joule/Desktop/code/game kaifa/assets/character_test_ktx2.glb",
+      "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-abe6c788802baa7c6/assets/character_test_ktx2.glb",
       "status": "passed",
       "stats": {
         "triangles": 11488,
@@ -84,7 +84,7 @@
       "warningCount": 0
     },
     {
-      "file": "/Users/joule/Desktop/code/game kaifa/assets/character_test_lod0.glb",
+      "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-abe6c788802baa7c6/assets/character_test_lod0.glb",
       "status": "passed",
       "stats": {
         "triangles": 11488,
@@ -111,7 +111,7 @@
       "warningCount": 0
     },
     {
-      "file": "/Users/joule/Desktop/code/game kaifa/assets/character_test_lod1.glb",
+      "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-abe6c788802baa7c6/assets/character_test_lod1.glb",
       "status": "passed",
       "stats": {
         "triangles": 5744,
@@ -138,7 +138,7 @@
       "warningCount": 0
     },
     {
-      "file": "/Users/joule/Desktop/code/game kaifa/assets/character_test_lod2.glb",
+      "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-abe6c788802baa7c6/assets/character_test_lod2.glb",
       "status": "passed",
       "stats": {
         "triangles": 2296,
@@ -165,7 +165,7 @@
       "warningCount": 0
     },
     {
-      "file": "/Users/joule/Desktop/code/game kaifa/assets/character_test_meshopt.glb",
+      "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-abe6c788802baa7c6/assets/character_test_meshopt.glb",
       "status": "passed",
       "stats": {
         "triangles": 11488,
@@ -192,7 +192,7 @@
       "warningCount": 0
     },
     {
-      "file": "/Users/joule/Desktop/code/game kaifa/assets/character_test_meshopt_ktx2.glb",
+      "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-abe6c788802baa7c6/assets/character_test_meshopt_ktx2.glb",
       "status": "passed",
       "stats": {
         "triangles": 11488,
@@ -217,21 +217,1501 @@
       "violations": [],
       "errorCount": 0,
       "warningCount": 0
+    },
+    {
+      "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-abe6c788802baa7c6/assets/character_vroid_lod0.glb",
+      "status": "passed",
+      "stats": {
+        "triangles": 45058,
+        "vertices": 34059,
+        "meshes": 5,
+        "materials": 17,
+        "textures": 15,
+        "animations": 3,
+        "skins": 5
+      },
+      "topology": [
+        {
+          "mesh": "hair",
+          "vertexCount": 5145,
+          "triangleCount": 7820,
+          "nonManifoldEdges": 4,
+          "boundaryEdges": 2376,
+          "degenerateTriangles": 0,
+          "looseVertices": 0
+        },
+        {
+          "mesh": "hair",
+          "vertexCount": 40,
+          "triangleCount": 60,
+          "nonManifoldEdges": 0,
+          "boundaryEdges": 16,
+          "degenerateTriangles": 0,
+          "looseVertices": 0
+        },
+        {
+          "mesh": "hair_tail",
+          "vertexCount": 156,
+          "triangleCount": 238,
+          "nonManifoldEdges": 0,
+          "boundaryEdges": 70,
+          "degenerateTriangles": 0,
+          "looseVertices": 0
+        },
+        {
+          "mesh": "head",
+          "vertexCount": 4332,
+          "triangleCount": 8010,
+          "nonManifoldEdges": 0,
+          "boundaryEdges": 636,
+          "degenerateTriangles": 0,
+          "looseVertices": 0
+        },
+        {
+          "mesh": "head",
+          "vertexCount": 1114,
+          "triangleCount": 1330,
+          "nonManifoldEdges": 0,
+          "boundaryEdges": 670,
+          "degenerateTriangles": 248,
+          "looseVertices": 206
+        },
+        {
+          "mesh": "head",
+          "vertexCount": 696,
+          "triangleCount": 1210,
+          "nonManifoldEdges": 0,
+          "boundaryEdges": 133,
+          "degenerateTriangles": 1087,
+          "looseVertices": 563
+        },
+        {
+          "mesh": "robo_arm",
+          "vertexCount": 2363,
+          "triangleCount": 2024,
+          "nonManifoldEdges": 0,
+          "boundaryEdges": 1992,
+          "degenerateTriangles": 0,
+          "looseVertices": 0
+        },
+        {
+          "mesh": "robo_arm",
+          "vertexCount": 1422,
+          "triangleCount": 986,
+          "nonManifoldEdges": 0,
+          "boundaryEdges": 1406,
+          "degenerateTriangles": 0,
+          "looseVertices": 0
+        },
+        {
+          "mesh": "robo_arm",
+          "vertexCount": 10,
+          "triangleCount": 6,
+          "nonManifoldEdges": 0,
+          "boundaryEdges": 10,
+          "degenerateTriangles": 0,
+          "looseVertices": 0
+        },
+        {
+          "mesh": "wear",
+          "vertexCount": 5260,
+          "triangleCount": 8042,
+          "nonManifoldEdges": 0,
+          "boundaryEdges": 2342,
+          "degenerateTriangles": 0,
+          "looseVertices": 0
+        },
+        {
+          "mesh": "wear",
+          "vertexCount": 1404,
+          "triangleCount": 2208,
+          "nonManifoldEdges": 0,
+          "boundaryEdges": 588,
+          "degenerateTriangles": 0,
+          "looseVertices": 0
+        },
+        {
+          "mesh": "wear",
+          "vertexCount": 242,
+          "triangleCount": 308,
+          "nonManifoldEdges": 0,
+          "boundaryEdges": 156,
+          "degenerateTriangles": 0,
+          "looseVertices": 0
+        },
+        {
+          "mesh": "wear",
+          "vertexCount": 4424,
+          "triangleCount": 5806,
+          "nonManifoldEdges": 0,
+          "boundaryEdges": 2804,
+          "degenerateTriangles": 0,
+          "looseVertices": 0
+        },
+        {
+          "mesh": "wear",
+          "vertexCount": 1161,
+          "triangleCount": 984,
+          "nonManifoldEdges": 0,
+          "boundaryEdges": 1158,
+          "degenerateTriangles": 0,
+          "looseVertices": 0
+        },
+        {
+          "mesh": "wear",
+          "vertexCount": 45,
+          "triangleCount": 56,
+          "nonManifoldEdges": 0,
+          "boundaryEdges": 30,
+          "degenerateTriangles": 0,
+          "looseVertices": 0
+        },
+        {
+          "mesh": "wear",
+          "vertexCount": 45,
+          "triangleCount": 56,
+          "nonManifoldEdges": 0,
+          "boundaryEdges": 30,
+          "degenerateTriangles": 0,
+          "looseVertices": 0
+        },
+        {
+          "mesh": "wear",
+          "vertexCount": 736,
+          "triangleCount": 594,
+          "nonManifoldEdges": 0,
+          "boundaryEdges": 734,
+          "degenerateTriangles": 0,
+          "looseVertices": 0
+        },
+        {
+          "mesh": "wear",
+          "vertexCount": 32,
+          "triangleCount": 16,
+          "nonManifoldEdges": 0,
+          "boundaryEdges": 32,
+          "degenerateTriangles": 0,
+          "looseVertices": 0
+        },
+        {
+          "mesh": "wear",
+          "vertexCount": 3820,
+          "triangleCount": 3922,
+          "nonManifoldEdges": 0,
+          "boundaryEdges": 3410,
+          "degenerateTriangles": 0,
+          "looseVertices": 0
+        },
+        {
+          "mesh": "wear",
+          "vertexCount": 1571,
+          "triangleCount": 1346,
+          "nonManifoldEdges": 0,
+          "boundaryEdges": 1496,
+          "degenerateTriangles": 0,
+          "looseVertices": 0
+        },
+        {
+          "mesh": "wear",
+          "vertexCount": 41,
+          "triangleCount": 36,
+          "nonManifoldEdges": 0,
+          "boundaryEdges": 38,
+          "degenerateTriangles": 0,
+          "looseVertices": 0
+        }
+      ],
+      "violations": [
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:hair",
+          "message": "名称 \"hair\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:hair_tail",
+          "message": "名称 \"hair_tail\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:head",
+          "message": "名称 \"head\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:hips",
+          "message": "名称 \"hips\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:spine",
+          "message": "名称 \"spine\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:chest",
+          "message": "名称 \"chest\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:bag_rope_L",
+          "message": "名称 \"bag_rope_L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:bag_rope_L.001",
+          "message": "名称 \"bag_rope_L.001\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:bag_rope_L.002",
+          "message": "名称 \"bag_rope_L.002\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:bag_rope_R",
+          "message": "名称 \"bag_rope_R\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:bag_rope_R.001",
+          "message": "名称 \"bag_rope_R.001\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:bag_rope_R.002",
+          "message": "名称 \"bag_rope_R.002\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:bagpack",
+          "message": "名称 \"bagpack\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:robo_root_pole",
+          "message": "名称 \"robo_root_pole\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:robo_shoulder.L",
+          "message": "名称 \"robo_shoulder.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:robo_upper_arm.L",
+          "message": "名称 \"robo_upper_arm.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:robo_forearm.L",
+          "message": "名称 \"robo_forearm.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:robo_hand.L",
+          "message": "名称 \"robo_hand.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:robo_palm.01.L",
+          "message": "名称 \"robo_palm.01.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:robo_f_index.01.L",
+          "message": "名称 \"robo_f_index.01.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:robo_f_index.02.L",
+          "message": "名称 \"robo_f_index.02.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:robo_f_index.03.L",
+          "message": "名称 \"robo_f_index.03.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:robo_thumb.01.L",
+          "message": "名称 \"robo_thumb.01.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:robo_thumb.02.L",
+          "message": "名称 \"robo_thumb.02.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:robo_thumb.03.L",
+          "message": "名称 \"robo_thumb.03.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:robo_palm.02.L",
+          "message": "名称 \"robo_palm.02.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:robo_f_middle.01.L",
+          "message": "名称 \"robo_f_middle.01.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:robo_f_middle.02.L",
+          "message": "名称 \"robo_f_middle.02.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:robo_f_middle.03.L",
+          "message": "名称 \"robo_f_middle.03.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:robo_palm.03.L",
+          "message": "名称 \"robo_palm.03.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:robo_f_ring.01.L",
+          "message": "名称 \"robo_f_ring.01.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:robo_f_ring.02.L",
+          "message": "名称 \"robo_f_ring.02.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:robo_f_ring.03.L",
+          "message": "名称 \"robo_f_ring.03.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:robo_palm.04.L",
+          "message": "名称 \"robo_palm.04.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:robo_f_pinky.01.L",
+          "message": "名称 \"robo_f_pinky.01.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:robo_f_pinky.02.L",
+          "message": "名称 \"robo_f_pinky.02.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:robo_f_pinky.03.L",
+          "message": "名称 \"robo_f_pinky.03.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:robo_wire",
+          "message": "名称 \"robo_wire\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:robo_wire.001",
+          "message": "名称 \"robo_wire.001\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:robo_wire.002",
+          "message": "名称 \"robo_wire.002\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:robo_wire.003",
+          "message": "名称 \"robo_wire.003\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:robo_wire.004",
+          "message": "名称 \"robo_wire.004\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:robo_wire.005",
+          "message": "名称 \"robo_wire.005\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:robo_wire_end",
+          "message": "名称 \"robo_wire_end\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:neck",
+          "message": "名称 \"neck\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:head 1",
+          "message": "名称 \"head 1\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:hair_A",
+          "message": "名称 \"hair_A\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:hair_A.001",
+          "message": "名称 \"hair_A.001\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:hair_A_end",
+          "message": "名称 \"hair_A_end\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:hair_B",
+          "message": "名称 \"hair_B\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:hair_B.001",
+          "message": "名称 \"hair_B.001\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:hair_B_end",
+          "message": "名称 \"hair_B_end\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:hair_C",
+          "message": "名称 \"hair_C\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:hair_C.001",
+          "message": "名称 \"hair_C.001\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:hair_C_end",
+          "message": "名称 \"hair_C_end\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:hair_D",
+          "message": "名称 \"hair_D\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:hair_D.001",
+          "message": "名称 \"hair_D.001\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:hair_D_end",
+          "message": "名称 \"hair_D_end\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:hair_E",
+          "message": "名称 \"hair_E\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:hair_E.001",
+          "message": "名称 \"hair_E.001\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:hair_E_end",
+          "message": "名称 \"hair_E_end\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:hair_F",
+          "message": "名称 \"hair_F\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:hair_F.001",
+          "message": "名称 \"hair_F.001\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:hair_F_end",
+          "message": "名称 \"hair_F_end\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:hair_G",
+          "message": "名称 \"hair_G\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:hair_G.001",
+          "message": "名称 \"hair_G.001\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:hair_G_end",
+          "message": "名称 \"hair_G_end\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:hair_subA",
+          "message": "名称 \"hair_subA\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:hair_subA.001",
+          "message": "名称 \"hair_subA.001\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:hair_subB",
+          "message": "名称 \"hair_subB\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:hair_subB.001",
+          "message": "名称 \"hair_subB.001\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:hair_subC",
+          "message": "名称 \"hair_subC\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:hair_subC.001",
+          "message": "名称 \"hair_subC.001\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:hair_subD",
+          "message": "名称 \"hair_subD\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:hair_subD.001",
+          "message": "名称 \"hair_subD.001\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:hair_tail_1",
+          "message": "名称 \"hair_tail_1\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:hair_tail_2",
+          "message": "名称 \"hair_tail_2\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:hair_tail_3",
+          "message": "名称 \"hair_tail_3\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:hair_tail_4",
+          "message": "名称 \"hair_tail_4\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:hair_tail_5",
+          "message": "名称 \"hair_tail_5\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:hair_tail_6",
+          "message": "名称 \"hair_tail_6\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:hair_tail_end",
+          "message": "名称 \"hair_tail_end\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:shoulder.L",
+          "message": "名称 \"shoulder.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:upper_arm.L",
+          "message": "名称 \"upper_arm.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:forearm.L",
+          "message": "名称 \"forearm.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:forearm.twist.L",
+          "message": "名称 \"forearm.twist.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:hand.L",
+          "message": "名称 \"hand.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:palm.01.L",
+          "message": "名称 \"palm.01.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:f_index.01.L",
+          "message": "名称 \"f_index.01.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:f_index.02.L",
+          "message": "名称 \"f_index.02.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:f_index.03.L",
+          "message": "名称 \"f_index.03.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:thumb.01.L",
+          "message": "名称 \"thumb.01.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:thumb.02.L",
+          "message": "名称 \"thumb.02.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:thumb.03.L",
+          "message": "名称 \"thumb.03.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:palm.02.L",
+          "message": "名称 \"palm.02.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:f_middle.01.L",
+          "message": "名称 \"f_middle.01.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:f_middle.02.L",
+          "message": "名称 \"f_middle.02.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:f_middle.03.L",
+          "message": "名称 \"f_middle.03.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:palm.03.L",
+          "message": "名称 \"palm.03.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:f_ring.01.L",
+          "message": "名称 \"f_ring.01.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:f_ring.02.L",
+          "message": "名称 \"f_ring.02.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:f_ring.03.L",
+          "message": "名称 \"f_ring.03.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:palm.04.L",
+          "message": "名称 \"palm.04.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:f_pinky.01.L",
+          "message": "名称 \"f_pinky.01.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:f_pinky.02.L",
+          "message": "名称 \"f_pinky.02.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:f_pinky.03.L",
+          "message": "名称 \"f_pinky.03.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:shoulder.R",
+          "message": "名称 \"shoulder.R\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:upper_arm.R",
+          "message": "名称 \"upper_arm.R\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:forearm.R",
+          "message": "名称 \"forearm.R\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:forearm.twist.R",
+          "message": "名称 \"forearm.twist.R\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:hand.R",
+          "message": "名称 \"hand.R\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:palm.01.R",
+          "message": "名称 \"palm.01.R\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:f_index.01.R",
+          "message": "名称 \"f_index.01.R\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:f_index.02.R",
+          "message": "名称 \"f_index.02.R\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:f_index.03.R",
+          "message": "名称 \"f_index.03.R\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:thumb.01.R",
+          "message": "名称 \"thumb.01.R\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:thumb.02.R",
+          "message": "名称 \"thumb.02.R\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:thumb.03.R",
+          "message": "名称 \"thumb.03.R\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:palm.02.R",
+          "message": "名称 \"palm.02.R\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:f_middle.01.R",
+          "message": "名称 \"f_middle.01.R\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:f_middle.02.R",
+          "message": "名称 \"f_middle.02.R\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:f_middle.03.R",
+          "message": "名称 \"f_middle.03.R\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:palm.03.R",
+          "message": "名称 \"palm.03.R\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:f_ring.01.R",
+          "message": "名称 \"f_ring.01.R\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:f_ring.02.R",
+          "message": "名称 \"f_ring.02.R\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:f_ring.03.R",
+          "message": "名称 \"f_ring.03.R\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:palm.04.R",
+          "message": "名称 \"palm.04.R\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:f_pinky.01.R",
+          "message": "名称 \"f_pinky.01.R\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:f_pinky.02.R",
+          "message": "名称 \"f_pinky.02.R\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:f_pinky.03.R",
+          "message": "名称 \"f_pinky.03.R\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:thigh.L",
+          "message": "名称 \"thigh.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:shin.L",
+          "message": "名称 \"shin.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:foot.L",
+          "message": "名称 \"foot.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:heel.L",
+          "message": "名称 \"heel.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:toe.L",
+          "message": "名称 \"toe.L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:foot_rope_L",
+          "message": "名称 \"foot_rope_L\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:foot_rope_L.001",
+          "message": "名称 \"foot_rope_L.001\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:thigh.R",
+          "message": "名称 \"thigh.R\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:shin.R",
+          "message": "名称 \"shin.R\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:foot.R",
+          "message": "名称 \"foot.R\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:heel.R",
+          "message": "名称 \"heel.R\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:toe.R",
+          "message": "名称 \"toe.R\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:foot_rope_R",
+          "message": "名称 \"foot_rope_R\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:foot_rope_R.001",
+          "message": "名称 \"foot_rope_R.001\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:robo_arm",
+          "message": "名称 \"robo_arm\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:wear",
+          "message": "名称 \"wear\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "node:ColliderGroups",
+          "message": "名称 \"ColliderGroups\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "mesh:hair",
+          "message": "名称 \"hair\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "mesh:hair_tail",
+          "message": "名称 \"hair_tail\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "mesh:head",
+          "message": "名称 \"head\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "mesh:robo_arm",
+          "message": "名称 \"robo_arm\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "mesh:wear",
+          "message": "名称 \"wear\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "material:hair",
+          "message": "名称 \"hair\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "material:huku_bake",
+          "message": "名称 \"huku_bake\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "material:body_bake",
+          "message": "名称 \"body_bake\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "material:eye",
+          "message": "名称 \"eye\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "material:eye_trans",
+          "message": "名称 \"eye_trans\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "material:arm_mat",
+          "message": "名称 \"arm_mat\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "material:arm_plastic",
+          "message": "名称 \"arm_plastic\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "material:green_emit",
+          "message": "名称 \"green_emit\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "material:body_nm",
+          "message": "名称 \"body_nm\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "material:wear_metal",
+          "message": "名称 \"wear_metal\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "material:armgear_plastic",
+          "message": "名称 \"armgear_plastic\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "material:robo_face",
+          "message": "名称 \"robo_face\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "material:glass",
+          "message": "名称 \"glass\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "material:backpack_metal",
+          "message": "名称 \"backpack_metal\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "material:backpack_nm",
+          "message": "名称 \"backpack_nm\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "material:backpack_plastic",
+          "message": "名称 \"backpack_plastic\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "texture:hair",
+          "message": "名称 \"hair\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "texture:mask_hair",
+          "message": "名称 \"mask_hair\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "texture:wear",
+          "message": "名称 \"wear\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "texture:nm_wear",
+          "message": "名称 \"nm_wear\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "texture:body",
+          "message": "名称 \"body\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "texture:body_shadeshift",
+          "message": "名称 \"body_shadeshift\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "texture:outlinemask_body",
+          "message": "名称 \"outlinemask_body\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "texture:faceparts",
+          "message": "名称 \"faceparts\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "texture:robo_arm",
+          "message": "名称 \"robo_arm\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "texture:mat_oneside_spec",
+          "message": "名称 \"mat_oneside_spec\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "texture:backpack",
+          "message": "名称 \"backpack\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "texture:nm_body_normals",
+          "message": "名称 \"nm_body_normals\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "texture:planekun_face",
+          "message": "名称 \"planekun_face\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "texture:nm_backpack_normals",
+          "message": "名称 \"nm_backpack_normals\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "texture:thumbnail",
+          "message": "名称 \"thumbnail\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "animation:run",
+          "message": "名称 \"run\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "animation:attack",
+          "message": "名称 \"attack\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "naming",
+          "severity": "warning",
+          "path": "animation:walk",
+          "message": "名称 \"walk\" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）"
+        },
+        {
+          "rule": "non-manifold",
+          "severity": "warning",
+          "path": "mesh:hair",
+          "message": "非流形边 4 条（>2 个面共边）"
+        },
+        {
+          "rule": "boundary-edge",
+          "severity": "warning",
+          "path": "mesh:hair",
+          "message": "边界边 2376 条（开放网格；角色资产通常应为闭合）"
+        },
+        {
+          "rule": "boundary-edge",
+          "severity": "warning",
+          "path": "mesh:hair",
+          "message": "边界边 16 条（开放网格；角色资产通常应为闭合）"
+        },
+        {
+          "rule": "boundary-edge",
+          "severity": "warning",
+          "path": "mesh:hair_tail",
+          "message": "边界边 70 条（开放网格；角色资产通常应为闭合）"
+        },
+        {
+          "rule": "boundary-edge",
+          "severity": "warning",
+          "path": "mesh:head",
+          "message": "边界边 636 条（开放网格；角色资产通常应为闭合）"
+        },
+        {
+          "rule": "degenerate-triangle",
+          "severity": "warning",
+          "path": "mesh:head",
+          "message": "退化三角 248 个"
+        },
+        {
+          "rule": "loose-vertex",
+          "severity": "warning",
+          "path": "mesh:head",
+          "message": "悬空顶点 206 个"
+        },
+        {
+          "rule": "boundary-edge",
+          "severity": "warning",
+          "path": "mesh:head",
+          "message": "边界边 670 条（开放网格；角色资产通常应为闭合）"
+        },
+        {
+          "rule": "degenerate-triangle",
+          "severity": "warning",
+          "path": "mesh:head",
+          "message": "退化三角 1087 个"
+        },
+        {
+          "rule": "loose-vertex",
+          "severity": "warning",
+          "path": "mesh:head",
+          "message": "悬空顶点 563 个"
+        },
+        {
+          "rule": "boundary-edge",
+          "severity": "warning",
+          "path": "mesh:head",
+          "message": "边界边 133 条（开放网格；角色资产通常应为闭合）"
+        },
+        {
+          "rule": "boundary-edge",
+          "severity": "warning",
+          "path": "mesh:robo_arm",
+          "message": "边界边 1992 条（开放网格；角色资产通常应为闭合）"
+        },
+        {
+          "rule": "boundary-edge",
+          "severity": "warning",
+          "path": "mesh:robo_arm",
+          "message": "边界边 1406 条（开放网格；角色资产通常应为闭合）"
+        },
+        {
+          "rule": "boundary-edge",
+          "severity": "warning",
+          "path": "mesh:robo_arm",
+          "message": "边界边 10 条（开放网格；角色资产通常应为闭合）"
+        },
+        {
+          "rule": "boundary-edge",
+          "severity": "warning",
+          "path": "mesh:wear",
+          "message": "边界边 2342 条（开放网格；角色资产通常应为闭合）"
+        },
+        {
+          "rule": "boundary-edge",
+          "severity": "warning",
+          "path": "mesh:wear",
+          "message": "边界边 588 条（开放网格；角色资产通常应为闭合）"
+        },
+        {
+          "rule": "boundary-edge",
+          "severity": "warning",
+          "path": "mesh:wear",
+          "message": "边界边 156 条（开放网格；角色资产通常应为闭合）"
+        },
+        {
+          "rule": "boundary-edge",
+          "severity": "warning",
+          "path": "mesh:wear",
+          "message": "边界边 2804 条（开放网格；角色资产通常应为闭合）"
+        },
+        {
+          "rule": "boundary-edge",
+          "severity": "warning",
+          "path": "mesh:wear",
+          "message": "边界边 1158 条（开放网格；角色资产通常应为闭合）"
+        },
+        {
+          "rule": "boundary-edge",
+          "severity": "warning",
+          "path": "mesh:wear",
+          "message": "边界边 30 条（开放网格；角色资产通常应为闭合）"
+        },
+        {
+          "rule": "boundary-edge",
+          "severity": "warning",
+          "path": "mesh:wear",
+          "message": "边界边 30 条（开放网格；角色资产通常应为闭合）"
+        },
+        {
+          "rule": "boundary-edge",
+          "severity": "warning",
+          "path": "mesh:wear",
+          "message": "边界边 734 条（开放网格；角色资产通常应为闭合）"
+        },
+        {
+          "rule": "boundary-edge",
+          "severity": "warning",
+          "path": "mesh:wear",
+          "message": "边界边 32 条（开放网格；角色资产通常应为闭合）"
+        },
+        {
+          "rule": "boundary-edge",
+          "severity": "warning",
+          "path": "mesh:wear",
+          "message": "边界边 3410 条（开放网格；角色资产通常应为闭合）"
+        },
+        {
+          "rule": "boundary-edge",
+          "severity": "warning",
+          "path": "mesh:wear",
+          "message": "边界边 1496 条（开放网格；角色资产通常应为闭合）"
+        },
+        {
+          "rule": "boundary-edge",
+          "severity": "warning",
+          "path": "mesh:wear",
+          "message": "边界边 38 条（开放网格；角色资产通常应为闭合）"
+        }
+      ],
+      "errorCount": 0,
+      "warningCount": 212
     }
   ],
   "summary": {
-    "files": 8,
-    "passed": 8,
+    "files": 9,
+    "passed": 9,
     "failed": 0,
     "errors": 0,
-    "warnings": 0
+    "warnings": 212
   },
   "textures": {
     "schemaVersion": 1,
-    "generatedAt": "2026-10-17T08:26:33.993Z",
+    "generatedAt": "2026-10-17T14:10:10.778Z",
     "files": [
       {
-        "file": "/Users/joule/Desktop/code/game kaifa/assets/textures/environment_dirt_path_tile.png",
+        "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-abe6c788802baa7c6/assets/textures/environment_dirt_path_tile.png",
         "status": "passed",
         "stats": {
           "width": 1024,
@@ -245,7 +1725,7 @@
         "warningCount": 0
       },
       {
-        "file": "/Users/joule/Desktop/code/game kaifa/assets/textures/environment_grass_tile.png",
+        "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-abe6c788802baa7c6/assets/textures/environment_grass_tile.png",
         "status": "passed",
         "stats": {
           "width": 1024,
@@ -259,7 +1739,7 @@
         "warningCount": 0
       },
       {
-        "file": "/Users/joule/Desktop/code/game kaifa/assets/textures/environment_stone_path_tile.png",
+        "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-abe6c788802baa7c6/assets/textures/environment_stone_path_tile.png",
         "status": "passed",
         "stats": {
           "width": 1024,
@@ -273,7 +1753,7 @@
         "warningCount": 0
       },
       {
-        "file": "/Users/joule/Desktop/code/game kaifa/assets/textures/environment_water_tile.png",
+        "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-abe6c788802baa7c6/assets/textures/environment_water_tile.png",
         "status": "passed",
         "stats": {
           "width": 1024,
@@ -287,7 +1767,7 @@
         "warningCount": 0
       },
       {
-        "file": "/Users/joule/Desktop/code/game kaifa/assets/textures/prop_barrel.png",
+        "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-abe6c788802baa7c6/assets/textures/prop_barrel.png",
         "status": "passed",
         "stats": {
           "width": 1024,
@@ -301,7 +1781,7 @@
         "warningCount": 0
       },
       {
-        "file": "/Users/joule/Desktop/code/game kaifa/assets/textures/prop_bush.png",
+        "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-abe6c788802baa7c6/assets/textures/prop_bush.png",
         "status": "passed",
         "stats": {
           "width": 1024,
@@ -315,7 +1795,7 @@
         "warningCount": 0
       },
       {
-        "file": "/Users/joule/Desktop/code/game kaifa/assets/textures/prop_crate.png",
+        "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-abe6c788802baa7c6/assets/textures/prop_crate.png",
         "status": "passed",
         "stats": {
           "width": 1024,
@@ -329,7 +1809,7 @@
         "warningCount": 0
       },
       {
-        "file": "/Users/joule/Desktop/code/game kaifa/assets/textures/prop_stone_wall.png",
+        "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-abe6c788802baa7c6/assets/textures/prop_stone_wall.png",
         "status": "passed",
         "stats": {
           "width": 1024,
@@ -343,7 +1823,7 @@
         "warningCount": 0
       },
       {
-        "file": "/Users/joule/Desktop/code/game kaifa/assets/textures/prop_tree_large.png",
+        "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-abe6c788802baa7c6/assets/textures/prop_tree_large.png",
         "status": "passed",
         "stats": {
           "width": 1024,

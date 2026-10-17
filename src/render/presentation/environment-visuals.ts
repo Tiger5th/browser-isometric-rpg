@@ -1,12 +1,13 @@
 /**
- * 翠谷正式环境视觉（票 25）：平铺地面 + billboard 贴图物件。
+ * 翠谷正式环境视觉（票 25 + 票 28 网格化）。
  *
  * - 地面：每个 patch 一个 Ground mesh，UV 按世界尺寸/tileSize 缩放，
  *   贴图设为 WRAP，因此一张 1024² 贴图可以自然平铺整个区域。
- * - 立面物件：白底贴图抠白后贴到朝相机的 plane（billboard），
- *   用 alpha test 裁剪而不是透明混合，避免排序问题与 overdraw。
- * - 遮挡盒：billboard 的 OBB 与屏幕对齐（axisZ = 相机前向），
- *   供射线-OBB 遮挡描边使用。
+ * - 硬碰撞件（树/石墙/木桶/木箱）：票 28 起改为**程序化几何拼装的真网格**
+ *   （prop-mesh-recipe 配方 + 同一批 Gemini 贴图的 UV 窗口），
+ *   挂 Babylon collider（checkCollisions + ellipsoid）供 moveWithCollisions 使用。
+ * - 灌木：保持 billboard 可穿；角色进入时由表现层按 bushOcclusionAt 半透明。
+ * - 遮挡盒：网格件的 OBB 与视觉包围盒一致，供射线-OBB 遮挡描边使用。
  */
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import type { Material } from "@babylonjs/core/Materials/material";
@@ -27,6 +28,7 @@ import {
   type GroundPatch,
   type PropKind,
 } from "./green-hollow-layout";
+import { buildPropMesh, type MeshedPropKind } from "./prop-mesh-builder";
 import {
   loadEnvironmentTextures,
   type EnvironmentTextures,
@@ -40,7 +42,10 @@ export interface WorldOccluder {
 
 export interface EnvironmentVisuals {
   groundMeshes: Mesh[];
+  /** billboard 灌木（可穿）。 */
   propMeshes: Mesh[];
+  /** 网格化硬碰撞件的全部零件网格（树/墙/桶/箱）。 */
+  meshedParts: Mesh[];
   occluders: WorldOccluder[];
   materials: Material[];
   textures: EnvironmentTextures;
@@ -159,26 +164,49 @@ export async function createGreenHollowEnvironment(
   });
 
   const propMeshes: Mesh[] = [];
+  const meshedParts: Mesh[] = [];
   const occluders: WorldOccluder[] = [];
   for (const prop of PROPS) {
     const material = propMaterials.get(prop.kind);
     if (!material) {
       throw new Error(`缺少道具材质：${prop.kind}`);
     }
-    propMeshes.push(
-      createPropBillboard(
-        scene,
-        root,
-        prop.id,
-        prop.kind,
-        prop.x,
-        prop.z,
-        prop.scale,
-        material,
-      ),
-    );
+    if (prop.kind === "bush") {
+      // 灌木：billboard 可穿（user story 16），保持票 25 方案。
+      propMeshes.push(
+        createPropBillboard(
+          scene,
+          root,
+          prop.id,
+          prop.kind,
+          prop.x,
+          prop.z,
+          prop.scale,
+          material,
+        ),
+      );
+    } else {
+      // 树/石墙/木桶/木箱：真网格 + 硬碰撞（user story 15）。
+      meshedParts.push(
+        ...buildPropMesh({
+          scene,
+          root,
+          propId: prop.id,
+          kind: prop.kind as MeshedPropKind,
+          x: prop.x,
+          z: prop.z,
+          scale: prop.scale,
+          material,
+        }),
+      );
+    }
+
     if (prop.occluder) {
       const dimensions = PROP_DIMENSIONS[prop.kind];
+      // 遮挡盒沿用票 25 的尺寸（树干/墙体的窄盒 + billboard 深度）：
+      // 射线-OBB 的每帧成本对盒子的尺寸不敏感，但「树冠全宽」会让描边在
+      // 离树干很远的地方触发，观感反而发散；硬碰撞尺寸另见
+      // world-physics.buildPropColliders（那才是「不可穿」的权威）。
       occluders.push({
         id: prop.id,
         box: createCameraAlignedBox(
@@ -199,6 +227,7 @@ export async function createGreenHollowEnvironment(
   return {
     groundMeshes,
     propMeshes,
+    meshedParts,
     occluders,
     materials,
     textures,
@@ -208,6 +237,9 @@ export async function createGreenHollowEnvironment(
         mesh.dispose();
       }
       for (const mesh of propMeshes) {
+        mesh.dispose();
+      }
+      for (const mesh of meshedParts) {
         mesh.dispose();
       }
       for (const material of materials) {

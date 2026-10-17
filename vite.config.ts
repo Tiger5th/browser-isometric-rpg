@@ -40,7 +40,7 @@ export default defineConfig({
     exclude: ["recast-navigation", "@recast-navigation/core", "@recast-navigation/generators"],
   },
   test: {
-    include: ["src/**/*.test.ts"],
+    include: ["src/**/*.test.ts", "tools/**/*.test.mjs"],
     environment: "node",
   },
 });

@@ -1,6 +1,9 @@
 {
   "schemaVersion": 1,
-  "status": "blocked",
-  "reason": "本机 PATH 中无 blender 可执行文件",
-  "script": "tools/pipeline/blender/export_test_asset.py"
+  "status": "passed",
+  "blenderVersion": "Blender 4.5.3 LTS",
+  "runs": 2,
+  "sha256": ["719c6813c6965e919f6a992be7cd6f0a37aab52e4899e4c843e883b870de10a4", "719c6813c6965e919f6a992be7cd6f0a37aab52e4899e4c843e883b870de10a4"],
+  "byteIdentical": true,
+  "bytes": 1384248
 }

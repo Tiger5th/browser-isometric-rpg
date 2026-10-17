@@ -97,6 +97,30 @@ PARTS = [
 ]
 
 
+def sort_bmesh_faces_deterministic(bm: bmesh.types.BMesh) -> None:
+    """把 bmesh 的面按 (最小顶点 index, 顶点 index 元组) 排序，保证跨进程一致。
+
+    背景（票 30 定位）：bmesh.ops.create_uvsphere 产出的**顶点**坐标与顺序是
+    跨进程确定的，但**面在 bm.faces 中的存储顺序不是**（同一组面、不同排列，
+    Blender 4.5.3 LTS 实测）。bm.to_mesh() 按该存储顺序生成多边形循环，
+    glTF 导出器再据此写索引缓冲区——于是两次 headless 导出的 GLB 索引
+    字节不同，`assets:blender:repro` 的 SHA-256 比对必然失败。
+
+    bmesh 没有 sort_faces 算子，且 bmesh 不支持删除后重建的确定性保证，
+    因此这里在 to_mesh 之前把面按规范化 key 重排：先收集
+    (min_vert_index, vert_indices) 排序，再按该顺序重新插入面。
+    """
+    ordered = sorted(
+        (tuple(vert.index for vert in face.verts) for face in bm.faces),
+        key=lambda indices: (min(indices), indices),
+    )
+    faces = [face for face in bm.faces]
+    bmesh.ops.delete(bm, geom=faces, context="FACES_ONLY")
+    lookup = {vert.index: vert for vert in bm.verts}
+    for indices in ordered:
+        bm.faces.new(tuple(lookup[index] for index in indices))
+
+
 def build_mesh() -> bpy.types.Object:
     bm = bmesh.new()
     for _name, lon, lat, center, radii in PARTS:
@@ -119,6 +143,9 @@ def build_mesh() -> bpy.types.Object:
 
     for face in bm.faces:
         face.smooth = True
+
+    # 必须在 to_mesh 之前：bmesh 面序跨进程不稳定（见函数 docstring）。
+    sort_bmesh_faces_deterministic(bm)
 
     mesh = bpy.data.meshes.new("character_test_lod0")
     bm.to_mesh(mesh)
