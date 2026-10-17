@@ -11,3 +11,7 @@
 - [x] 自动 LOD 质量结论（可接受/需手动）——**可接受**（近景 LOD1 48dB/LOD2 37.6dB；建议 3 级）
 - [x] KTX2 兼容——Chromium WebGL2 ✅（ETC2 转码）/ WebGPU ✅（但转码为 RGBA8，显存收益未确认）/ **Safari 未实测**，PNG 回退预案保留
 - [x] lint 规则 7/7 GLB 通过；非流形负向自测正确捕获
+
+### 2026-10-17 · 用户决策
+
+用户将安装 Blender（Homebrew），随后补测 `npm run assets:blender:repro`；与票 17 完整版手做合并进行。
