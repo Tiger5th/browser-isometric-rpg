@@ -4,10 +4,10 @@
 
 **Blocked by:** 19 (GameSession 骨架——数据模型要对齐 Entity)
 
-**Status:** ready-for-agent
+**Status:** resolved (content schema v1 + L2 lint + GameSession.loadRegion)
 
-- [ ] content/ 目录含全部最小内容集数据文件
-- [ ] L2 校验脚本可运行，schema + 引用完整性检查就位
-- [ ] 负向测试：坏引用/坏 schema 被正确拒绝
-- [ ] GameSession 能从内容数据实例化实体（区域加载走通）
-- [ ] 格式决策记录（字段含义、扩展约定）写入 content/README
+- [x] content/ 目录含全部最小内容集数据文件
+- [x] L2 校验脚本可运行，schema + 引用完整性检查就位
+- [x] 负向测试：坏引用/坏 schema 被正确拒绝
+- [x] GameSession 能从内容数据实例化实体（区域加载走通）
+- [x] 格式决策记录（字段含义、扩展约定）写入 content/README

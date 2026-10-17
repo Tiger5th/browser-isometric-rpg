@@ -45,6 +45,7 @@
 - **P1 规格已发布并拆票**：specs/p1-vertical-slice.md → tickets 19–26。19 无阻塞；19→20→{21,22} 并行→23（需 19–22）→24（需 22,23）→25（组装）→26（验收）。
 - **P0 正式收尾。** 遗留：VRoid 真人资产（用户手做 15 分钟，指引在票 17 Comments）、Blender 安装（补测 `npm run assets:blender:repro`）、toon shader morph 支持、真实 VRoid 多材质实机验证。下一步：进入 P1 规格（/to-spec）。
 - **19 号票已完成**（17a7f0f：GameSession 零引擎依赖——实体集合 + 手动时钟 + moveTo 意图 + 可序列化快照；click-move 场景用 P0 角色经 Crowd V2 走到点击点；渲染层只读快照；L1 6 测试、全量 49/49、build 通过；分支 worktree-agent-a312606604c8cf863，待合入 p1-integration）。
+- **20 号票已完成**（359dc3e：content schema v1（JSON Schema 2020-12 + 引用完整性 + ink 任务标签）与 P1 最小内容集（1 区域/2 NPC/3 个同模板敌人/4 物品/1 任务）；L2 `npm run content:lint` 可运行、负向测试 12 例；GameSession.loadRegion 从内容实例化实体；全量 61/61、build 通过；格式合同见 content/README.md；分支 worktree-agent-a6d3077c444a13262，待合入 p1-integration）。
 
 ## Fog
 
