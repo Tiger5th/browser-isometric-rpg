@@ -15,6 +15,7 @@
 import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
 import { SceneInstrumentation } from "@babylonjs/core/Instrumentation/sceneInstrumentation";
 import { HighlightLayer } from "@babylonjs/core/Layers/highlightLayer";
+import { DirectionalLight } from "@babylonjs/core/Lights/directionalLight";
 import { ColorCurves } from "@babylonjs/core/Materials/colorCurves";
 import type { Material } from "@babylonjs/core/Materials/material";
 import type { BaseTexture } from "@babylonjs/core/Materials/Textures/baseTexture";
@@ -26,8 +27,7 @@ import type { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import type { Observer } from "@babylonjs/core/Misc/observable";
 import { DefaultRenderingPipeline } from "@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/defaultRenderingPipeline";
-import type { Scene } from "@babylonjs/core/scene";
-
+import { Scene } from "@babylonjs/core/scene";
 import cullSlimesData from "../../../content/quests/cull_slimes.json";
 import elderMaCompiled from "../../../content/dialogues/elder_ma.ink?ink";
 import slimeTemplateData from "../../../content/enemy-templates/slime.json";
@@ -79,6 +79,13 @@ import {
   createGreenHollowNavigation,
   type GreenHollowNavigation,
 } from "../presentation/green-hollow-navigation";
+import {
+  createLandscapeRing,
+  installLandscapeFog,
+  installUnifiedKeyLight,
+  type LandscapeVisuals,
+} from "../presentation/landscape-ring";
+import { NpcIdleController } from "../presentation/npc-idle";
 import { OcclusionOutlineController } from "../presentation/occlusion-controller";
 import {
   DynamicResolutionController,
@@ -90,6 +97,18 @@ import {
   type QualityLevel,
 } from "../presentation/quality";
 import { createWhiteTexture } from "../presentation/textures";
+import {
+  bushAlphaForOcclusion,
+  bushOcclusionAt,
+  buildPropColliders,
+  isBlockedByCollider,
+  keyLightAzimuthDegrees,
+  keyLightElevationDegrees,
+  resolveMoveWithColliders,
+  validateKeyLight,
+  validateLandscape,
+  type PropCollider,
+} from "../presentation/world-physics";
 
 const SCENARIO_NAME = "p1-world";
 const PLAYER_ID = "entity:player";
@@ -135,6 +154,14 @@ interface P1WorldState {
   player: PlayerCharacter;
   whiteTexture: BaseTexture;
   environment: EnvironmentVisuals;
+  /** 边界景观环带 + 渐暗雾（票 28）。 */
+  landscape: LandscapeVisuals;
+  /** 全场唯一主光（票 28；main.ts 的默认双光源已关闭）。 */
+  keyLight: DirectionalLight | null;
+  /** 硬碰撞体（树/墙/桶/箱；灌木可穿）。 */
+  colliders: PropCollider[];
+  /** NPC 待机演出（呼吸/踱步）。 */
+  npcIdle: Map<string, NpcIdleController>;
   materials: Material[];
   layer: HighlightLayer;
   occlusion: OcclusionOutlineController;
@@ -159,7 +186,13 @@ interface P1WorldState {
     textureCount: number;
     keyedTransparentRatio: number;
     occluderCount: number;
+    /** 网格化零件网格数（树/墙/桶/箱的全部零件）。 */
+    meshedPartCount: number;
+    /** 硬碰撞体数量。 */
+    colliderCount: number;
   };
+  /** 玩家当前所在灌木的遮挡强度（0–1）；ego-browser 断言用。 */
+  bushOcclusion: { bushId: string | null; occlusion: number };
   instrumentation: SceneInstrumentation;
   lastDrawCalls: number;
   occlusionTargets: Array<{
@@ -213,6 +246,38 @@ export interface P1WorldDebugApi {
   };
   /** 保持眯眼/眨眼 ms，便于截图（默认 500ms）。 */
   blink(holdMs?: number): void;
+  /** 世界质感证据（票 28）：网格化/碰撞/雾/景观/主光/NPC 待机/灌木可穿。 */
+  getWorldEvidence(): {
+    meshedPartCount: number;
+    colliderCount: number;
+    colliderKinds: string[];
+    /** 灌木数量（保持 billboard 可穿）。 */
+    bushCount: number;
+    fogEnabled: boolean;
+    fogStart: number;
+    fogEnd: number;
+    landscapeMeshCount: number;
+    /** 场景中唯一启用的光源名与方向。 */
+    keyLight: { name: string; direction: [number, number, number]; enabled: boolean } | null;
+    enabledLightCount: number;
+    keyLightElevationDegrees: number;
+    keyLightAzimuthDegrees: number;
+    npcIdleCount: number;
+    npcPacingCount: number;
+    bushOcclusion: { bushId: string | null; occlusion: number };
+    playerAlpha: number;
+  };
+  /** 世界碰撞探针：把玩家视觉移到目标点并返回实际落点（撞树被挡）。 */
+  probeCollision(x: number, z: number): {
+    requested: { x: number; z: number };
+    resolved: { x: number; z: number };
+    blocked: boolean;
+    blockedBy: string | null;
+    /** 该点是否被硬碰撞体覆盖（灌木除外）。 */
+    insideCollider: boolean;
+  };
+  /** 灌木可穿性探针：返回该点是否可通行（灌木不阻挡）。 */
+  probePassable(x: number, z: number): { passable: boolean; blockedBy: string | null };
   /** toon/morph/环境贴图证据。 */
   getRenderEvidence(): {
     morphTargetCount: number;
@@ -224,6 +289,9 @@ export interface P1WorldDebugApi {
     environmentTextureCount: number;
     environmentKeyedRatio: number;
     occluderCount: number;
+    meshedPartCount: number;
+    colliderCount: number;
+    landscapeMeshCount: number;
     drawCalls: number;
   };
 }
@@ -357,8 +425,10 @@ function createGradingPipeline(scene: Scene): DefaultRenderingPipeline {
   pipeline.imageProcessing.toneMappingType =
     ImageProcessingConfiguration.TONEMAPPING_ACES;
   pipeline.imageProcessing.vignetteEnabled = true;
-  pipeline.imageProcessing.vignetteWeight = 1.1;
-  pipeline.imageProcessing.vignetteColor = new Color4(0.02, 0.02, 0.05, 0);
+  // 票 28：暗角权重从 1.1 降到 0.35。原值在屏幕角落把景观剪影压成近黑，
+  // 与「四方向无黑色虚无」的票面要求冲突（ego-browser 截图可见 V 形黑块）。
+  pipeline.imageProcessing.vignetteWeight = 0.35;
+  pipeline.imageProcessing.vignetteColor = new Color4(0.1, 0.11, 0.15, 0);
 
   const curves = new ColorCurves();
   curves.globalSaturation = 18;
@@ -442,6 +512,10 @@ function syncVisualToSnapshot(
     visual.node.setEnabled(true);
     if (entity.identity.type === "enemy") {
       visual.node.position.set(entity.position.x, 0.45, entity.position.z);
+    } else if (entity.identity.type === "npc") {
+      // NPC：逻辑位置不变，视觉位置由 NpcIdleController 每帧叠加（呼吸/踱步）。
+      // 这里只同步 Y 与朝向，避免覆盖待机演出的位移。
+      visual.node.position.y = entity.position.y;
     } else {
       visual.node.position.set(
         entity.position.x,
@@ -730,6 +804,70 @@ function installDebugApi(scene: Scene, state: P1WorldState): void {
       };
     },
     blink: (holdMs = 500) => state.player.triggerBlink(holdMs),
+    getWorldEvidence: () => {
+      const enabledLights = scene.lights.filter((light) => light.isEnabled());
+      const light = enabledLights[0] ?? null;
+      // 只有 DirectionalLight 有 direction；HemisphericLight 没有。
+      const direction =
+        light instanceof DirectionalLight ? light.direction.normalize() : null;
+      let npcPacingCount = 0;
+      for (const controller of state.npcIdle.values()) {
+        if (controller.isPacing) {
+          npcPacingCount += 1;
+        }
+      }
+      return {
+        meshedPartCount: state.environment.meshedParts.length,
+        colliderCount: state.colliders.length,
+        colliderKinds: [...new Set(state.colliders.map((collider) => collider.kind))].sort(),
+        bushCount: PROPS.filter((prop) => prop.kind === "bush").length,
+        fogEnabled: scene.fogEnabled,
+        fogStart: scene.fogStart,
+        fogEnd: scene.fogEnd,
+        landscapeMeshCount: state.landscape.meshes.length,
+        keyLight:
+          light === null
+            ? null
+            : {
+                name: light.name,
+                direction: direction
+                  ? [round(direction.x, 4), round(direction.y, 4), round(direction.z, 4)]
+                  : [0, 0, 0],
+                enabled: light.isEnabled(),
+              },
+        enabledLightCount: enabledLights.length,
+        keyLightElevationDegrees: round(keyLightElevationDegrees(), 2),
+        keyLightAzimuthDegrees: round(keyLightAzimuthDegrees(), 2),
+        npcIdleCount: state.npcIdle.size,
+        npcPacingCount,
+        bushOcclusion: {
+          bushId: state.bushOcclusion.bushId,
+          occlusion: round(state.bushOcclusion.occlusion, 4),
+        },
+        playerAlpha: round(state.player.meshes[0]?.visibility ?? 1, 4),
+      };
+    },
+    probeCollision: (x, z) => {
+      const from = {
+        x: state.player.rootNode.position.x,
+        z: state.player.rootNode.position.z,
+      };
+      const resolved = resolveMoveWithColliders(from, { x, z }, state.colliders);
+      const inside = state.colliders.some((collider) =>
+        isBlockedByCollider(collider, x, z),
+      );
+      return {
+        requested: { x: round(x, 3), z: round(z, 3) },
+        resolved: { x: round(resolved.x, 3), z: round(resolved.z, 3) },
+        blocked: resolved.blocked,
+        blockedBy: resolved.blockedBy,
+        insideCollider: inside,
+      };
+    },
+    probePassable: (x, z) => {
+      const blocker = state.colliders.find((collider) => isBlockedByCollider(collider, x, z));
+      return { passable: blocker === undefined, blockedBy: blocker?.id ?? null };
+    },
     getRenderEvidence: () => ({
       morphTargetCount: state.player.morphTargetCount,
       morphTargetNames: [...state.player.morphTargetNames],
@@ -742,6 +880,9 @@ function installDebugApi(scene: Scene, state: P1WorldState): void {
       environmentTextureCount: state.environmentMetrics.textureCount,
       environmentKeyedRatio: round(state.environmentMetrics.keyedTransparentRatio, 4),
       occluderCount: state.environmentMetrics.occluderCount,
+      meshedPartCount: state.environmentMetrics.meshedPartCount,
+      colliderCount: state.environmentMetrics.colliderCount,
+      landscapeMeshCount: state.landscape.meshes.length,
       drawCalls: state.lastDrawCalls,
     }),
   };
@@ -767,6 +908,25 @@ export const p1WorldScenario: ScenarioDefinition = {
       );
     }
 
+    // 票 28：景观环带与主光同样是自检项——四方向无内容或光照方向错误直接失败，
+    // 避免「黑色虚无/错误方向」这类只能靠截图发现的问题进入 L4。
+    const landscapeIssues = validateLandscape();
+    if (landscapeIssues.length > 0) {
+      throw new Error(
+        `边界景观自检失败：${landscapeIssues
+          .map((issue) => `${issue.id}: ${issue.message}`)
+          .join("；")}`,
+      );
+    }
+    const lightIssues = validateKeyLight();
+    if (lightIssues.length > 0) {
+      throw new Error(
+        `主光自检失败：${lightIssues
+          .map((issue) => `${issue.id}: ${issue.message}`)
+          .join("；")}`,
+      );
+    }
+
     if (!PLACEHOLDER_URL) {
       throw new Error(
         "缺少占位角色资产 assets/character_anime_placeholder.glb（先运行 npm run assets:anime）",
@@ -780,6 +940,12 @@ export const p1WorldScenario: ScenarioDefinition = {
       : new Vector3(-0.408, -0.816, 0.408).normalize();
 
     const environment = await createGreenHollowEnvironment(scene, root, forward);
+    // 边界景观环带 + 渐暗雾 + 全场唯一主光（票 28）。
+    const landscape = createLandscapeRing(scene, root);
+    const keyLight = installUnifiedKeyLight(scene);
+    installLandscapeFog(scene);
+    // 硬碰撞体：树/石墙/木桶/木箱（灌木可穿，见 world-physics）。
+    const colliders = buildPropColliders();
     const pipeline = createGradingPipeline(scene);
     const whiteTexture = createWhiteTexture(scene);
 
@@ -818,12 +984,35 @@ export const p1WorldScenario: ScenarioDefinition = {
       );
     }
 
+    // NPC 待机演出：呼吸摆动 + 偶尔踱步（表现层，不写逻辑快照）。
+    const npcIdle = new Map<string, NpcIdleController>();
+    initialSnapshot.entities.forEach((entity, index) => {
+      if (entity.identity.type !== "npc") {
+        return;
+      }
+      const visual = visuals.get(entity.id);
+      if (!visual) {
+        return;
+      }
+      npcIdle.set(
+        entity.id,
+        new NpcIdleController({
+          scene,
+          node: visual.node,
+          home: { x: entity.position.x, z: entity.position.z },
+          seed: 1000 + index * 37,
+        }),
+      );
+    });
+
     const layer = new HighlightLayer("layer.p1-world-occlusion", scene);
-    // 环境 billboard 是自绘 alpha-test ShaderMaterial；把它们排除出高亮层，
-    // 避免它们参与 glow 的深度/模板路径（实测会导致高亮色被渲染成黑色）。
+    // 环境 billboard 与网格件都是自绘 alpha-test / unlit 的 ShaderMaterial；
+    // 把它们排除出高亮层，避免它们参与 glow 的深度/模板路径
+    // （实测会导致高亮色被渲染成黑色）。
     for (const mesh of [
       ...environment.groundMeshes,
       ...environment.propMeshes,
+      ...environment.meshedParts,
     ]) {
       layer.addExcludedMesh(mesh);
     }
@@ -842,6 +1031,10 @@ export const p1WorldScenario: ScenarioDefinition = {
       player,
       whiteTexture,
       environment,
+      landscape,
+      keyLight,
+      colliders,
+      npcIdle,
       materials,
       layer,
       occlusion,
@@ -869,7 +1062,10 @@ export const p1WorldScenario: ScenarioDefinition = {
         keyedTransparentRatio:
           keyRatios.reduce((sum, value) => sum + value, 0) / Math.max(1, keyRatios.length),
         occluderCount: environment.occluders.length,
+        meshedPartCount: environment.meshedParts.length,
+        colliderCount: colliders.length,
       },
+      bushOcclusion: { bushId: null, occlusion: 0 },
       instrumentation: new SceneInstrumentation(scene),
       lastDrawCalls: 0,
       occlusionTargets: [],
@@ -1019,6 +1215,55 @@ export const p1WorldScenario: ScenarioDefinition = {
         snapshot,
         now < state.probeHoldUntil ? PLAYER_ID : null,
       );
+
+      // 票 28：玩家视觉位置再过一遍硬碰撞求解。navmesh 已排除障碍，
+      // 但逻辑层是直线推进，逐帧 moveTo 的插值可能切过障碍角；
+      // 这里保证「玩家/敌人均不可穿」在渲染层也成立（灌木不在此列）。
+      const playerState = snapshot.entities.find(
+        (entity) => entity.id === PLAYER_ID,
+      );
+      if (playerState !== undefined && playerState.combat.alive) {
+        const resolved = resolveMoveWithColliders(
+          { x: previousX, z: previousZ },
+          { x: player.rootNode.position.x, z: player.rootNode.position.z },
+          state.colliders,
+        );
+        if (resolved.x !== player.rootNode.position.x) {
+          player.rootNode.position.x = resolved.x;
+        }
+        if (resolved.z !== player.rootNode.position.z) {
+          player.rootNode.position.z = resolved.z;
+        }
+      }
+
+      // NPC 待机演出：呼吸摆动 + 偶尔踱步（只动视觉节点）。
+      for (const [npcId, controller] of state.npcIdle) {
+        const npc = snapshot.entities.find((entity) => entity.id === npcId);
+        if (!npc) {
+          continue;
+        }
+        controller.update(deltaMs, {
+          x: npc.position.x,
+          z: npc.position.z,
+        });
+      }
+
+      // 灌木进入反馈：玩家在灌木内时轻微半透明（草丛机制视觉预留）。
+      const bushes = PROPS.filter((prop) => prop.kind === "bush").map((prop) => ({
+        id: prop.id,
+        x: prop.x,
+        z: prop.z,
+      }));
+      const proximity = bushOcclusionAt(
+        player.rootNode.position.x,
+        player.rootNode.position.z,
+        bushes,
+      );
+      state.bushOcclusion = proximity;
+      const alpha = bushAlphaForOcclusion(proximity.occlusion);
+      for (const mesh of player.meshes) {
+        mesh.visibility = alpha;
+      }
 
       const dx = player.rootNode.position.x - previousX;
       const dz = player.rootNode.position.z - previousZ;
@@ -1241,6 +1486,64 @@ export const p1WorldScenario: ScenarioDefinition = {
         comparison: "gte",
       },
       {
+        // 票 28：网格化零件的零件网格数（树 4 + 墙 1 + 桶 4 + 箱 2 = 11 件/实例）。
+        name: "meshedPartCount",
+        value: state.environmentMetrics.meshedPartCount,
+        unit: "meshes",
+        threshold: 1,
+        comparison: "gte",
+      },
+      {
+        // 硬碰撞体数量 = 布局里树/墙/桶/箱的总数（当前 8 树 + 4 墙 + 2 桶 + 2 箱 = 16~17）；
+        // 灌木不在此列。阈值取下界，防回归（某类件漏挂碰撞）。
+        name: "colliderCount",
+        value: state.environmentMetrics.colliderCount,
+        unit: "colliders",
+        threshold: 15,
+        comparison: "gte",
+      },
+      {
+        // 环带 = 1 块地面 + 8 座山丘 + 20 棵远景树 ×（树干 + 树冠）= 49 个网格。
+        name: "landscapeMeshCount",
+        value: state.landscape.meshes.length,
+        unit: "meshes",
+        threshold: 45,
+        comparison: "gte",
+      },
+      {
+        // 全场唯一主光：多于 1 说明有遗漏的默认光源没关掉。
+        name: "enabledLightCount",
+        value: scene.lights.filter((light) => light.isEnabled()).length,
+        unit: "lights",
+        threshold: 1,
+        comparison: "eq",
+      },
+      {
+        // 渐暗雾开启：四个方向不再出现黑色虚无。
+        name: "fogEnabled",
+        value: scene.fogEnabled ? 1 : 0,
+        unit: "boolean",
+        threshold: 1,
+        comparison: "eq",
+      },
+      {
+        name: "keyLightElevationDegrees",
+        value: round(keyLightElevationDegrees(), 2),
+        unit: "degrees",
+      },
+      {
+        name: "keyLightAzimuthDegrees",
+        value: round(keyLightAzimuthDegrees(), 2),
+        unit: "degrees",
+      },
+      {
+        name: "npcIdleCount",
+        value: state.npcIdle.size,
+        unit: "npcs",
+        threshold: 2,
+        comparison: "gte",
+      },
+      {
         name: "occlusionOutlined",
         value: state.occlusion.outlinedCount,
         unit: "meshes",
@@ -1358,6 +1661,9 @@ export const p1WorldScenario: ScenarioDefinition = {
     state.occlusion.dispose();
     state.layer.dispose();
 
+    for (const controller of state.npcIdle.values()) {
+      controller.dispose();
+    }
     for (const visual of state.visuals.values()) {
       visual.procedural?.dispose();
     }
@@ -1367,6 +1673,12 @@ export const p1WorldScenario: ScenarioDefinition = {
     state.player.dispose();
     state.navigation.dispose();
     state.environment.dispose();
+    // 票 28：景观环带 + 唯一主光 + 雾效清理；雾与光照恢复默认，
+    // 否则会影响后续 scenario（共享 scene）。
+    state.landscape.dispose();
+    state.keyLight?.dispose();
+    context.scene.fogEnabled = false;
+    context.scene.fogMode = Scene.FOGMODE_NONE;
     state.whiteTexture.dispose();
     state.pipeline.dispose();
     state.root.dispose(false, true);
