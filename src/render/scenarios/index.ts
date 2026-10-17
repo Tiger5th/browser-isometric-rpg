@@ -5,6 +5,7 @@ import { charactersScenario } from "./characters";
 import { clickMoveScenario } from "./click-move";
 import { crowdHotSwapScenario } from "./crowd-hot-swap";
 import { crowdNavScenario } from "./crowd-nav";
+import { dialogueQuestScenario } from "./dialogue-quest";
 import { helloScenario } from "./hello";
 import { occlusionOutlineScenario } from "./occlusion-outline";
 import { regionGateScenario } from "./regionGate";
@@ -21,6 +22,7 @@ export function registerBuiltinScenarios(harness: P0Harness): void {
   harness.registerScenario(charactersScenario);
   harness.registerScenario(crowdNavScenario);
   harness.registerScenario(clickMoveScenario);
+  harness.registerScenario(dialogueQuestScenario);
   harness.registerScenario(crowdHotSwapScenario);
   harness.registerScenario(assetPipelineScenario);
   harness.registerScenario(animePipelineScenario);

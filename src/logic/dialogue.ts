@@ -63,14 +63,36 @@ export interface ContinueResult {
   choices: string[];
 }
 
-/** 持续 Continue 直到需要玩家选择或故事结束。 */
-export function continueToChoices(story: Story): ContinueResult {
+/**
+ * 推进结果：除文本/选项外，还收集本次推进经过的 ink 标签。
+ *
+ * 标签与文本按 ink 的行模型一一对应（`story.currentTags` 属于最近一次
+ * Continue 返回的行），任务标签据此在 GameSession 内触发状态转移。
+ */
+export interface DialogueStep extends ContinueResult {
+  tags: string[];
+  /** 故事已结束且没有待选选项。 */
+  ended: boolean;
+}
+
+/** 持续 Continue 直到需要玩家选择或故事结束，并收集沿途标签。 */
+export function continueDialogue(story: Story): DialogueStep {
   let text = "";
+  const tags: string[] = [];
   while (story.canContinue) {
     text += story.Continue() ?? "";
+    tags.push(...(story.currentTags ?? []));
   }
   return {
     text,
+    tags,
     choices: story.currentChoices.map((choice) => choice.text),
+    ended: story.currentChoices.length === 0,
   };
+}
+
+/** 持续 Continue 直到需要玩家选择或故事结束。 */
+export function continueToChoices(story: Story): ContinueResult {
+  const { text, choices } = continueDialogue(story);
+  return { text, choices };
 }

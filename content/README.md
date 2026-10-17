@@ -130,6 +130,7 @@ P1 任务：`quest:cull_slimes`（杀 3 只 `enemy_template:slime` → 物品 + 
 
 - 源文件：`content/dialogues/<dialogueId>.ink`，`dialogueId` 即文件名（不含扩展名），如 `elder_ma.ink` ↔ `dialogueId: "elder_ma"`。
 - 运行时不打包 ink 编译器：构建/工具阶段用 `inkjs/full` 编译，运行时用 `src/logic/dialogue.ts` 的 `createDialogue(compiledJson)` 加载。
+  Vite 插件（`vite.config.ts` 的 `ink-compile`）把 `*.ink?ink` 导入在构建/dev 时编译为 JSON 字符串；vitest 走同一管线。
 - L2 会用 `Compiler` 编译每个 `.ink`，语法错误直接失败。
 - 任务标签（独占一行，L2 校验引用的任务存在）：
 
@@ -139,6 +140,10 @@ P1 任务：`quest:cull_slimes`（杀 3 只 `enemy_template:slime` → 物品 + 
   ```
 
   P1 示例见 `content/dialogues/elder_ma.ink`。
+- 只读外部函数 `questStatus(questId)`：返回 `available / active / ready_to_turn_in / completed`。
+  使用前必须在 ink 顶部声明 `EXTERNAL questStatus(questId)`；GameSession 在对话开始时绑定。
+  它只用于让对话按任务状态分支（如只在可交时显示复命选项），**不改变任务状态**；
+  状态转移仍只由上面的任务标签触发。引用未知任务会显式报错。
 
 ## 数据 → Entity 映射
 
