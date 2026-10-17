@@ -35,8 +35,20 @@
 - 等级加成走修饰器系统的 **`level` 源**（新增 `ModifierSourceKind`），每次按当前等级
   **整源重算**（先 `removeModifiersBySource` 再 append），不逐次叠加——所以读档重算、
   跨级、撤销都不会重复入账。maxHp 变大后按差额补当前生命，升级不会反而变脆。
-- 等级记在玩家 `baseAttributes.level`（随实体快照往返）。**本票没改快照结构**：
-  票 31 的 `playerLevel`/`cumulativeXp`/`worldState` 是可选镜像，本票不依赖它们。
+- 等级记在玩家 `baseAttributes.level`（随实体快照往返）。**本票没改快照结构**。
+
+### 与票 31 合流（merge p2-integration）
+
+- 票 31 已声明快照 v3 的 `playerLevel` / `cumulativeXp` / `worldState`，但只声明
+  未写入（注释写着「升级结算本体在成长系统」）。合流后**本票成为它们的写入方**：
+  `this.playerLevel` 与 `this.cumulativeXp` 是等级/经验的唯一真相来源，实体属性上的
+  `level`/`xp` 是同一事实的渲染层镜像，随之更新。
+- 好处是 user story 20 的另一半白拿：`save-slots.ts` 的存档元数据本来就读
+  `snapshot.playerLevel`，现在选槽界面显示的等级是真实的了。
+- 合并只有一处冲突（`GameSession` 字段声明区），手工融合：保留票 31 的
+  `worldState` / `getWorldState`，把 `playerLevel`/`cumulativeXp` 接上本票的写入方。
+- L1 里补了 `snapshot().playerLevel` / `cumulativeXp` 的往返断言——
+  待办里那条「若字段不在就写条件测试」已不需要：合流时票 31 已就位。
 
 ### HUD 等级徽标
 

@@ -158,6 +158,9 @@ describe("存档迁移链：v2 → v3", () => {
       version: 2,
       regionId: REGION_ID,
       elapsedMs: 1000,
+      playerLevel: 1,
+      cumulativeXp: 0,
+      worldState: {},
       nextItemInstanceId: 1,
       respawnAtMs: null,
       entities: [

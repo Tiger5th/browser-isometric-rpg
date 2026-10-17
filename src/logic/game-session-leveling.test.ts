@@ -236,8 +236,15 @@ describe("等级系统：升级状态快照往返", () => {
     reloaded.session.restoreSnapshot(saved);
     const player = reloaded.player();
 
-    // 等级与经验随快照往返（字段由票 31 的快照 v3 承载；此处断言表现层可见的事实）。
+    // 票 31 的快照 v3 字段（playerLevel / cumulativeXp）由本票的结算写入，
+    // 读档后必须还在——存档槽面板与选槽 UI 直接读这两个字段。
+    const afterLoad = reloaded.snapshot();
+    expect(afterLoad.playerLevel).toBe(2);
+    expect(afterLoad.cumulativeXp).toBe(100);
+
+    // 同一事实的实体镜像也随快照往返。
     expect(player.baseAttributes.xp).toBe(100);
+    expect(player.baseAttributes.level).toBe(2);
     expect(player.attributes.attack).toBe(14);
     expect(player.combat.maxHp).toBe(110);
 
