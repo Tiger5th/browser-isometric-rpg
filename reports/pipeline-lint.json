@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-17T09:04:16.525Z",
+  "generatedAt": "2026-10-17T08:26:33.988Z",
   "files": [
     {
-      "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a136beb66674a0d18/assets/character_anime_placeholder.glb",
+      "file": "/Users/joule/Desktop/code/game kaifa/assets/character_anime_placeholder.glb",
       "status": "passed",
       "stats": {
         "triangles": 11236,
@@ -30,7 +30,7 @@
       "warningCount": 0
     },
     {
-      "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a136beb66674a0d18/assets/character_test_draco.glb",
+      "file": "/Users/joule/Desktop/code/game kaifa/assets/character_test_draco.glb",
       "status": "passed",
       "stats": {
         "triangles": 11488,
@@ -57,7 +57,7 @@
       "warningCount": 0
     },
     {
-      "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a136beb66674a0d18/assets/character_test_ktx2.glb",
+      "file": "/Users/joule/Desktop/code/game kaifa/assets/character_test_ktx2.glb",
       "status": "passed",
       "stats": {
         "triangles": 11488,
@@ -84,7 +84,7 @@
       "warningCount": 0
     },
     {
-      "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a136beb66674a0d18/assets/character_test_lod0.glb",
+      "file": "/Users/joule/Desktop/code/game kaifa/assets/character_test_lod0.glb",
       "status": "passed",
       "stats": {
         "triangles": 11488,
@@ -111,7 +111,7 @@
       "warningCount": 0
     },
     {
-      "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a136beb66674a0d18/assets/character_test_lod1.glb",
+      "file": "/Users/joule/Desktop/code/game kaifa/assets/character_test_lod1.glb",
       "status": "passed",
       "stats": {
         "triangles": 5744,
@@ -138,7 +138,7 @@
       "warningCount": 0
     },
     {
-      "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a136beb66674a0d18/assets/character_test_lod2.glb",
+      "file": "/Users/joule/Desktop/code/game kaifa/assets/character_test_lod2.glb",
       "status": "passed",
       "stats": {
         "triangles": 2296,
@@ -165,7 +165,7 @@
       "warningCount": 0
     },
     {
-      "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a136beb66674a0d18/assets/character_test_meshopt.glb",
+      "file": "/Users/joule/Desktop/code/game kaifa/assets/character_test_meshopt.glb",
       "status": "passed",
       "stats": {
         "triangles": 11488,
@@ -192,7 +192,7 @@
       "warningCount": 0
     },
     {
-      "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a136beb66674a0d18/assets/character_test_meshopt_ktx2.glb",
+      "file": "/Users/joule/Desktop/code/game kaifa/assets/character_test_meshopt_ktx2.glb",
       "status": "passed",
       "stats": {
         "triangles": 11488,
@@ -228,10 +228,10 @@
   },
   "textures": {
     "schemaVersion": 1,
-    "generatedAt": "2026-10-17T09:04:16.527Z",
+    "generatedAt": "2026-10-17T08:26:33.993Z",
     "files": [
       {
-        "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a136beb66674a0d18/assets/textures/environment_dirt_path_tile.png",
+        "file": "/Users/joule/Desktop/code/game kaifa/assets/textures/environment_dirt_path_tile.png",
         "status": "passed",
         "stats": {
           "width": 1024,
@@ -245,7 +245,7 @@
         "warningCount": 0
       },
       {
-        "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a136beb66674a0d18/assets/textures/environment_grass_tile.png",
+        "file": "/Users/joule/Desktop/code/game kaifa/assets/textures/environment_grass_tile.png",
         "status": "passed",
         "stats": {
           "width": 1024,
@@ -259,7 +259,7 @@
         "warningCount": 0
       },
       {
-        "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a136beb66674a0d18/assets/textures/environment_stone_path_tile.png",
+        "file": "/Users/joule/Desktop/code/game kaifa/assets/textures/environment_stone_path_tile.png",
         "status": "passed",
         "stats": {
           "width": 1024,
@@ -273,7 +273,7 @@
         "warningCount": 0
       },
       {
-        "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a136beb66674a0d18/assets/textures/environment_water_tile.png",
+        "file": "/Users/joule/Desktop/code/game kaifa/assets/textures/environment_water_tile.png",
         "status": "passed",
         "stats": {
           "width": 1024,
@@ -287,7 +287,7 @@
         "warningCount": 0
       },
       {
-        "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a136beb66674a0d18/assets/textures/prop_barrel.png",
+        "file": "/Users/joule/Desktop/code/game kaifa/assets/textures/prop_barrel.png",
         "status": "passed",
         "stats": {
           "width": 1024,
@@ -301,7 +301,7 @@
         "warningCount": 0
       },
       {
-        "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a136beb66674a0d18/assets/textures/prop_bush.png",
+        "file": "/Users/joule/Desktop/code/game kaifa/assets/textures/prop_bush.png",
         "status": "passed",
         "stats": {
           "width": 1024,
@@ -315,7 +315,7 @@
         "warningCount": 0
       },
       {
-        "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a136beb66674a0d18/assets/textures/prop_crate.png",
+        "file": "/Users/joule/Desktop/code/game kaifa/assets/textures/prop_crate.png",
         "status": "passed",
         "stats": {
           "width": 1024,
@@ -329,7 +329,7 @@
         "warningCount": 0
       },
       {
-        "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a136beb66674a0d18/assets/textures/prop_stone_wall.png",
+        "file": "/Users/joule/Desktop/code/game kaifa/assets/textures/prop_stone_wall.png",
         "status": "passed",
         "stats": {
           "width": 1024,
@@ -343,7 +343,7 @@
         "warningCount": 0
       },
       {
-        "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a136beb66674a0d18/assets/textures/prop_tree_large.png",
+        "file": "/Users/joule/Desktop/code/game kaifa/assets/textures/prop_tree_large.png",
         "status": "passed",
         "stats": {
           "width": 1024,
