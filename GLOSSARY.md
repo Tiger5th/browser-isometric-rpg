@@ -40,6 +40,8 @@
 - **自动存档（Autosave）**：关键节点（区域切换/任务状态变化/获得重要物品）与 `beforeunload` 兜底时写入 `auto` 槽的存档动作。自动存档永不抛错，失败只通报不影响游戏。
 - **安全区（Safe Zone）**：敌人 AI 被逻辑层拒止不得进入的地带。村庄聚点位于安全区内。
 - **欣赏模式（Showcase Mode）**：相机自由缩放旋转的状态；一键复位回到出厂等距预设（alpha/beta/radius 常量）。
+- **等级曲线（Level Curve）**：累计经验 → 等级的阈值表 + 每级属性加成（票 34）。内容数据（`content/level-curves/*.json`），解释口 `src/logic/leveling.ts`。升级加成走修饰器系统的 `level` 源，按当前等级**整源重算**（不是逐次叠加），因此读档与跨级都不会重复入账。
+- **等级徽标（Level Badge）**：HUD 上的 `Lv.N` 与经验条。显示值由 `src/render/ui/level-hud.ts` 的纯函数 `levelHudView()` 换算，HUD 只搭 DOM。
 - **换锚点（Re-anchor）**：任务状态变化时 NPC 移动到新默认位置的机制——「世界因你而变」的最小实现。
 
 ## 测试与流程

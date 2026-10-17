@@ -31,6 +31,7 @@ const KIND_DIRS = [
   { kind: "item", dir: "items" },
   { kind: "quest", dir: "quests" },
   { kind: "character-palette", dir: "character-palettes" },
+  { kind: "level-curve", dir: "level-curves" },
 ];
 
 const SCHEMA_FILES = [
@@ -42,6 +43,7 @@ const SCHEMA_FILES = [
   ["item", "item.schema.json"],
   ["quest", "quest.schema.json"],
   ["characterPalette", "character-palette.schema.json"],
+  ["levelCurve", "level-curve.schema.json"],
 ];
 
 /** ink 任务标签约定：# quest:offer:<questId> / # quest:turnin:<questId>（独占一行）。 */

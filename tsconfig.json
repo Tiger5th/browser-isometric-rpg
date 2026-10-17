@@ -13,6 +13,8 @@
     "skipLibCheck": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
+    // tools/*.mjs 用 Node 的类型剥离直接 import src/**/*.ts，import 必须带扩展名。
+    "allowImportingTsExtensions": true,
     "types": ["vite/client"]
   },
   "include": ["src", "vite.config.ts"]

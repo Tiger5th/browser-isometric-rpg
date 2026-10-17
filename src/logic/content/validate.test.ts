@@ -22,6 +22,7 @@ const KIND_DIRS: Array<{ kind: ContentKind; dir: string }> = [
   { kind: "item", dir: "items" },
   { kind: "quest", dir: "quests" },
   { kind: "character-palette", dir: "character-palettes" },
+  { kind: "level-curve", dir: "level-curves" },
 ];
 
 function readJson(relativePath: string): unknown {
@@ -40,6 +41,7 @@ function loadSchemas(): ContentSchemas {
     characterPalette: readJson(
       "content/schema/character-palette.schema.json",
     ) as object,
+    levelCurve: readJson("content/schema/level-curve.schema.json") as object,
   };
 }
 

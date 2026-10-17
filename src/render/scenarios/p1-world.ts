@@ -41,8 +41,10 @@ import slimeGelData from "../../../content/items/slime_gel.json";
 import travelerSwordData from "../../../content/items/traveler_sword.json";
 import npcElderData from "../../../content/npcs/elder_ma.json";
 import npcScoutData from "../../../content/npcs/scout_lin.json";
+import levelCurveData from "../../../content/level-curves/standard.json";
 import regionData from "../../../content/regions/green_hollow.json";
 import type { ContentBundle } from "../../logic/content/types";
+import type { LevelCurveDefinition } from "../../logic/leveling";
 import {
   GameSession,
   type EntitySnapshot,
@@ -176,6 +178,7 @@ const CONTENT_BUNDLE = {
   enemies: [slimeMeadowData, slimeBlueData, slimeElderData],
   items: [healingHerbData, oldCoinData, slimeGelData, travelerSwordData],
   quests: [cullSlimesData],
+  levelCurves: [levelCurveData],
 } as unknown as ContentBundle;
 
 interface EntityVisual {
@@ -299,6 +302,10 @@ export interface P1WorldDebugApi {
   /** 票 31：手动触发一次「区域切换」自动存档路径。 */
   saveToAuto(): Promise<void>;
   getMeshPosition(entityId: string): { x: number; y: number; z: number } | null;
+  /** 票 34：等级进度（等级/累计经验/距下一级）。 */
+  getLevelProgress(): { level: number; cumulativeXp: number; xpToNext: number | null };
+  /** 票 34：发放经验（走击杀奖励同一条结算路径），L4 冒烟用来补足曲线阈值。 */
+  grantExperience(amount: number): void;
   /** 票 27：重击意图（1.5 倍伤害、8 秒冷却）。 */
   heavyAttackEnemy(enemyId: string): IntentResult;
   /** 票 27：反馈层状态（飘字/血条/顿帧/震屏/闪红）。 */
@@ -1104,6 +1111,8 @@ function installDebugApi(scene: Scene, state: P1WorldState): void {
       }
       return result;
     },
+    getLevelProgress: () => state.session.playerLevelProgress(),
+    grantExperience: (amount) => state.session.grantExperience(PLAYER_ID, amount),
     getFeedback: () => ({
       ...state.feedback.debugState(),
       selectedTargetId: state.selectedEnemyId,
@@ -1615,6 +1624,8 @@ export const p1WorldScenario: ScenarioDefinition = {
     state.ui = createQuestLoopUi({
       mount: document.body,
       bundle: CONTENT_BUNDLE,
+      // 票 34：HUD 只拿曲线做等级/经验条换算，不持有任何逻辑状态。
+      levelCurve: levelCurveData as unknown as LevelCurveDefinition,
       onChoose: (index) => session.chooseDialogueOption(index),
       onUseItem: (instanceId) => session.tryUseItem(PLAYER_ID, instanceId),
       onEquipItem: (instanceId) => session.tryEquip(PLAYER_ID, instanceId),

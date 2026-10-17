@@ -12,6 +12,7 @@
 import Ajv2020 from "ajv/dist/2020.js";
 import type { ValidateFunction } from "ajv";
 
+import { validateLevelCurve } from "../leveling.ts";
 import type {
   ContentFileInput,
   ContentIssue,
@@ -29,6 +30,7 @@ const KIND_SCHEMA_KEY: Record<ContentKind, Exclude<keyof ContentSchemas, "common
   item: "item",
   quest: "quest",
   "character-palette": "characterPalette",
+  "level-curve": "levelCurve",
 };
 
 /** id 前缀必须与文件所在目录对应（enemy-template 目录对应 enemy_template: 前缀）。 */
@@ -40,6 +42,7 @@ const KIND_ID_PREFIX: Record<ContentKind, string> = {
   item: "item:",
   quest: "quest:",
   "character-palette": "character_palette:",
+  "level-curve": "level_curve:",
 };
 
 type JsonRecord = Record<string, unknown>;
@@ -65,6 +68,7 @@ function emptySets(): Record<ContentKind, Set<string>> {
     item: new Set(),
     quest: new Set(),
     "character-palette": new Set(),
+    "level-curve": new Set(),
   };
 }
 
@@ -264,6 +268,18 @@ export function validateContent(
         break;
       }
       case "item": {
+        break;
+      }
+      case "level-curve": {
+        // 阈值单调性与等级序号连续性：schema 管不了区间关系，用结构校验兜住。
+        for (const message of validateLevelCurve(data)) {
+          issues.push({
+            code: "level-curve",
+            file: file.file,
+            path: "/levels",
+            message,
+          });
+        }
         break;
       }
       case "quest": {
