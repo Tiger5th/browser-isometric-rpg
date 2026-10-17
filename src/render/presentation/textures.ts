@@ -102,7 +102,12 @@ async function createKeyedTexture(
   const dynamic = new DynamicTexture(name, { width, height }, scene, true);
   const context = dynamic.getContext() as CanvasRenderingContext2D;
   context.clearRect(0, 0, width, height);
+  // DynamicTexture 的 canvas 坐标 Y 向下，而 plane UV 原点在左下（Y 向上），
+  // 直接 drawImage 会垂直翻转贴图（树冠朝下、石墙倒挂）；此处预翻转抵消。
+  context.translate(0, height);
+  context.scale(1, -1);
   context.drawImage(image, 0, 0);
+  context.setTransform(1, 0, 0, 1, 0, 0);
 
   const imageData = context.getImageData(0, 0, width, height);
   const result = keyOutNearWhiteBackground({
