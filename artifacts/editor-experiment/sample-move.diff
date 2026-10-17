@@ -1,0 +1,16 @@
+diff --git a/assets/example.scene/meshes/9bfe8d43-894c-4c27-ad3c-f70bea3cb844.json b/assets/example.scene/meshes/9bfe8d43-894c-4c27-ad3c-f70bea3cb844.json
+index 232dff0..196b406 100644
+--- a/assets/example.scene/meshes/9bfe8d43-894c-4c27-ad3c-f70bea3cb844.json
++++ b/assets/example.scene/meshes/9bfe8d43-894c-4c27-ad3c-f70bea3cb844.json
+@@ -7,7 +7,7 @@
+             "type": "Mesh",
+             "position": [
+                 0,
+-                50,
++                80,
+                 0
+             ],
+             "rotation": [
+diff --git a/assets/example.scene/preview.png b/assets/example.scene/preview.png
+index b6b4d24..08fa9bf 100644
+Binary files a/assets/example.scene/preview.png and b/assets/example.scene/preview.png differ

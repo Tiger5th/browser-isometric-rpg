@@ -12,6 +12,8 @@
   },
   "dependencies": {
     "@babylonjs/core": "9.31.0",
+    "@babylonjs/loaders": "9.31.0",
+    "@babylonjs/serializers": "9.31.0",
     "recast-navigation": "0.43.1"
   },
   "devDependencies": {

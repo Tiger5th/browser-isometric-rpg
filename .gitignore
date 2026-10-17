@@ -2,3 +2,6 @@ node_modules/
 dist/
 coverage/
 .DS_Store
+
+# Editor 实验：完整工程（含 node_modules 与二进制资产）不入库，仅保留 artifacts/editor-experiment/ 下的样本与 reports/ 结论。
+artifacts/editor-experiment/project/

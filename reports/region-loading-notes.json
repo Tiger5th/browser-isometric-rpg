@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "kind": "scenario-notes",
+  "scenario": "region-loading / region-gate",
+  "environment": {
+    "browser": "Chromium (ego-browser)",
+    "renderBackend": "webgl2",
+    "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+    "devicePixelRatio": 2,
+    "hardwareConcurrency": 10
+  },
+  "assetConstruction": {
+    "approach": "Programmatic greybox region: 10 height-displaced terrain chunks (296 subdivisions each) + 22 landmarks, exported at runtime to binary glTF (GLB) with unused UVs retained.",
+    "chunks": 10,
+    "subdivisionsPerChunk": 296,
+    "vertices": 882838,
+    "triangles": 1752864,
+    "exportedBytes": 49314044,
+    "exportedMB": 49.314044,
+    "exportedMiB": 47.029537200927734,
+    "exportMs": 1516.6,
+    "exportCaveat": "Export happens on the main thread at scenario start and is reported separately from load time. A production pipeline would export offline."
+  },
+  "regionLoading": {
+    "preloadMs": 55.3,
+    "addAllToSceneMs": 0.4,
+    "removeAllFromSceneMs": 0.3,
+    "disposeMs": 6.0,
+    "maskedWarmupMs": 1140.6,
+    "revealMaxFrameMs": 36,
+    "revealAverageFrameMs": 24.17,
+    "gateMaskInMs": 249.3,
+    "gateMaskOutMs": 281.5,
+    "heapBaselineMB": 72.81,
+    "heapPeakMB": 323.83,
+    "heapPeakDeltaMB": 251.02,
+    "heapSampling": "Chrome performance.memory.usedJSHeapSize sampled every 50ms; coarse JS-heap proxy, not process RSS, and no forced GC.",
+    "preloadCaveat": "The GLB is already a Blob in memory (generated in-page), so preload measures parse/container creation only, not network transfer. A real 50MB download must be added to the load-gate budget."
+  },
+  "findings": [
+    "AssetContainer preloading keeps all 33 loaded meshes out of the scene: scene mesh count stayed at 73 until addAllToScene.",
+    "addAllToScene/removeAllFromScene are sub-millisecond operations; the real cost is deferred GPU upload and shader compilation on the first rendered frame.",
+    "Without a masked warmup, the first reveal frame spiked to ~203-233ms. Waiting for materials and rendering three frames while the gate is still black reduced the reveal max frame to 36ms.",
+    "Cold run masked warmup was ~1.14s; a second run in the same page (asset cached, shaders already compiled) had a peak JS heap of ~201.8MB and a 35ms reveal max frame.",
+    "region-gate loaded two containers (A/B) and swapped them while fully masked. The swap itself took 0.3-0.6ms; reveal max frame was 35.5ms (A) / 50.3ms (B); exit restored the scene mesh count exactly.",
+    "The loading gate is therefore not just a visual transition: it must cover the first rendered frame after addAllToScene, otherwise the expensive upload is visible as a hitch."
+  ],
+  "caveats": [
+    "Timings vary between runs (cold vs warm caches, shader compilation, background load). The committed region-loading report is the cold run.",
+    "Gate durations are CSS transition times measured in-page; background tabs may throttle transitions.",
+    "This is a greybox asset: no KTX2 textures, skinning or animation, so its bytes and decode profile differ from a production region."
+  ]
+}
