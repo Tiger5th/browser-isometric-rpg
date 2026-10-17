@@ -42,6 +42,7 @@
 - **17 号票已完成合并**（98d7866：toon 渲染验证通过（自定义 shader，Babylon 9.31 无官方 ToonMaterial）；VRoid 真人链路 blocked——用户手做指引在票 Comments；VRM→GLB 工具就绪）。
 - **18 号票已完成合并（3501caf）——P0 全部 9 张票完成**。最终报告：artifacts/p0-final-report.md。冒烟 9/9；**300 角色干净重跑 60fps 但无余量**（必须动态分辨率）；预算已修正；三个降级预案均未触发；建议进入 P1（前置：用户手做 VRoid + 装 Blender）。
 - **code-review 完成：8 项发现全部修复并合并**（5b4e416：morph delta 数据 bug、多材质 toon、顶点色回退、开关重置、加载门时序、取景 span、容器清理、fps 口径）。main 与 p0-integration 同步。
+- **P1 规格已发布并拆票**：specs/p1-vertical-slice.md → tickets 19–26。19 无阻塞；19→20→{21,22} 并行→23（需 19–22）→24（需 22,23）→25（组装）→26（验收）。
 - **P0 正式收尾。** 遗留：VRoid 真人资产（用户手做 15 分钟，指引在票 17 Comments）、Blender 安装（补测 `npm run assets:blender:repro`）、toon shader morph 支持、真实 VRoid 多材质实机验证。下一步：进入 P1 规格（/to-spec）。
 
 ## Fog
