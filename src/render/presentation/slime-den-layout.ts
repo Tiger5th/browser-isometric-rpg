@@ -23,6 +23,7 @@ import {
   type PropKind,
   type PropPlacement,
 } from "./green-hollow-layout";
+import { ALL_GROUND_TEXTURE_IDS } from "./ground-texture-ids";
 import type { LandscapeHill, LandscapeIssue, LandscapeTree } from "./world-physics";
 import { validateLandscape } from "./world-physics";
 
@@ -278,15 +279,26 @@ export function slimeDenWaterPatch(): GroundPatch | undefined {
   return SLIME_DEN_GROUND_PATCHES.find((patch) => patch.texture === "water");
 }
 
-/** 巢穴复用了哪些翠谷贴图（资产 agent 产出 region2 贴图后从这里换名）。 */
-export function slimeDenReusedTextures(): GroundTextureId[] {
+/** 巢穴用到的地面贴图 id（巢穴专用 + 复用主区域的两类）。 */
+export function slimeDenTextures(): GroundTextureId[] {
   return [...new Set(SLIME_DEN_GROUND_PATCHES.map((patch) => patch.texture))];
 }
 
-/** 巢穴用到的主区域贴图 id 是否都真实存在（防止贴图清单与布局脱节）。 */
-export function slimeDenTextureCoverage(): string[] {
+/** 与主区域共享的贴图 id（其余是巢穴专属的暗色调瓦片）。 */
+export function slimeDenSharedTextures(): GroundTextureId[] {
   const hollowTextures = new Set(HOLLOW_PATCHES.map((patch) => patch.texture));
-  return slimeDenReusedTextures()
-    .filter((texture) => !hollowTextures.has(texture))
-    .map((texture) => `巢穴引用了翠谷没有的贴图：${texture}`);
+  return slimeDenTextures().filter((texture) => hollowTextures.has(texture));
+}
+
+/**
+ * 贴图覆盖自检：巢穴用到的每一个地面贴图 id 都必须真实存在于
+ * textures.ts 的 GROUND_TEXTURE_FILES（运行时那里找不到文件会直接抛错，
+ * 但那时已经在切区黑场里了；这里提前在 setup 阶段拦）。
+ */
+export function slimeDenTextureCoverage(
+  available: ReadonlySet<string> = new Set<string>(ALL_GROUND_TEXTURE_IDS),
+): string[] {
+  return slimeDenTextures()
+    .filter((texture) => !available.has(texture))
+    .map((texture) => `巢穴引用了不存在的地面贴图：${texture}`);
 }

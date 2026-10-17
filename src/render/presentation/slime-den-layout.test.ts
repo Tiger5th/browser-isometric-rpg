@@ -10,6 +10,9 @@ import {
   SLIME_DEN_PROPS,
   SLIME_DEN_EXITS,
   SLIME_DEN_TINT,
+  slimeDenSharedTextures,
+  slimeDenTextureCoverage,
+  slimeDenTextures,
   validateSlimeDenLandscape,
   validateSlimeDenLayout,
 } from "./slime-den-layout";
@@ -87,12 +90,23 @@ describe("史莱姆巢穴（slime_den）布局数据", () => {
   });
 
   it("除巢穴地面外，其余贴片复用主区域的贴图 id", () => {
-    const denTextures = new Set(SLIME_DEN_GROUND_PATCHES.map((patch) => patch.texture));
-    denTextures.delete("cave-floor");
-    for (const texture of denTextures) {
+    for (const texture of slimeDenSharedTextures()) {
       expect(GROUND_PATCHES.some((patch) => patch.texture === texture)).toBe(true);
     }
-    expect(denTextures.size).toBeGreaterThan(0);
+    expect(slimeDenSharedTextures().length).toBeGreaterThan(0);
+    // 巢穴专用瓦片不在主区域里（这正是它「换了一套资产」的证据）。
+    expect(slimeDenTextures()).toContain("cave-floor");
+    expect(GROUND_PATCHES.some((patch) => patch.texture === "cave-floor")).toBe(false);
+  });
+
+  it("贴图覆盖自检能抓出未定义的贴图 id", () => {
+    expect(slimeDenTextureCoverage()).toEqual([]);
+    // 顺序按布局里贴片的先后（cave-floor 在最前）。
+    expect(slimeDenTextureCoverage(new Set(["grass", "stone-path"]))).toEqual([
+      "巢穴引用了不存在的地面贴图：cave-floor",
+      "巢穴引用了不存在的地面贴图：dirt-path",
+      "巢穴引用了不存在的地面贴图：water",
+    ]);
   });
 
   it("巢穴带晶簇/茧/蛋三类巢穴件（artifacts/region2/ 的贴图已接入）", () => {

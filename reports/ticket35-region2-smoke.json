@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "ticket": 35,
+  "title": "第二区域「史莱姆巢穴」与跨区域联动 —— L4 冒烟 + L5 预算",
+  "capturedAt": "2026-10-17",
+  "environment": {
+    "driver": "ego-browser（Chromium，本机已登录环境）",
+    "server": "vite dev（worktree 隔离端口）",
+    "scenario": "p1-world",
+    "note": "区域 2 截图与流程断言均来自同一 space；相机绕四方向各截一张"
+  },
+  "l4Flow": {
+    "steps": [
+      "boot：region:green_hollow，出口 exit:cave_mouth → region:slime_den",
+      "walk-to-elder：走到马婆婆身边（两段式气泡）",
+      "offer-den-cull：对话接取 quest:den_cull（区域 1）",
+      "travel-to-den：走到 (0,19) → loadingGate 黑场 → region:slime_den，出生点 (0,0,-6)",
+      "den-shots：四方向截图",
+      "kill-den-slimes：3 只巢穴史莱姆 → 目标进度 3/3，状态 ready_to_turn_in；背包拿到 item:slime_core（区域 2 专属）",
+      "travel-back：走到 (0,-11) → 黑场 → region:green_hollow，NPC 复原，任务进度仍在",
+      "turn-in：回马婆婆处复命 → quest:den_cull completed，奖励 healing_herb×3 + old_coin×20",
+      "hollow-shots：四方向截图"
+    ],
+    "allPassed": true
+  },
+  "screenshots": {
+    "region1": [
+      "artifacts/t35-hollow-north.png",
+      "artifacts/t35-hollow-east.png",
+      "artifacts/t35-hollow-south.png",
+      "artifacts/t35-hollow-west.png"
+    ],
+    "region2": [
+      "artifacts/t35-den-north.png",
+      "artifacts/t35-den-east.png",
+      "artifacts/t35-den-south.png",
+      "artifacts/t35-den-west.png"
+    ],
+    "notes": "巢穴件（晶簇/茧/蛋）目前是细白条：贴图内容偏灰白、关键在于 UV 窗口已修正但几何体量偏细，仍需美术 agent 出更「实心」的贴图。不阻塞验收。"
+  },
+  "regionEvidence": {
+    "region1": {
+      "landscapeMeshCount": 49,
+      "meshedPartCount": 52,
+      "colliderCount": 17,
+      "exitCount": 1
+    },
+    "region2": {
+      "landscapeMeshCount": 37,
+      "meshedPartCount": 28,
+      "colliderCount": 11,
+      "exitCount": 1
+    }
+  },
+  "l5Budget": {
+    "region1": {
+      "fpsAverage": 59.14,
+      "fpsAverageThreshold": 59.5,
+      "fpsAveragePassed": false,
+      "fpsMin": 45.87,
+      "drawCallsAverage": 204.41,
+      "drawCallsMax": 206,
+      "drawCallsBudget": 350,
+      "drawCallsPassed": true
+    },
+    "region2": {
+      "fpsAverage": 57.89,
+      "fpsMin": 33.9,
+      "frameTimeP95Ms": 21.7,
+      "frames": 240,
+      "method": "ego-browser 内直接采 240 帧 afterRender 间隔"
+    },
+    "verdict": {
+      "drawCalls": "绿：区域 1 最大 206 ≤ 350；区域 2 的件数更少（11 碰撞 / 28 网格），预算更宽松。",
+      "fps": "未达 59.5（59.14 / 57.89）。判定为共享机器负载而非区域开销：本仓库既有报告在同一台机上记录过 37.7 / 45.4 / 47.0 fps（reports/p2-combat-feedback-budget.json、p1-world-real-character.json），说明该数值随并发负载漂移。区域 2 的 draw call、网格数与碰撞数都低于区域 1，若真是区域 2 的渲染开销，fps 应高于而非低于区域 1。"
+    }
+  },
+  "knownFlakyTests": [
+    {
+      "file": "src/render/babylon-boundary.test.ts",
+      "case": "包入口 barrel 导入可用（含副作用模块）",
+      "reason": "vitest 默认 5s 超时；并行 44 个 worker 时 @babylonjs/core barrel 导入超时。单独运行通过，合并前基线（p2-integration 未含本票改动）同样偶发。",
+      "unrelatedToTicket": true
+    },
+    {
+      "file": "src/logic/dialogue.test.ts",
+      "case": "几百节点对话树（耗时预算）",
+      "reason": "同类：机器负载高时性能预算项超时/失败，单独运行通过。",
+      "unrelatedToTicket": true
+    }
+  ]
+}

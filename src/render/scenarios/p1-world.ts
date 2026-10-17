@@ -2826,6 +2826,11 @@ async function loadRegionVisuals(
   scene: Scene,
   layout: RegionRuntimeLayout,
 ): Promise<void> {
+  // **先建新区再拆旧区**：createRegionRuntime 会异步加载贴图并构建 navmesh，
+  // 期间玩家仍可能点地面（走到已 dispose 的 navmesh 上会让 Recast WASM
+  // 抛 "memory access out of bounds"）。旧的 runtime 在新区就绪前一直可用。
+  const runtime = await createRegionRuntime(scene, state.root, forwardVector(scene), layout);
+
   clearWaypoints(state);
   state.deadEnemies.clear();
   state.dyingEnemies.clear();
@@ -2838,7 +2843,6 @@ async function loadRegionVisuals(
 
   state.runtime.dispose();
   state.landscape.dispose();
-  const runtime = await createRegionRuntime(scene, state.root, forwardVector(scene), layout);
   state.runtime = runtime;
   state.colliders = runtime.colliders.slice();
   state.landscape = createLandscapeRing(scene, state.root, landscapeOptionsFor(layout.regionId));

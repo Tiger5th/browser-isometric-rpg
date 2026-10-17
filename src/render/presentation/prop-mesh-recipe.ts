@@ -217,19 +217,128 @@ const CRATE_RECIPE: PropMeshRecipe = {
   ],
 };
 
+/* ------------------------------------------------------------------ */
+/* 巢穴件（票 35）：晶簇 / 茧 / 蛋                                    */
+/*                                                                    */
+/* 几何刻意做得比木箱木桶更「有尖角」——锥体与扁球贴上巢穴的暗紫贴图 */
+/* 后轮廓与区域 1 的家具类件明显不同，玩家一眼能分出「这是巢穴的东西」。 */
+/* ------------------------------------------------------------------ */
+
+/** 晶簇：三根高低不一的锥体聚在一起，是巢穴最显眼的剪影。 */
+const DEN_CRYSTAL_RECIPE: PropMeshRecipe = {
+  kind: "den-crystal",
+  height: 1.42,
+  width: 1.9,
+  estimatedTriangles: 42,
+  parts: [
+    {
+      id: "shard.center",
+      primitive: "cylinder",
+      size: { width: 0.34, height: 1.3, depth: 0.34 },
+      offset: { x: 0, y: 0.65, z: 0 },
+      face: "side",
+      // UV 窗口取自贴图实测内容包围盒（artifacts/region2/crystal-c1，
+      // u 0.273–0.729 / v 0.131–0.877），窗口只取内容内的子矩形，
+      // 避免整块网格采样到白底而被 alphaCutoff 裁成细条。
+      uv: window({ u: 0.28, v: 0.45, width: 0.4, height: 0.4 }),
+    },
+    {
+      id: "shard.left",
+      primitive: "cylinder",
+      size: { width: 0.26, height: 0.9, depth: 0.26 },
+      offset: { x: -0.34, y: 0.45, z: 0.1 },
+      face: "side",
+      uv: window({ u: 0.27, v: 0.2, width: 0.26, height: 0.32 }),
+    },
+    {
+      id: "shard.right",
+      primitive: "cylinder",
+      size: { width: 0.24, height: 0.72, depth: 0.24 },
+      offset: { x: 0.32, y: 0.36, z: -0.12 },
+      face: "side",
+      uv: window({ u: 0.5, v: 0.25, width: 0.22, height: 0.28 }),
+    },
+  ],
+};
+
+/** 茧：悬吊的椭球 + 顶部小环，贴上茧的贴图。 */
+const DEN_COCOON_RECIPE: PropMeshRecipe = {
+  kind: "den-cocoon",
+  height: 1.57,
+  width: 2.1,
+  estimatedTriangles: 40,
+  parts: [
+    {
+      id: "stalk",
+      primitive: "cylinder",
+      size: { width: 0.12, height: 0.55, depth: 0.12 },
+      offset: { x: 0, y: 0.28, z: 0 },
+      face: "side",
+      // cocoon-c1 内容包围盒：u 0.285–0.774 / v 0.077–0.931。
+      uv: window({ u: 0.47, v: 0.1, width: 0.12, height: 0.22 }),
+    },
+    {
+      id: "sac",
+      primitive: "sphere",
+      size: { width: 0.78, height: 1.0, depth: 0.78 },
+      offset: { x: 0, y: 0.95, z: 0 },
+      face: "side",
+      uv: window({ u: 0.29, v: 0.3, width: 0.48, height: 0.6 }),
+    },
+  ],
+};
+
+/** 蛋：三枚高低错落的扁球挤成一堆。 */
+const DEN_EGGS_RECIPE: PropMeshRecipe = {
+  kind: "den-eggs",
+  height: 1.2,
+  width: 1.6,
+  estimatedTriangles: 36,
+  parts: [
+    {
+      id: "egg.left",
+      primitive: "sphere",
+      size: { width: 0.6, height: 0.82, depth: 0.6 },
+      offset: { x: -0.26, y: 0.41, z: 0.08 },
+      face: "side",
+      // eggs-c1 内容包围盒：u 0.138–0.863 / v 0.105–0.905。
+      uv: window({ u: 0.16, v: 0.2, width: 0.26, height: 0.45 }),
+    },
+    {
+      id: "egg.center",
+      primitive: "sphere",
+      size: { width: 0.66, height: 0.95, depth: 0.66 },
+      offset: { x: 0.06, y: 0.48, z: -0.06 },
+      face: "side",
+      uv: window({ u: 0.4, v: 0.13, width: 0.28, height: 0.5 }),
+    },
+    {
+      id: "egg.right",
+      primitive: "sphere",
+      size: { width: 0.52, height: 0.7, depth: 0.52 },
+      offset: { x: 0.34, y: 0.35, z: 0.14 },
+      face: "side",
+      uv: window({ u: 0.62, v: 0.25, width: 0.22, height: 0.4 }),
+    },
+  ],
+};
+
 /**
  * 全部硬碰撞环境件的网格配方。
  * 灌木**不在表内**：它保持 billboard 可穿（user story 16），
  * 因此这份表本身就是「哪些件已网格化」的权威清单。
  */
 export const PROP_MESH_RECIPES: Record<
-  "tree-large" | "stone-wall" | "barrel" | "crate",
+  "tree-large" | "stone-wall" | "barrel" | "crate" | "den-crystal" | "den-cocoon" | "den-eggs",
   PropMeshRecipe
 > = {
   "tree-large": TREE_RECIPE,
   "stone-wall": STONE_WALL_RECIPE,
   barrel: BARREL_RECIPE,
   crate: CRATE_RECIPE,
+  "den-crystal": DEN_CRYSTAL_RECIPE,
+  "den-cocoon": DEN_COCOON_RECIPE,
+  "den-eggs": DEN_EGGS_RECIPE,
 };
 
 /** 网格化的环境件种类（硬碰撞 4 类）。 */

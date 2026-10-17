@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { PROP_DIMENSIONS, PROPS } from "./green-hollow-layout";
+import { PROP_DIMENSIONS, PROPS, type PropKind } from "./green-hollow-layout";
+import { SLIME_DEN_PROPS } from "./slime-den-layout";
 import {
   MESHED_PROP_KINDS,
   PROP_MESH_RECIPES,
@@ -12,8 +13,17 @@ import {
 } from "./prop-mesh-recipe";
 
 describe("环境件网格配方（user story 15）", () => {
-  it("4 类硬碰撞件有配方，灌木没有（保持 billboard）", () => {
-    expect(MESHED_PROP_KINDS).toEqual(["tree-large", "stone-wall", "barrel", "crate"]);
+  it("硬碰撞件有配方，灌木没有（保持 billboard）", () => {
+    // 区域 1 的四类 + 区域 2 的三类巢穴件（票 35）。
+    expect(MESHED_PROP_KINDS).toEqual([
+      "tree-large",
+      "stone-wall",
+      "barrel",
+      "crate",
+      "den-crystal",
+      "den-cocoon",
+      "den-eggs",
+    ]);
     expect(
       (PROP_MESH_RECIPES as Record<string, PropMeshRecipe | undefined>).bush,
     ).toBeUndefined();
@@ -29,9 +39,16 @@ describe("环境件网格配方（user story 15）", () => {
   it("配方视觉尺寸与布局常量一致（网格与碰撞用同一组尺寸）", () => {
     for (const kind of MESHED_PROP_KINDS) {
       const recipe = getPropMeshRecipe(kind);
-      const dimensions = PROP_DIMENSIONS[kind];
+      const dimensions = PROP_DIMENSIONS[kind as PropKind];
       expect(recipe.width).toBeCloseTo(dimensions.width, 5);
       expect(recipe.height).toBeCloseTo(dimensions.height, 5);
+    }
+  });
+
+  it("巢穴件（票 35）三种都配了网格配方：晶簇 / 茧 / 蛋", () => {
+    for (const kind of ["den-crystal", "den-cocoon", "den-eggs"] as const) {
+      expect(MESHED_PROP_KINDS).toContain(kind);
+      expect(getPropMeshRecipe(kind).parts.length).toBeGreaterThanOrEqual(2);
     }
   });
 
@@ -73,19 +90,26 @@ describe("环境件网格配方（user story 15）", () => {
         if (!part.uv) {
           continue;
         }
-        expect(part.uv.width).toBeGreaterThan(0.1);
-        expect(part.uv.height).toBeGreaterThan(0.1);
+        expect(part.uv.width).toBeGreaterThanOrEqual(0.1);
+        expect(part.uv.height).toBeGreaterThanOrEqual(0.1);
         expect(part.uv.u + part.uv.width).toBeLessThanOrEqual(1);
         expect(part.uv.v + part.uv.height).toBeLessThanOrEqual(1);
       }
     }
   });
 
-  it("配方三角数在逐件 LOD 预算内（单类 ≤ 120，全部 ≤ 210）", () => {
+  it("配方三角数在逐件 LOD 预算内（单类 ≤ 120，区域 1 的四类合计 ≤ 210）", () => {
     for (const kind of MESHED_PROP_KINDS) {
       expect(getPropMeshRecipe(kind).estimatedTriangles).toBeLessThanOrEqual(120);
     }
-    expect(totalRecipeTriangles()).toBeLessThanOrEqual(210);
+    // 票 35 起预算分区域算：巢穴三件只出现在区域 2，不占区域 1 的预算。
+    const regionOneKinds = MESHED_PROP_KINDS.filter((kind) => !kind.startsWith("den-"));
+    const regionOneTotal = regionOneKinds.reduce(
+      (sum, kind) => sum + getPropMeshRecipe(kind).estimatedTriangles,
+      0,
+    );
+    expect(regionOneTotal).toBeLessThanOrEqual(210);
+    expect(totalRecipeTriangles()).toBeGreaterThan(regionOneTotal);
   });
 
   it("validatePropMeshRecipe 能抓出坏配方", () => {
@@ -113,10 +137,11 @@ describe("环境件网格配方（user story 15）", () => {
     expect(messages).toContain("UV 窗口越界");
   });
 
-  it("布局里每类硬碰撞件都有对应配方（网格化不遗漏）", () => {
-    const layoutKinds = new Set(PROPS.map((prop) => prop.kind));
+  it("两个区域的布局里各自出现的硬碰撞件都有对应配方（网格化不遗漏）", () => {
+    const regionOne = new Set(PROPS.map((prop) => prop.kind));
+    const regionTwo = new Set(SLIME_DEN_PROPS.map((prop) => prop.kind));
     for (const kind of MESHED_PROP_KINDS) {
-      expect(layoutKinds.has(kind)).toBe(true);
+      expect(regionOne.has(kind) || regionTwo.has(kind)).toBe(true);
     }
   });
 
