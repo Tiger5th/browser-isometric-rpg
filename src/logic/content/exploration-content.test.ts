@@ -67,6 +67,9 @@ function dialogueInputs(): DialogueInput[] {
       file: "content/dialogues/elder_ma.ink",
       questTags: [{ kind: "offer", questId: "quest:cull_slimes" }],
     },
+    // 商人与铁匠的对话没有任务标签，但文件必须登记（否则 NPC 的 dialogueId 会断引用）。
+    { id: "merchant_bo", file: "content/dialogues/merchant_bo.ink", questTags: [] },
+    { id: "smith_qi", file: "content/dialogues/smith_qi.ink", questTags: [] },
   ];
 }
 

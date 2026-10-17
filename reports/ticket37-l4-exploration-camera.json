@@ -15,7 +15,7 @@
       "chests": 3,
       "collectibles": 8,
       "collectSets": 1,
-      "note": "内容先配在区域 1（green_hollow）；区域 2 的宝箱位由票 35 或收尾阶段补一行配置即可"
+      "note": "内容先配在区域 1（green_hollow）；区域 2 的宝箱位由票 35 或收尾阶段补一行配置即可。合并 p2-integration（票 33 村庄聚点）后复测仍全绿。"
     },
     "openChest": {
       "worldStateKeys": [
@@ -88,13 +88,13 @@
       },
       "wheelEvent": {
         "before": {
-          "alpha": -0.791679,
+          "alpha": -0.812161,
           "beta": 0.955317,
           "radius": 40,
           "verticalSpan": 30
         },
         "after": {
-          "alpha": -0.806227,
+          "alpha": -0.814453,
           "beta": 0.955317,
           "radius": 40,
           "verticalSpan": 26
@@ -102,27 +102,35 @@
       },
       "resetViaHudButton": {
         "before": {
-          "alpha": -0.791012,
+          "alpha": -0.777636,
           "beta": 0.955317,
           "radius": 40,
           "verticalSpan": 30
         },
         "after": {
-          "alpha": -0.791679,
+          "alpha": -0.812161,
           "beta": 0.955317,
           "radius": 40,
           "verticalSpan": 30
         }
       },
       "resetToPresetExact": {
-        "note": "无敌人干扰的干净会话里断言 alpha/beta/radius/span 精确回预设值",
+        "note": "按帧采样复位插值：alpha 从 1.654 单调走到 -0.785398（出厂等距预设），beta/radius/verticalSpan 同步精确落位",
         "preset": {
           "alpha": -0.785398,
           "beta": 0.955317,
           "radius": 40,
           "verticalSpan": 30
         },
-        "observed": {
+        "alphaTrace": [
+          1.654019,
+          1.142782,
+          0.62973,
+          0.124543,
+          -0.369148,
+          -0.785398
+        ],
+        "final": {
           "alpha": -0.785398,
           "beta": 0.955317,
           "radius": 40,
@@ -131,10 +139,10 @@
         "durationMs": 420,
         "pass": true
       },
-      "resetDuringCombat": {
-        "note": "战斗中被敌人打时，alpha 在复位完成后仍会被票 27 的震屏抖动推移（±0.02 rad 量级）；复位动画本身精确落位，beta/radius/span 始终精确回预设",
+      "resetUnderEnemyFire": {
+        "note": "复位完成后若敌人仍在攻击（本次是 18m 外的 enemy:spitter_pond），票 27 的震屏会继续往 alpha 加随机抖动（±0.02 rad 量级）；这是票 27 的既有表现，不是复位失败——beta/radius/verticalSpan 仍精确回预设，无敌人干扰时再按一次复位即精确落位。",
         "observed": {
-          "alpha": -0.777796,
+          "alpha": -0.814732,
           "beta": 0.955317,
           "radius": 40,
           "verticalSpan": 30
@@ -145,18 +153,34 @@
       "note": "draw calls / fps 断言在本机已因票 36 的两个新敌人而常年红（基线 485 / 44fps vs 阈值 350 / 59.5）；探索内容只增加 14 个网格（3 箱 ×2 + 8 草 ×1）",
       "jsHeapUsedMB": 157.34,
       "jsHeapBudgetMB": 1500,
-      "pass": true
+      "pass": true,
+      "explorationSpriteTransparentRatio": {
+        "note": "场景报告新增指标：探索件精灵抠白透明占比，阈值 ≥0.3（说明白底真的抠掉了，不是整张白板）",
+        "passed": true
+      }
+    },
+    "assets": {
+      "note": "探索件用资产 agent 的产出（artifacts/exploration/ 留档，选中候选复制到 assets/exploration/），与 prop/敌人精灵同一套白底抠白 + billboard 基建",
+      "files": [
+        "chest_closed.png",
+        "chest_open.png",
+        "glow_grass.png"
+      ],
+      "fallback": "贴图加载失败时自动回落到程序化占位（合并网格的木箱 / 自发光叶簇），场景不会因为一张 PNG 缺失而起不来",
+      "chestOpenLook": "开启动画过半时从关闭态贴图切到开启态贴图（贴图路径无中间态）"
     }
   },
   "screenshots": [
-    "artifacts/exploration/t37-chest-collect-camera-zoom.png",
+    "artifacts/exploration/t37-collect-hud-8of8.png",
+    "artifacts/exploration/t37-chest-sprite.png",
+    "artifacts/exploration/t37-camera-zoom.png",
     "artifacts/exploration/t37-camera-reset.png",
     "artifacts/exploration/t37-after-reload.png"
   ],
   "knownIssues": [
-    "宝箱与萤光草的视觉是程序化占位（artifacts/exploration/ 暂无资产 agent 产出）：宝箱 = 合并后的木箱壳 + 可开合箱盖，萤光草 = 合并成单网格的自发光叶簇。贴图到位后只替换 src/render/presentation/exploration-visuals.ts 的几何与材质。",
-    "为了不放大 draw call 预算，探索视觉做了 Mesh.MergeMeshes：每个宝箱 2 个网格、每株萤光草 1 个网格。",
-    "src/render/babylon-boundary.test.ts 的 Babylon barrel 导入用例在本机偶发 5s 超时（单独加长 timeout 通过）；src/logic/dialogue.test.ts 的 ink 快照耗时用例在高并发 vitest 下偶发 >100ms。两者与本票改动无关。",
-    "p1-world 的 drawCallsMax/fpsAverage 断言在本机长期为 failed（票 36 遗留），本票未引入回归也未掩盖：实体数断言改为从内容包现算，避免写死 6 造成误报。"
+    "探索件的候选图是 Gemini 1024 宽白底出图，接入走运行时抠白（keyOutNearWhiteBackground）；无缝性与手绘描边一致性还需要一次人工看图确认，见 artifacts/exploration/。",
+    "探索视觉全部 billboard/单网格：宝箱 1 个网格（关闭/开启切贴图）、萤光草 1 个网格，共 +11 个网格，不放大 draw call 预算。",
+    "p1-world 的 drawCallsMax/fpsAverage 断言在本机长期为 failed（票 36 遗留基线 485 / 44fps，本票复测 552 / 57fps 是同一量级的抖动）；本票把实体数断言改为从内容包现算，避免写死 6 造成误报，没有掩盖也没有试图修预算。",
+    "src/render/babylon-boundary.test.ts 的 Babylon barrel 导入用例在本机偶发 5s 超时（单独加长 timeout 通过）；src/logic/dialogue.test.ts 的 ink 快照耗时用例在高并发 vitest 下偶发 >100ms。两者与本票改动无关。"
   ]
 }

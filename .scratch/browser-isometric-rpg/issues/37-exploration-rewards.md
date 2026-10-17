@@ -13,7 +13,8 @@
 - 相机：`src/render/camera-presets.ts`（预设表 + 有限范围缩放/旋转 + 按时长线性插值复位）、`src/render/scenarios/p1-world.ts` 接管滚轮/右键拖拽/R 键/HUD 按钮；复位期间临时关掉票 27 的震屏抖动，否则 alpha 永远差一点。
 - HUD：`src/render/ui/collect-hud.ts`（独立文件，不动被多票改过的 quest-loop-ui.ts）。
 - 顺手修的回归：场景启动时先 `notifyRegionChanged()` 会用空快照盖掉自动槽里的进度（票 31 遗留），现在改成「先读后写」，读档不回退这条才真的成立。
-- 遗留：区域 2 的宝箱位等票 35 落地后补一行 content 配置；探索视觉是程序化占位（详见 `reports/ticket37-l4-exploration-camera.json` 的 knownIssues）。
+- 视觉资产：直接用资产 agent 的产出（`artifacts/exploration/` 留档 → `assets/exploration/` 3 张 PNG），与 prop/敌人精灵同一套「白底抠白 + billboard」基建；贴图加载失败自动回落到程序化占位。宝箱按开启状态在关闭/开启两张贴图间切换。
+- 遗留：区域 2 的宝箱位等票 35 落地后补一行 content 配置。
 
 - [x] L1：宝箱开启→loot→worldState 状态→快照往返不重开（vitest）
 - [x] L1：收集计数聚合 + 全收集奖励入包（worldState 驱动）

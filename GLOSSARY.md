@@ -41,7 +41,9 @@
 - **世界状态（World State）**：快照中记录世界事实的通用容器（宝箱开启、收集计数、机关状态等）。新系统的事实优先挂世界状态而非逐项加快照字段。
 - **存档槽（Save Slot）**：一个独立的存档位置，键为 `auto`（自动存档）或 `slot-1..3`（手动槽）。槽位元数据（存档时间、游戏时长、等级）存在存档文件的 `meta` 分节而非会话快照内——快照只描述世界事实。
 - **自动存档（Autosave）**：关键节点（区域切换/任务状态变化/获得重要物品）与 `beforeunload` 兜底时写入 `auto` 槽的存档动作。自动存档永不抛错，失败只通报不影响游戏。
-- **安全区（Safe Zone）**：敌人 AI 被逻辑层拒止不得进入的地带。村庄聚点位于安全区内。
+- **安全区（Safe Zone）**：敌人 AI 被逻辑层拒止不得进入的地带。村庄聚点位于安全区内。区域内容里的矩形地带（`region.safeZones`），几何判定纯函数在 `src/logic/safe-zone.ts`，拒止在 `GameSession.updateEnemyBehavior`——玩家在区内时敌人不追入，即使被点过一次攻击（优先级高于感知半径）。
+- **商人（Vendor）**：带 `npc.vendor` 价格表的 NPC。对话走完自动开摊位；报价算术在 `src/logic/trade.ts`，交易面板（`src/render/ui/trade-panel.ts`）与结算共用同一条报价路径，因此显示价与成交价不会漂移。金币是背包物品 `item:old_coin`，不是独立字段。
+- **巡逻（Patrol）**：每 NPC 一条点位路线，走→停留张望→下一点。逻辑层持有进度事实（进快照的 `patrolIndex`），表现层只做插值与演出。对话中进度冻结、结束继续。解释口在 `src/logic/npc-patrol.ts`。
 - **欣赏模式（Showcase Mode）**：相机自由缩放旋转的状态；一键复位回到出厂等距预设（alpha/beta/radius 常量）。
 - **宝箱（Chest）**：探索回报的载体。content 定义位置与 loot 表，运行时开启 = loot 逐件入包 + worldState 记 `chest:<local>.opened`，一次性（见 `src/logic/exploration.ts`）。
 - **收集品（Collectible）**：拾取即入包的普通物品，**没有新系统**。计数是 worldState 里 `collectible:<local>` 条目的**聚合**，不是另存的计数器——读档因此天然不回退。
@@ -49,6 +51,8 @@
 - **相机预设（Camera Preset）**：一组 alpha/beta/radius/verticalSpan 常量。当前出厂一位（默认等距），`CAMERA_PRESETS` 的结构支持将来多位。复位是按**时长线性插值**回预设，不是指数逼近，因此「回预设值」可断言。
 - **等级曲线（Level Curve）**：累计经验 → 等级的阈值表 + 每级属性加成（票 34）。内容数据（`content/level-curves/*.json`），解释口 `src/logic/leveling.ts`。升级加成走修饰器系统的 `level` 源，按当前等级**整源重算**（不是逐次叠加），因此读档与跨级都不会重复入账。
 - **等级徽标（Level Badge）**：HUD 上的 `Lv.N` 与经验条。显示值由 `src/render/ui/level-hud.ts` 的纯函数 `levelHudView()` 换算，HUD 只搭 DOM。
+- **标题画面（Title Screen）**：打开游戏的正式入口。logo（生成图）+ 氛围背景（游戏画面派生）+ 版本号 + 「继续游戏」/「新游戏」；入场演出 2.4 秒（logo 淡入 + 雾气/粒子）可点击跳过。入口路由判定在 `src/logic/title-menu.ts`（纯函数），DOM 只负责演出与交互；进入游戏复用加载门黑场过场。
+- **入场意图（Entry Intent）**：标题画面选定的「读哪个槽 / 是不是新游戏」，一次性交给场景构建消费（`src/render/title-entry.ts`）。因此「经标题进入」与「harness 直入」走同一段场景代码。
 - **换锚点（Re-anchor）**：任务状态变化时 NPC 移动到新默认位置的机制——「世界因你而变」的最小实现。
 
 ## 测试与流程

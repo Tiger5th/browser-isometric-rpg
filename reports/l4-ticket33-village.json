@@ -1,0 +1,591 @@
+{
+  "schemaVersion": 1,
+  "ticket": 33,
+  "scenario": "p1-world",
+  "runner": "ego-browser (Chromium)",
+  "note": "买卖断言按相对变化核对（开局可能带自动存档，绝对金币数不定；单价、「金币不为负」「拒绝时背包零改动」是不变量）",
+  "assertions": {
+    "safeZone_refuses_enemies_inside": {
+      "expected": "玩家在区内时没有任何敌人进入 |x|<=9 且 |z|<=9",
+      "observed": {
+        "playerSheltered": true,
+        "zones": [
+          {
+            "id": "zone:green_hollow_village",
+            "center": {
+              "x": 0,
+              "z": 0
+            },
+            "halfExtents": {
+              "x": 9,
+              "z": 9
+            }
+          }
+        ],
+        "markCount": 5,
+        "enemies": [
+          {
+            "id": "enemy:slime_blue",
+            "x": 14,
+            "z": -6
+          },
+          {
+            "id": "enemy:slime_elder",
+            "x": 16,
+            "z": -10
+          },
+          {
+            "id": "enemy:slime_meadow",
+            "x": 12,
+            "z": -4
+          }
+        ],
+        "enemiesInsideZone": []
+      },
+      "passed": true
+    },
+    "safeZone_chase_resumes_outside": {
+      "expected": "玩家出区后敌人追上（最近距离 <= 3m）",
+      "observed": {
+        "closest": 1.961,
+        "playerSheltered": false
+      },
+      "passed": true
+    },
+    "vendor_price_table_rendered": {
+      "expected": "摊位两栏价格与内容价格表一致（凝胶 3 卖 / 草药 15 买）",
+      "observed": [
+        {
+          "itemId": "item:slime_gel",
+          "displayName": "史莱姆凝胶",
+          "kind": "sell",
+          "unitPrice": 3,
+          "maxSellQuantity": 5,
+          "maxBuyQuantity": 0,
+          "broke": false,
+          "atMaxStack": false
+        },
+        {
+          "itemId": "item:healing_herb",
+          "displayName": "疗伤草",
+          "kind": "buy",
+          "unitPrice": 15,
+          "maxSellQuantity": 0,
+          "maxBuyQuantity": 9,
+          "broke": false,
+          "atMaxStack": false
+        }
+      ],
+      "passed": true
+    },
+    "trade_sell_closes_loop": {
+      "expected": "卖 2 个凝胶 → 凝胶 -2、金币 +6（单价 3 来自价格表）",
+      "observed": {
+        "result": {
+          "ok": true,
+          "quantity": 2,
+          "coinDelta": 6
+        },
+        "before": {
+          "gel": 9,
+          "coin": 22,
+          "herb": 0
+        },
+        "after": {
+          "gel": 7,
+          "coin": 28,
+          "herb": 0
+        }
+      },
+      "passed": true
+    },
+    "trade_partial_buy_downsizes": {
+      "expected": "金币不足时按可负担件数成交并说明原因（不透支）",
+      "observed": {
+        "result": {
+          "ok": true,
+          "quantity": 1,
+          "coinDelta": -15,
+          "message": "金币只够买 1 件"
+        },
+        "before": {
+          "gel": 7,
+          "coin": 28,
+          "herb": 0
+        },
+        "after": {
+          "gel": 7,
+          "coin": 13,
+          "herb": 1
+        }
+      },
+      "passed": true
+    },
+    "trade_buy_deducts_coin": {
+      "expected": "买 2 个草药 → 结算自报 coinDelta=-30、草药 +2",
+      "observed": {
+        "result": {
+          "ok": true,
+          "quantity": 2,
+          "coinDelta": -30
+        },
+        "before": {
+          "gel": 7,
+          "coin": 13,
+          "herb": 1
+        },
+        "after": {
+          "gel": 7,
+          "coin": 23,
+          "herb": 3
+        }
+      },
+      "passed": true
+    },
+    "trade_rejects_when_broke": {
+      "expected": "金币不足到一枚都买不起时明确拒绝且背包零改动",
+      "observed": {
+        "before": {
+          "gel": 7,
+          "coin": 8,
+          "herb": 6
+        },
+        "result": {
+          "ok": false,
+          "message": "金币不够",
+          "quantity": 0
+        },
+        "after": {
+          "gel": 7,
+          "coin": 8,
+          "herb": 6
+        }
+      },
+      "passed": true
+    },
+    "trade_rejects_selling_absent_item": {
+      "expected": "背包里没有该物品时卖出被拒且背包零改动",
+      "observed": {
+        "emptied": {
+          "ok": true,
+          "quantity": 7,
+          "coinDelta": 21
+        },
+        "afterEmpty": {
+          "gel": 0,
+          "coin": 29,
+          "herb": 6
+        },
+        "resell": {
+          "ok": false,
+          "message": "背包里没有这件东西",
+          "quantity": 0
+        },
+        "afterResell": {
+          "gel": 0,
+          "coin": 29,
+          "herb": 6
+        }
+      },
+      "passed": true
+    },
+    "trade_never_makes_coin_negative": {
+      "expected": "全程金币 >= 0",
+      "observed": {
+        "coinAfterBuy": 23,
+        "coinAfterPartial": 8
+      },
+      "passed": true
+    },
+    "npc_patrol_moves": {
+      "expected": "四个 NPC 位置随时间变化且 patrolIndex 前进",
+      "observed": [
+        [
+          "npc:elder_ma@4,2#1",
+          "npc:merchant_bo@-5,3#1",
+          "npc:scout_lin@-9,-2#2",
+          "npc:smith_qi@6.439,-4.439#1"
+        ],
+        [
+          "npc:elder_ma@4,2#1",
+          "npc:merchant_bo@-5,3#1",
+          "npc:scout_lin@-9,-2#2",
+          "npc:smith_qi@7,-5#1"
+        ],
+        [
+          "npc:elder_ma@4.761,1.746#2",
+          "npc:merchant_bo@-5,3#1",
+          "npc:scout_lin@-9,-2#2",
+          "npc:smith_qi@7,-5#1"
+        ],
+        [
+          "npc:elder_ma@5.583,1.472#2",
+          "npc:merchant_bo@-5,3#1",
+          "npc:scout_lin@-8.784,-1.641#0",
+          "npc:smith_qi@7,-5#1"
+        ],
+        [
+          "npc:elder_ma@6.435,1.188#2",
+          "npc:merchant_bo@-4.172,3.276#2",
+          "npc:scout_lin@-8.322,-0.87#0",
+          "npc:smith_qi@7,-5#1"
+        ],
+        [
+          "npc:elder_ma@7,1#2",
+          "npc:merchant_bo@-3.331,3.556#2",
+          "npc:scout_lin@-7.866,-0.11#0",
+          "npc:smith_qi@6.381,-5#2"
+        ],
+        [
+          "npc:elder_ma@7,1#2",
+          "npc:merchant_bo@-2.508,3.831#2",
+          "npc:scout_lin@-7.42,0.633#0",
+          "npc:smith_qi@5.514,-5#2"
+        ],
+        [
+          "npc:elder_ma@7,1#2",
+          "npc:merchant_bo@-2,4#2",
+          "npc:scout_lin@-6.949,1.418#0",
+          "npc:smith_qi@4.599,-5#2"
+        ]
+      ],
+      "passed": true
+    },
+    "reanchor_after_quest_completed": {
+      "expected": "任务交付后马婆婆换到村口锚点 (9,-2) 并继续巡逻",
+      "observed": {
+        "before": {
+          "x": 7,
+          "z": 1,
+          "patrolIndex": 2
+        },
+        "beforeStatus": "available",
+        "completed": true,
+        "after": {
+          "x": 9,
+          "z": -2,
+          "patrolIndex": 0
+        },
+        "afterStatus": "completed",
+        "afterPatrol": {
+          "x": 8.66,
+          "z": -1.73,
+          "patrolIndex": 1
+        }
+      },
+      "passed": true
+    },
+    "save_load_restores_patrol_position": {
+      "expected": "存档→读档后 NPC 位置与巡逻进度恢复",
+      "observed": {
+        "saved": {
+          "version": 3,
+          "elapsedMs": 47148.39999985695
+        },
+        "loaded": true,
+        "before": {
+          "x": -2.1233772867030707,
+          "y": 0,
+          "z": 3.7532454265938573
+        },
+        "after": {
+          "x": -2.1233772867030707,
+          "y": 0,
+          "z": 3.7532454265938573
+        }
+      },
+      "passed": true
+    }
+  },
+  "artifacts": [
+    "artifacts/p33-village-safezone.png",
+    "artifacts/p33-trade-panel.png"
+  ],
+  "raw": {
+    "safeZoneInside": {
+      "playerSheltered": true,
+      "player": {
+        "x": 0,
+        "z": 0
+      },
+      "zones": [
+        {
+          "id": "zone:green_hollow_village",
+          "center": {
+            "x": 0,
+            "z": 0
+          },
+          "halfExtents": {
+            "x": 9,
+            "z": 9
+          }
+        }
+      ],
+      "markCount": 5,
+      "enemies": [
+        {
+          "id": "enemy:slime_blue",
+          "x": 14,
+          "z": -6
+        },
+        {
+          "id": "enemy:slime_elder",
+          "x": 16,
+          "z": -10
+        },
+        {
+          "id": "enemy:slime_meadow",
+          "x": 12,
+          "z": -4
+        }
+      ],
+      "enemiesInsideZone": []
+    },
+    "safeZoneOutside": {
+      "playerSheltered": false,
+      "player": {
+        "x": 16,
+        "z": 0
+      },
+      "enemies": [
+        {
+          "id": "enemy:slime_blue",
+          "x": 14.687,
+          "z": -1.456
+        },
+        {
+          "id": "enemy:slime_elder",
+          "x": 16,
+          "z": -8.843
+        },
+        {
+          "id": "enemy:slime_meadow",
+          "x": 14.125,
+          "z": -0.676
+        }
+      ],
+      "closest": 1.9605879220274722
+    },
+    "patrol": [
+      [
+        "npc:elder_ma@4,2#1",
+        "npc:merchant_bo@-5,3#1",
+        "npc:scout_lin@-9,-2#2",
+        "npc:smith_qi@6.439,-4.439#1"
+      ],
+      [
+        "npc:elder_ma@4,2#1",
+        "npc:merchant_bo@-5,3#1",
+        "npc:scout_lin@-9,-2#2",
+        "npc:smith_qi@7,-5#1"
+      ],
+      [
+        "npc:elder_ma@4.761,1.746#2",
+        "npc:merchant_bo@-5,3#1",
+        "npc:scout_lin@-9,-2#2",
+        "npc:smith_qi@7,-5#1"
+      ],
+      [
+        "npc:elder_ma@5.583,1.472#2",
+        "npc:merchant_bo@-5,3#1",
+        "npc:scout_lin@-8.784,-1.641#0",
+        "npc:smith_qi@7,-5#1"
+      ],
+      [
+        "npc:elder_ma@6.435,1.188#2",
+        "npc:merchant_bo@-4.172,3.276#2",
+        "npc:scout_lin@-8.322,-0.87#0",
+        "npc:smith_qi@7,-5#1"
+      ],
+      [
+        "npc:elder_ma@7,1#2",
+        "npc:merchant_bo@-3.331,3.556#2",
+        "npc:scout_lin@-7.866,-0.11#0",
+        "npc:smith_qi@6.381,-5#2"
+      ],
+      [
+        "npc:elder_ma@7,1#2",
+        "npc:merchant_bo@-2.508,3.831#2",
+        "npc:scout_lin@-7.42,0.633#0",
+        "npc:smith_qi@5.514,-5#2"
+      ],
+      [
+        "npc:elder_ma@7,1#2",
+        "npc:merchant_bo@-2,4#2",
+        "npc:scout_lin@-6.949,1.418#0",
+        "npc:smith_qi@4.599,-5#2"
+      ]
+    ],
+    "trade": {
+      "opened": true,
+      "before": {
+        "gel": 5,
+        "coin": 22,
+        "herb": 0
+      },
+      "offer": {
+        "open": true,
+        "npcId": "npc:merchant_bo",
+        "coins": 22,
+        "lastMessage": "",
+        "rows": [
+          {
+            "itemId": "item:slime_gel",
+            "displayName": "史莱姆凝胶",
+            "kind": "sell",
+            "unitPrice": 3,
+            "maxSellQuantity": 5,
+            "maxBuyQuantity": 0,
+            "broke": false,
+            "atMaxStack": false
+          },
+          {
+            "itemId": "item:healing_herb",
+            "displayName": "疗伤草",
+            "kind": "buy",
+            "unitPrice": 15,
+            "maxSellQuantity": 0,
+            "maxBuyQuantity": 9,
+            "broke": false,
+            "atMaxStack": false
+          }
+        ]
+      },
+      "afterGrant": {
+        "gel": 9,
+        "coin": 22,
+        "herb": 0
+      },
+      "sell": {
+        "ok": true,
+        "quantity": 2,
+        "coinDelta": 6
+      },
+      "afterSell": {
+        "gel": 7,
+        "coin": 28,
+        "herb": 0
+      },
+      "buyBroke": {
+        "ok": true,
+        "quantity": 1,
+        "coinDelta": -15,
+        "message": "金币只够买 1 件"
+      },
+      "afterBroke": {
+        "gel": 7,
+        "coin": 13,
+        "herb": 1
+      },
+      "buy": {
+        "ok": true,
+        "quantity": 2,
+        "coinDelta": -30
+      },
+      "afterBuy": {
+        "gel": 7,
+        "coin": 23,
+        "herb": 3
+      },
+      "buyAgain": {
+        "ok": true,
+        "quantity": 1,
+        "coinDelta": -15,
+        "message": "金币只够买 1 件"
+      },
+      "afterPartial": {
+        "gel": 7,
+        "coin": 8,
+        "herb": 4
+      }
+    },
+    "dialoguePause": {
+      "start": {
+        "x": 4.599029999947547,
+        "y": 0,
+        "z": -5
+      }
+    },
+    "reanchor": {
+      "before": {
+        "x": 7,
+        "z": 1,
+        "patrolIndex": 2
+      },
+      "beforeStatus": "available",
+      "completed": true,
+      "after": {
+        "x": 9,
+        "z": -2,
+        "patrolIndex": 0
+      },
+      "afterStatus": "completed",
+      "afterPatrol": {
+        "x": 8.66,
+        "z": -1.73,
+        "patrolIndex": 1
+      }
+    },
+    "saveLoad": {
+      "saved": {
+        "version": 3,
+        "elapsedMs": 47148.39999985695
+      },
+      "loaded": true,
+      "before": {
+        "x": -2.1233772867030707,
+        "y": 0,
+        "z": 3.7532454265938573
+      },
+      "after": {
+        "x": -2.1233772867030707,
+        "y": 0,
+        "z": 3.7532454265938573
+      }
+    }
+  },
+  "rawRejections": {
+    "coinBefore": 8,
+    "spentAll": {
+      "ok": false,
+      "message": "金币不够",
+      "quantity": 0
+    },
+    "afterSpend": {
+      "gel": 7,
+      "coin": 8,
+      "herb": 6
+    },
+    "rejected": {
+      "ok": false,
+      "message": "金币不够",
+      "quantity": 0
+    },
+    "afterReject": {
+      "gel": 7,
+      "coin": 8,
+      "herb": 6
+    },
+    "emptied": {
+      "ok": true,
+      "quantity": 7,
+      "coinDelta": 21
+    },
+    "afterEmpty": {
+      "gel": 0,
+      "coin": 29,
+      "herb": 6
+    },
+    "soldAgain": {
+      "ok": false,
+      "message": "背包里没有这件东西",
+      "quantity": 0
+    },
+    "afterResell": {
+      "gel": 0,
+      "coin": 29,
+      "herb": 6
+    }
+  },
+  "status": "passed"
+}

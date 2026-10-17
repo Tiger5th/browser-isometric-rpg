@@ -1,0 +1,29 @@
+{
+  "id": "npc:smith_qi",
+  "displayName": "铁七",
+  "templateId": "npc_template:smith",
+  "regionId": "region:green_hollow",
+  "position": { "x": 5, "y": 0, "z": -3 },
+  "rotation": { "x": 0, "y": 3.141592653589793, "z": 0 },
+  "baseAttributes": {
+    "maxHp": 90,
+    "hp": 90,
+    "attack": 8,
+    "defense": 5
+  },
+  "tags": ["npc", "smith"],
+  "dialogueId": "smith_qi",
+  "paletteId": "character_palette:smith_qi",
+  "portrait": {
+    "image": "assets/portraits/smith_qi.png",
+    "keywords": ["village blacksmith", "soot dark apron", "hammer", "quiet"]
+  },
+  "patrol": {
+    "waypoints": [
+      { "x": 5, "y": 0, "z": -3 },
+      { "x": 7, "y": 0, "z": -5 },
+      { "x": 3, "y": 0, "z": -5 }
+    ],
+    "dwellMs": 2800
+  }
+}

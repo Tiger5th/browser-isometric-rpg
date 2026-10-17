@@ -18,6 +18,9 @@ import { collectEnvironmentInfo } from "./environment";
 import { createGreyboxRegion } from "./greybox";
 import { P0Harness, type ScenarioSummary } from "./harness";
 import { registerBuiltinScenarios } from "./scenarios";
+import { setTitleEntryIntent } from "./title-entry";
+import { createTitleFlow } from "./ui/title-flow";
+import { shouldShowTitleScreen } from "../logic/title-menu";
 
 export type RenderPath = "webgl2" | "webgpu";
 
@@ -40,6 +43,22 @@ declare global {
     P0HarnessRunningScenario?: string;
     /** 诊断入口：浏览器驱动时可直接检查场景状态（如骨骼动画是否推进）。 */
     P0HarnessDebug?: { scene: Scene; engine: AbstractEngine };
+    /** 票 32：标题画面调试 API（ego-browser 冒烟断言入口/子流程用）。 */
+    TitleDebug?: {
+      present(): Promise<void>;
+      hide(): void;
+      debugState(): {
+        visible: boolean;
+        introState: "playing" | "ready";
+        view: string;
+        entries: string[];
+        requireNewGameConfirm: boolean;
+        occupiedSlotIds: string[];
+        error: string | null;
+      };
+      skipIntro(): void;
+      dispose(): void;
+    };
   }
 }
 
@@ -269,7 +288,47 @@ async function bootstrap(): Promise<void> {
   await nextFrame();
   await nextFrame();
 
+  // 票 32：标题画面是正式入口——先在标题屏等着，玩家选完再跑 p1-world。
+  // `?harness=1` / `?scenario=` / `?title=0` 走直达路径（调试与 L4 脚本）。
+  const titleParams = new URLSearchParams(window.location.search);
+  const showTitle = shouldShowTitleScreen({
+    title: titleParams.get("title"),
+    harness: titleParams.get("harness"),
+    scenario: titleParams.get("scenario"),
+  });
+
+  const titleFlow = createTitleFlow(document.body, {
+    onContinue: async (slotId) => {
+      setTitleEntryIntent({ kind: "continue", slotId });
+      await runScenario("p1-world");
+    },
+    onNewGame: async () => {
+      setTitleEntryIntent({ kind: "new-game" });
+      await runScenario("p1-world");
+    },
+  });
+
+  window.TitleDebug = {
+    present: () => titleFlow.show(),
+    hide: () => titleFlow.hide(),
+    debugState: () => titleFlow.screen.debugState(),
+    skipIntro: () => titleFlow.screen.skipIntro(),
+    dispose: () => titleFlow.dispose(),
+  };
+
+  window.addEventListener("game:back-to-title", () => {
+    // 游戏内「返回标题」：场景留着（回标题不必重建），只把标题层挂上来。
+    void titleFlow.show();
+  });
+
   try {
+    if (showTitle) {
+      // 标题画面先出，p1-world 场景在玩家选完入口后才建。
+      window.P0HarnessReady = true;
+      await titleFlow.show();
+      return;
+    }
+
     await runScenario("hello");
     window.P0HarnessReady = true;
 

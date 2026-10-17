@@ -208,6 +208,21 @@ export function validateContent(
     const data = file.data;
     switch (file.kind) {
       case "region": {
+        const safeZoneIds = new Set<string>();
+        asArray(data.safeZones).forEach((zone, index) => {
+          if (!isRecord(zone) || typeof zone.id !== "string") {
+            return;
+          }
+          if (safeZoneIds.has(zone.id)) {
+            issues.push({
+              code: "duplicate-id",
+              file: file.file,
+              path: pointer("safeZones", index, "id"),
+              message: `重复的安全区 id：${zone.id}`,
+            });
+          }
+          safeZoneIds.add(zone.id);
+        });
         if (isRecord(data.player)) {
           asArray(data.player.startingItems).forEach((item, index) => {
             if (!isRecord(item)) {
@@ -255,6 +270,75 @@ export function validateContent(
         }
         asArray(data.questIds).forEach((questId, index) => {
           requireReference(file, pointer("questIds", index), questId, idSets.quest, "任务");
+        });
+        // 票 33：商人价格表引用真实物品，且卖买不能是同一件（否则利差为零、
+        // 面板会出现「买完再原样卖回」的空转行）。
+        if (isRecord(data.vendor)) {
+          for (const side of ["sell", "buy"] as const) {
+            const table = data.vendor[side];
+            if (!isRecord(table)) {
+              continue;
+            }
+            for (const itemId of Object.keys(table)) {
+              requireReference(
+                file,
+                pointer("vendor", side, itemId),
+                itemId,
+                idSets.item,
+                "物品",
+              );
+            }
+          }
+          const sell = isRecord(data.vendor.sell) ? data.vendor.sell : {};
+          const buy = isRecord(data.vendor.buy) ? data.vendor.buy : {};
+          for (const itemId of Object.keys(sell)) {
+            if (buy[itemId] !== undefined) {
+              issues.push({
+                code: "range",
+                file: file.file,
+                path: pointer("vendor", "buy", itemId),
+                message: `物品 ${itemId} 不能同时出现在 sell 与 buy（需要买卖价差）`,
+              });
+            }
+          }
+          if (Object.keys(sell).length === 0 && Object.keys(buy).length === 0) {
+            issues.push({
+              code: "range",
+              file: file.file,
+              path: "/vendor",
+              message: "vendor 的 sell 与 buy 不能同时为空",
+            });
+          }
+        }
+        // 巡逻路线：首点应当就是 NPC 的初始位置，否则 NPC 一开局就「传送」。
+        if (isRecord(data.patrol) && Array.isArray(data.patrol.waypoints)) {
+          const first = data.patrol.waypoints[0];
+          const origin = data.position;
+          if (isRecord(first) && isRecord(origin)) {
+            const same =
+              first.x === origin.x && first.y === origin.y && first.z === origin.z;
+            if (!same) {
+              issues.push({
+                code: "range",
+                file: file.file,
+                path: "/patrol/waypoints/0",
+                message: "巡逻路线首点应等于 NPC 的初始 position（否则读档/开局会瞬移）",
+              });
+            }
+          }
+        }
+        // 换锚点：任务必须存在。
+        asArray(data.reanchors).forEach((reanchor, index) => {
+          if (!isRecord(reanchor)) {
+            return;
+          }
+          requireReference(
+            file,
+            pointer("reanchors", index, "questId"),
+            reanchor.questId,
+            idSets.quest,
+            "任务",
+          );
         });
         break;
       }

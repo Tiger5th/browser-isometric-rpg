@@ -1,31 +1,46 @@
 /**
- * 探索回报的视觉件（票 37）：宝箱与萤光草的程序化占位模型。
+ * 探索回报的视觉件（票 37）：宝箱与萤光草。
  *
- * 资产说明：`artifacts/exploration/` 目前没有资产 agent 产出的贴图/模型，
- * 因此这里**全部程序化占位**：宝箱是「木箱壳 + 箱盖 + 铜色包边」的网格组合，
- * 萤光草是自发光的小簇叶片。贴图到位后只替换 `createChestVisual` /
- * `createCollectibleVisual` 两个函数的几何与材质，逻辑与交互不动。
+ * 资产：资产 agent 的产出（artifacts/exploration/ 留档，选中的候选复制到
+ * assets/exploration/），走与 prop/敌人精灵同一套「白底抠白 + billboard」基建
+ * （见 exploration-textures.ts）。宝箱按开启状态切关闭/开启两张贴图；
+ * 萤光草是 billboard 并做呼吸摇曳。
  *
- * 宝箱视觉只读会话事实（`session.isChestOpened(id)`）：开过就不再合上盖子。
+ * 贴图缺失或加载失败时回落到程序化占位（合并网格的木箱 / 叶簇），
+ * 这样场景不会因为一张 PNG 缺失就整个起不来——占位路径同样只出 1–2 个网格。
  */
 
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
+import type { BaseTexture } from "@babylonjs/core/Materials/Textures/baseTexture";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import type { Scene } from "@babylonjs/core/scene";
 
 import type { ChestDefinition, CollectibleDefinition } from "../../logic/content/types";
+import { createToonMaterial } from "../anime/toonMaterial";
+
+/** 宝箱 billboard 世界尺寸（贴图 1:1，保持不拉伸）。 */
+const CHEST_SIZE = 1.3;
+/** 萤光草 billboard 世界尺寸。 */
+const GRASS_SIZE = { width: 0.72, height: 0.45 };
 
 export interface ChestVisual {
   root: TransformNode;
   /** 可点击的网格（带 metadata.chestId）。 */
   mesh: Mesh;
-  /** 箱盖节点：开启动画绕它后缘旋转。 */
-  lid: Mesh;
+  /** 关闭态 / 开启态贴图；缺省（无贴图）时为 null，走程序化占位。 */
+  closed: BaseTexture | null;
+  open: BaseTexture | null;
+  /** 程序化占位的箱盖节点；贴图路径为 null。 */
+  lid: Mesh | null;
   /** 当前开启动画进度 0–1。 */
   openProgress: number;
+  /** 当前是否已经切到「开启态」外观。 */
+  openLook: boolean;
+  /** 开启动画进度阈值：超过它才切贴图（占位路径用 Infinity，即不切）。 */
+  swapAt: number;
 }
 
 export interface CollectibleVisual {
@@ -45,14 +60,35 @@ function solidMaterial(scene: Scene, name: string, hex: string, emissive = false
   return material;
 }
 
+function billboard(
+  scene: Scene,
+  name: string,
+  parent: TransformNode,
+  width: number,
+  height: number,
+  texture: BaseTexture,
+): Mesh {
+  const mesh = MeshBuilder.CreatePlane(name, { width, height }, scene);
+  mesh.parent = parent;
+  mesh.billboardMode = Mesh.BILLBOARDMODE_ALL;
+  mesh.material = createToonMaterial(scene, `${name}.material`, texture, {
+    useVertexColors: false,
+    unlit: true,
+    alphaCutoff: 0.35,
+  });
+  return mesh;
+}
+
 /**
- * 程序化宝箱：木箱壳 + 可开合的箱盖。
- *
- * draw call 预算（票 37）：每个宝箱只出 **2 个网格**（壳 / 盖），铜色包边靠
- * 顶点色而不是多两个盒子 mesh —— 否则 3 个宝箱就是 12 个 draw call，
- * p1-world 的 350 预算会被探索内容吃掉一大块。
+ * 宝箱视觉：优先用贴图（关闭/开启两张），无贴图时用程序化占位。
+ * 两种路径都只出 1–2 个网格，不额外放大 draw call 预算。
  */
-export function createChestVisual(scene: Scene, root: TransformNode, chest: ChestDefinition): ChestVisual {
+export function createChestVisual(
+  scene: Scene,
+  root: TransformNode,
+  chest: ChestDefinition,
+  textures: { closed: BaseTexture | null; open: BaseTexture | null },
+): ChestVisual {
   const node = new TransformNode(`visual.${chest.id}`, scene);
   node.parent = root;
   node.position.set(chest.position.x, chest.position.y, chest.position.z);
@@ -60,18 +96,32 @@ export function createChestVisual(scene: Scene, root: TransformNode, chest: Ches
     node.rotation.set(chest.rotation.x, chest.rotation.y, chest.rotation.z);
   }
 
+  if (textures.closed !== null) {
+    const mesh = billboard(scene, `${chest.id}.mesh`, node, CHEST_SIZE, CHEST_SIZE, textures.closed);
+    mesh.position.y = CHEST_SIZE / 2;
+    mesh.metadata = { chestId: chest.id };
+    mesh.isPickable = true;
+    return {
+      root: node,
+      mesh,
+      closed: textures.closed,
+      open: textures.open,
+      lid: null,
+      openProgress: 0,
+      openLook: false,
+      swapAt: 0.5,
+    };
+  }
+
+  // 程序化占位：箱体（含包边，合并成 1 个网格）+ 可开合箱盖。
   const bodyMaterial = solidMaterial(scene, `${chest.id}.body`, "#8a5a32");
   const trimMaterial = solidMaterial(scene, `${chest.id}.trim`, "#c9a227");
-
-  // 箱体：主体 + 两道包边合并成一个网格（Mesh.MergeMeshes，合并后只 1 个 draw call）。
   const body = MeshBuilder.CreateBox(
     `${chest.id}.body`,
     { width: 0.9, height: 0.55, depth: 0.6 },
     scene,
   );
   body.position.y = 0.275;
-  body.metadata = { chestId: chest.id };
-  body.isPickable = true;
   const bands = [-0.42, 0.42].map((offsetX, index) => {
     const band = MeshBuilder.CreateBox(
       `${chest.id}.band.${index}`,
@@ -91,11 +141,9 @@ export function createChestVisual(scene: Scene, root: TransformNode, chest: Ches
   mergedBody.metadata = { chestId: chest.id };
   mergedBody.isPickable = true;
 
-  // 箱盖挂在后缘：绕后缘旋转就是「掀开」，不需要额外动画骨骼。
   const lidPivot = new TransformNode(`${chest.id}.lidPivot`, scene);
   lidPivot.parent = node;
   lidPivot.position.set(0, 0.55, -0.3);
-
   const lid = MeshBuilder.CreateBox(
     `${chest.id}.lid`,
     { width: 0.92, height: 0.18, depth: 0.62 },
@@ -106,38 +154,76 @@ export function createChestVisual(scene: Scene, root: TransformNode, chest: Ches
   lid.material = trimMaterial;
   lid.isPickable = false;
 
-  return { root: node, mesh: mergedBody, lid, openProgress: 0 };
+  return {
+    root: node,
+    mesh: mergedBody,
+    closed: null,
+    open: null,
+    lid,
+    openProgress: 0,
+    openLook: false,
+    swapAt: Number.POSITIVE_INFINITY,
+  };
 }
 
-/** 宝箱开启动画：0 = 闭合，1 = 盖子完全掀起。 */
+/**
+ * 宝箱开启动画：0 = 闭合，1 = 完全打开。
+ * 贴图路径在中点切到「开启态」那张；占位路径是箱盖绕后缘掀起。
+ */
 export function advanceChestVisual(visual: ChestVisual, dtMs: number, target: number): void {
   const step = Math.min(1, dtMs / 260);
   visual.openProgress += (target - visual.openProgress) * step;
   if (Math.abs(target - visual.openProgress) < 1e-3) {
     visual.openProgress = target;
   }
-  visual.lid.rotation.x = -visual.openProgress * 1.9;
+
+  if (visual.lid !== null) {
+    visual.lid.rotation.x = -visual.openProgress * 1.9;
+    return;
+  }
+  if (visual.open !== null && !visual.openLook && visual.openProgress >= visual.swapAt) {
+    visual.openLook = true;
+    visual.mesh.material?.dispose();
+    visual.mesh.material = createToonMaterial(
+      visual.mesh.getScene(),
+      `${visual.mesh.name}.open`,
+      visual.open,
+      { useVertexColors: false, unlit: true, alphaCutoff: 0.35 },
+    );
+  }
 }
 
 /**
- * 程序化萤光草：自发光的小簇叶片（占位，见文件头资产说明）。
- *
- * 每个收集品只出 **1 个网格**：五片叶子合成一个网格，否则 8 株就是 40 个
- * draw call（p1-world 预算 350，探索内容必须自成一两个 draw call 量级）。
+ * 萤光草：billboard + 呼吸摇曳。贴图缺失时回落成合并成单网格的自发光叶簇。
  */
 export function createCollectibleVisual(
   scene: Scene,
   root: TransformNode,
   collectible: CollectibleDefinition,
   index: number,
+  texture: BaseTexture | null,
 ): CollectibleVisual {
   const node = new TransformNode(`visual.${collectible.id}`, scene);
   node.parent = root;
   node.position.set(collectible.position.x, collectible.position.y, collectible.position.z);
 
+  if (texture !== null) {
+    const mesh = billboard(
+      scene,
+      `${collectible.id}.mesh`,
+      node,
+      GRASS_SIZE.width,
+      GRASS_SIZE.height,
+      texture,
+    );
+    mesh.position.y = GRASS_SIZE.height / 2;
+    mesh.metadata = { collectibleId: collectible.id };
+    mesh.isPickable = true;
+    return { root: node, mesh, phase: index * 0.9 };
+  }
+
   const material = solidMaterial(scene, `${collectible.id}.glow`, "#7ef0c8", true);
   material.alpha = 0.92;
-
   const blades = 5;
   const parts = [];
   for (let blade = 0; blade < blades; blade += 1) {
@@ -161,17 +247,12 @@ export function createCollectibleVisual(
   cluster.material = material;
   cluster.metadata = { collectibleId: collectible.id };
   cluster.isPickable = true;
-
   return { root: node, mesh: cluster, phase: index * 0.9 };
 }
 
-/** 收集品呼吸/摇曳（确定性正弦，拾取后由调用方隐藏节点）。 */
-export function animateCollectibleVisual(
-  visual: CollectibleVisual,
-  elapsedMs: number,
-): void {
-  const sway = Math.sin((elapsedMs / 900 + visual.phase) * Math.PI * 2) * 0.12;
-  visual.root.rotation.y = sway;
+/** 收集品呼吸/摇曳（确定性正弦；拾取后由调用方隐藏整组节点）。 */
+export function animateCollectibleVisual(visual: CollectibleVisual, elapsedMs: number): void {
+  visual.root.rotation.y = Math.sin((elapsedMs / 900 + visual.phase) * Math.PI * 2) * 0.12;
   const pulse = 0.85 + Math.sin((elapsedMs / 1200 + visual.phase) * Math.PI * 2) * 0.15;
   visual.root.scaling.setAll(pulse);
 }

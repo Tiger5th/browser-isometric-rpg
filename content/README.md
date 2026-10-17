@@ -128,6 +128,7 @@ L1 不加属性（基准等级）；`levels[1].xpRequired` 必须为 0。一个�
 | `player.baseAttributes` | 是 | 玩家基础属性 |
 | `player.startingItems` | 否 | `[{itemId, quantity(≥1)}]`；`itemId` 必须存在 |
 | `exits` | 否 | `{id, targetRegionId, position, rotation?}`，目标区域必须存在 |
+| `safeZones` | 否 | 安全区（票 33）：`{id, shape:"rect", center, halfExtents:{x,z}}`。敌人 AI 在逻辑层拒止进入；玩家在区内时敌人不追入（即使被点过一次攻击） |
 
 ### NPC `npcs/<local>.json`
 
@@ -143,6 +144,9 @@ L1 不加属性（基准等级）；`levels[1].xpRequired` 必须为 0。一个�
 | `questIds` | 否 | 该 NPC 可提供的任务，必须都存在 |
 | `paletteId` | 否 | 角色色板卡 id（票 29），必须存在；3D tint 与立绘同源 |
 | `portrait` | 否 | 立绘引用 `{image, keywords?}`；`image` 缺失会被 schema 拒绝。资产未生成时可整个字段缺省，表现层用程序化色块占位 |
+| `vendor` | 否 | 商人价格表（票 33）：`{sell:{itemId:价}, buy:{itemId:价}}`，价格为正整数。物品必须存在；同一物品不能同时出现在 sell 与 buy（需要价差）；两者不能同时为空 |
+| `patrol` | 否 | 巡逻路线（票 33）：`{waypoints:[vec3,...至少2个], dwellMs?}`。**首点必须等于 `position`**（否则开局/读档会瞬移）；走→停留 `dwellMs`→下一点 |
+| `reanchors` | 否 | 换锚点（票 33）：`[{questId, waypoints, dwellMs?}]`。任务**完成**（交付）时 NPC 站到 `waypoints[0]` 并从新路线重新巡逻 |
 
 ### 角色色板卡 `character-palettes/<local>.json`
 

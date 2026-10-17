@@ -1,0 +1,11 @@
+{
+  "id": "character_palette:merchant_bo",
+  "displayName": "老陶",
+  "role": "翠谷唯一的杂货商，收战利品、卖草药；市侩但不坑人",
+  "primary": "#f97316",
+  "secondary": "#7c2d12",
+  "accent": "#fed7aa",
+  "hairKeywords": "salt and pepper short hair, receding hairline",
+  "costumeKeywords": "rust orange vest, canvas apron, coin pouch at belt",
+  "status": "pending"
+}
