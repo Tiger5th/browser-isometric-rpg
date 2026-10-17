@@ -54,6 +54,8 @@
 
 - **25 号票已完成**（正式表现层组装：`p1-world` 场景——Gemini 环境贴图平铺地面 + 白底运行时抠图的树/石墙/灌木/木桶/木箱 billboard + 占位角色 glb/NPC/敌人统一 toon；P0 射线-OBB 遮挡描边提取为共享模块并在正式区域生效；动态分辨率默认 auto + high/medium/low 档位；toon shader 补齐 morph include，眨眼在 toon 下可见；`assets:lint` 扩展 PNG 贴图检查。L1 166/166、build/content:lint/assets:lint 通过；L4 p1-world 报告 passed：60.01fps / drawCallsMax 38 / jsHeap 256.5MB @1920×1080；完整闭环与存读档冒烟通过；回归 dialogue-quest/anime-pipeline/occlusion-outline 全 passed。关键决策：布局暂存渲染层常量（P2 再进 content）；fps 阈值按 P0 建议 59.5；共享浏览器下 p95/fpsMin 只报告不阻塞；HighlightLayer 排除自绘 alpha-test 环境网格以修复黑色高亮。报告 `reports/p1-world.json`，截图 `artifacts/p1-world-*.png`）。
 
+- **P2 第二批规格已发布并拆票（2026-10-17）**：specs/p2-batch2-quality-motivation.md → tickets 31–37。定位 = 品质感 + 最小动力切片（Q1 B）。关键决策：快照 v2→v3 一次升版合流（重击冷却 + 等级/经验 + worldState 通用容器，Q6/Q17）；自动存档（关键节点+beforeunload 兜底）+ 3 手动槽 + auto 槽 + 选槽元数据（Q3/Q15）；主界面标题画面 + logo 演出，游戏名占位（Q2/Q12）；村庄聚点 = 安全区 + 商人买卖经济闭环 + NPC 巡逻 + 任务后换锚点 + 实时位置入档（Q9/Q13/Q14）；等级曲线数据驱动进 content（Q7）；第二区域「史莱姆巢穴」+ 跨区域任务 + 专属掉落（Q8）；新敌人 = 冲锋型（windup/charge/recovery）+ 吐弹 kite 型（Q10）；宝箱 + 萤光草收集 + 全收集饰品（Q11）；相机全解锁（缩放+旋转）+ 出厂预设一键复位/欣赏模式（Q16）；死亡轻惩罚 = 回村复活 + 10% 金币。依赖：31 无阻塞；34 无阻塞；36←27；33←29,34；32←31；35←36,28；37←35,27。建议顺序：31→34→36→35→37，32/33 在 27/29 后插入，30 保持最后。
+
 ## Fog
 
 **八大主题全部解决（2026-10-17）。** 路线图与风险清单见 issues/08-scaling-roadmap.md。
