@@ -1,50 +1,34 @@
 import { describe, expect, it } from "vitest";
 
 import elderMaCompiled from "../../content/dialogues/elder_ma.ink?ink";
-import slimeTemplateData from "../../content/enemy-templates/slime.json";
-import slimeBlueData from "../../content/enemies/slime_blue.json";
-import slimeElderData from "../../content/enemies/slime_elder.json";
-import slimeMeadowData from "../../content/enemies/slime_meadow.json";
-import healingHerbData from "../../content/items/healing_herb.json";
-import oldCoinData from "../../content/items/old_coin.json";
-import slimeGelData from "../../content/items/slime_gel.json";
-import travelerSwordData from "../../content/items/traveler_sword.json";
-import npcElderData from "../../content/npcs/elder_ma.json";
-import npcScoutData from "../../content/npcs/scout_lin.json";
-import cullSlimesData from "../../content/quests/cull_slimes.json";
-import regionData from "../../content/regions/green_hollow.json";
 
-import type { ContentBundle } from "./content/types";
+import { GREEN_HOLLOW_REGION_ID, SAMPLE_CONTENT_BUNDLE as BUNDLE } from "./content/sample-content";
 import { GameSession } from "./game-session";
 
 /**
  * 真实 content/ 数据的闭环测试：示例对话、任务标签、敌人模板与奖励引用
  * 必须能在一起跑通（L2 之外的运行时验证）。`?ink` 由 Vite 插件在测试期编译。
  */
-const BUNDLE = {
-  regions: [regionData],
-  npcs: [npcElderData, npcScoutData],
-  enemyTemplates: [slimeTemplateData],
-  enemies: [slimeMeadowData, slimeBlueData, slimeElderData],
-  items: [healingHerbData, oldCoinData, slimeGelData, travelerSwordData],
-  quests: [cullSlimesData],
-} as unknown as ContentBundle;
 
 describe("示例内容：马婆婆的清理史莱姆任务", () => {
   it("对话接取 → 击杀三只史莱姆 → 复命发奖，完整走通", () => {
     const session = new GameSession();
     session.registerDialogue("elder_ma", elderMaCompiled);
-    session.loadRegion(BUNDLE, "region:green_hollow");
+    session.loadRegion(BUNDLE, GREEN_HOLLOW_REGION_ID);
 
-    // 第一次交谈：可接状态显示两个接取分支。
+    // 第一次交谈：可接状态显示两个接取分支（＋巢穴任务入口）。
     session.talkTo("npc:elder_ma");
-    expect(session.snapshot().dialogue?.choices).toEqual(["发生了什么？", "我这就去。"]);
+    expect(session.snapshot().dialogue?.choices).toEqual([
+      "发生了什么？",
+      "我这就去。",
+      "南边那个洞口是什么地方？",
+    ]);
     session.chooseDialogueOption(1);
     expect(session.snapshot().quests[0].status).toBe("active");
 
     // 进行中交谈：只剩「还在清理」的应答，不会重复接取。
     session.talkTo("npc:elder_ma");
-    expect(session.snapshot().dialogue?.choices).toEqual(["我还在清理史莱姆。"]);
+    expect(session.snapshot().dialogue?.choices).toContain("我还在清理史莱姆。");
     session.chooseDialogueOption(0);
     expect(session.snapshot().quests[0].status).toBe("active");
 
@@ -59,12 +43,14 @@ describe("示例内容：马婆婆的清理史莱姆任务", () => {
     expect(ready.status).toBe("ready_to_turn_in");
     expect(ready.objectives[0].current).toBe(3);
 
-    // 可交状态：对话只显示复命分支。
+    // 可交状态：对话显示复命分支。
     session.talkTo("npc:elder_ma");
-    expect(session.snapshot().dialogue?.choices).toEqual([
+    expect(session.snapshot().dialogue?.choices).toContain(
       "（复命）史莱姆已经清理完了。",
-    ]);
-    session.chooseDialogueOption(0);
+    );
+    session.chooseDialogueOption(
+      session.snapshot().dialogue!.choices.indexOf("（复命）史莱姆已经清理完了。"),
+    );
 
     const snapshot = session.snapshot();
     expect(snapshot.quests[0].status).toBe("completed");
@@ -92,7 +78,7 @@ describe("示例内容：马婆婆的清理史莱姆任务", () => {
   it("会话内战斗击杀自动推进任务进度（票 21 合流后的真实路径）", () => {
     const session = new GameSession();
     session.registerDialogue("elder_ma", elderMaCompiled);
-    session.loadRegion(BUNDLE, "region:green_hollow");
+    session.loadRegion(BUNDLE, GREEN_HOLLOW_REGION_ID);
     session.talkTo("npc:elder_ma");
     session.chooseDialogueOption(1);
     expect(session.snapshot().quests[0].status).toBe("active");

@@ -29,7 +29,22 @@ export const GROUND_TEXTURE_FILES: Record<GroundTextureId, string> = {
   "stone-path": "environment_stone_path_tile.png",
   "dirt-path": "environment_dirt_path_tile.png",
   water: "environment_water_tile.png",
+  // 巢穴地面（票 35）：artifacts/region2/ground-c1 落到 assets/textures/。
+  "cave-floor": "region2_ground_tile.png",
 };
+
+/**
+ * 区域 2「史莱姆巢穴」专用贴图（票 35）。
+ *
+ * 资产来自 artifacts/region2/（票 35 资产 agent 的 Gemini 候选 c1），
+ * 落到 assets/textures/ 后与区域 1 共用同一条抠白/平铺管线。
+ * 地面用 ground-c1（1024² 正俯视可平铺），环境件用 1024×765 白底立面。
+ */
+export const DEN_PROP_TEXTURE_FILES = {
+  crystal: "prop_den_crystal.png",
+  cocoon: "prop_den_cocoon.png",
+  eggs: "prop_den_eggs.png",
+} as const;
 
 export const PROP_TEXTURE_FILES: Record<PropKind, string> = {
   "tree-large": "prop_tree_large.png",
@@ -37,6 +52,10 @@ export const PROP_TEXTURE_FILES: Record<PropKind, string> = {
   "stone-wall": "prop_stone_wall.png",
   barrel: "prop_barrel.png",
   crate: "prop_crate.png",
+  // 巢穴件复用 artifacts/region2/ 的贴图（票 35）。
+  "den-crystal": DEN_PROP_TEXTURE_FILES.crystal,
+  "den-cocoon": DEN_PROP_TEXTURE_FILES.cocoon,
+  "den-eggs": DEN_PROP_TEXTURE_FILES.eggs,
 };
 
 export interface TextureLoadStats extends KeyOutResult {

@@ -1,39 +1,24 @@
 import { describe, expect, it } from "vitest";
 
 import elderMaCompiled from "../../content/dialogues/elder_ma.ink?ink";
-import slimeTemplateData from "../../content/enemy-templates/slime.json";
-import slimeBlueData from "../../content/enemies/slime_blue.json";
-import slimeElderData from "../../content/enemies/slime_elder.json";
-import slimeMeadowData from "../../content/enemies/slime_meadow.json";
-import healingHerbData from "../../content/items/healing_herb.json";
-import oldCoinData from "../../content/items/old_coin.json";
-import slimeGelData from "../../content/items/slime_gel.json";
-import travelerSwordData from "../../content/items/traveler_sword.json";
-import npcElderData from "../../content/npcs/elder_ma.json";
-import npcScoutData from "../../content/npcs/scout_lin.json";
-import cullSlimesData from "../../content/quests/cull_slimes.json";
-import regionData from "../../content/regions/green_hollow.json";
+import { GREEN_HOLLOW_REGION_ID, SAMPLE_CONTENT_BUNDLE } from "./content/sample-content";
 
-import type { ContentBundle } from "./content/types";
 import { GameSession, GAME_SESSION_SNAPSHOT_VERSION } from "./game-session";
 import type { EntitySnapshot, GameSessionSnapshot } from "./game-session";
 import { migrateSave, readSessionSnapshot, type SaveFile } from "./save";
 
-const REGION_ID = "region:green_hollow";
+const REGION_ID = GREEN_HOLLOW_REGION_ID;
 const PLAYER_ID = "entity:player";
 const NPC_ID = "npc:elder_ma";
 const QUEST_ID = "quest:cull_slimes";
 const SLIME_TEMPLATE = "enemy_template:slime";
 
-/** 真实 content/ 数据：存档要恢复的正是 P1 最小内容集。 */
-const BUNDLE = {
-  regions: [regionData],
-  npcs: [npcElderData, npcScoutData],
-  enemyTemplates: [slimeTemplateData],
-  enemies: [slimeMeadowData, slimeBlueData, slimeElderData],
-  items: [healingHerbData, oldCoinData, slimeGelData, travelerSwordData],
-  quests: [cullSlimesData],
-} as unknown as ContentBundle;
+/**
+ * 真实 content/ 数据：存档要恢复的正是 P1 最小内容集。
+ * 用共享内容包（票 35 起含第二区域）而不是手抄一份，保证 ink 里
+ * questStatus() 引用到的任务一定存在。
+ */
+const BUNDLE = SAMPLE_CONTENT_BUNDLE;
 
 function createSession(): GameSession {
   const session = new GameSession();

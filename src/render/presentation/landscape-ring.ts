@@ -19,6 +19,7 @@ import { Scene } from "@babylonjs/core/scene";
 import { DirectionalLight } from "@babylonjs/core/Lights/directionalLight";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 
+import type { LandscapeHill, LandscapeTree } from "./world-physics";
 import {
   AMBIENT_COLOR,
   FOG_COLOR,
@@ -95,35 +96,70 @@ export function installLandscapeFog(scene: Scene): void {
  * 低细节景观环带：地面 + 山丘 + 远景树。
  * 全部 disableLighting 的扁平材质（远景不需要光照），且不参与碰撞/寻路。
  */
-export function createLandscapeRing(scene: Scene, root: TransformNode): LandscapeVisuals {
+export function createLandscapeRing(
+  scene: Scene,
+  root: TransformNode,
+  layout: {
+    /** 环带外边界（地面尺寸 + 雾化余量）。 */
+    bounds?: { minX: number; maxX: number; minZ: number; maxZ: number };
+    hills?: readonly LandscapeHill[];
+    trees?: readonly LandscapeTree[];
+    /** 区域 2 的暗色山丘/远景色（缺省 = 翠谷的绿）。 */
+    colors?: {
+      ground: { r: number; g: number; b: number };
+      hill: { r: number; g: number; b: number };
+      tree: { r: number; g: number; b: number };
+    };
+    /** 网格命名空间前缀，避免两区域重名。 */
+    namePrefix?: string;
+  } = {},
+): LandscapeVisuals {
   const meshes: Mesh[] = [];
   const materials: StandardMaterial[] = [];
 
-  const groundMaterial = flatMaterial(scene, "material.landscape.ground", LANDSCAPE_GROUND_COLOR);
-  const hillMaterial = flatMaterial(scene, "material.landscape.hill", LANDSCAPE_HILL_COLOR);
-  const treeMaterial = flatMaterial(scene, "material.landscape.tree", LANDSCAPE_TREE_COLOR);
+  const bounds = layout.bounds ?? LANDSCAPE_BOUNDS;
+  const hills = layout.hills ?? LANDSCAPE_HILLS;
+  const trees = layout.trees ?? LANDSCAPE_TREES;
+  const colors = layout.colors;
+  const prefix = layout.namePrefix ?? "landscape";
+
+  const groundMaterial = flatMaterial(
+    scene,
+    `${prefix}.material.ground`,
+    colors?.ground ?? LANDSCAPE_GROUND_COLOR,
+  );
+  const hillMaterial = flatMaterial(
+    scene,
+    `${prefix}.material.hill`,
+    colors?.hill ?? LANDSCAPE_HILL_COLOR,
+  );
+  const treeMaterial = flatMaterial(
+    scene,
+    `${prefix}.material.tree`,
+    colors?.tree ?? LANDSCAPE_TREE_COLOR,
+  );
   materials.push(groundMaterial, hillMaterial, treeMaterial);
 
-  const width = LANDSCAPE_BOUNDS.maxX - LANDSCAPE_BOUNDS.minX;
-  const depth = LANDSCAPE_BOUNDS.maxZ - LANDSCAPE_BOUNDS.minZ;
+  const width = bounds.maxX - bounds.minX;
+  const depth = bounds.maxZ - bounds.minZ;
   const ground = MeshBuilder.CreateGround(
-    "landscape.ground",
+    `${prefix}.ground`,
     { width, height: depth, subdivisions: 1 },
     scene,
   );
   ground.position.set(
-    (LANDSCAPE_BOUNDS.minX + LANDSCAPE_BOUNDS.maxX) / 2,
+    (bounds.minX + bounds.maxX) / 2,
     -0.06,
-    (LANDSCAPE_BOUNDS.minZ + LANDSCAPE_BOUNDS.maxZ) / 2,
+    (bounds.minZ + bounds.maxZ) / 2,
   );
   ground.material = groundMaterial;
   ground.isPickable = false;
   ground.parent = root;
   meshes.push(ground);
 
-  for (const hill of LANDSCAPE_HILLS) {
+  for (const hill of hills) {
     const mesh = MeshBuilder.CreateCylinder(
-      `landscape.${hill.id}`,
+      `${prefix}.${hill.id}`,
       {
         height: hill.height,
         diameterTop: hill.radius * 0.35,
@@ -139,7 +175,7 @@ export function createLandscapeRing(scene: Scene, root: TransformNode): Landscap
     meshes.push(mesh);
   }
 
-  for (const tree of LANDSCAPE_TREES) {
+  for (const tree of trees) {
     const height = 3.2 * tree.scale;
     const trunk = MeshBuilder.CreateCylinder(
       `landscape.${tree.id}.trunk`,
@@ -153,7 +189,7 @@ export function createLandscapeRing(scene: Scene, root: TransformNode): Landscap
     meshes.push(trunk);
 
     const crown = MeshBuilder.CreateCylinder(
-      `landscape.${tree.id}.crown`,
+      `${prefix}.${tree.id}.crown`,
       {
         height: height * 0.75,
         diameterTop: 0.01,

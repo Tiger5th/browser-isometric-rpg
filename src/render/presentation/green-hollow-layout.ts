@@ -19,7 +19,16 @@ export const GREEN_HOLLOW_BOUNDS = {
   maxZ: 20,
 } as const;
 
-export type GroundTextureId = "grass" | "stone-path" | "dirt-path" | "water";
+/**
+ * 地面贴图 id。区域 2（票 35）新增 cave-floor：artifacts/region2/ 的
+ * 暗色调瓦片，与区域 1 的四张贴图走同一条平铺管线。
+ */
+export type GroundTextureId =
+  | "grass"
+  | "stone-path"
+  | "dirt-path"
+  | "water"
+  | "cave-floor";
 
 export interface GroundPatch {
   id: string;
@@ -35,7 +44,19 @@ export interface GroundPatch {
   tileSize: number;
 }
 
-export type PropKind = "tree-large" | "bush" | "stone-wall" | "barrel" | "crate";
+/**
+ * 环境件种类。区域 2（票 35）新增 den-crystal / den-cocoon / den-eggs
+ * 三种巢穴件，走与区域 1 相同的网格化/抠白管线，只换贴图。
+ */
+export type PropKind =
+  | "tree-large"
+  | "bush"
+  | "stone-wall"
+  | "barrel"
+  | "crate"
+  | "den-crystal"
+  | "den-cocoon"
+  | "den-eggs";
 
 export interface PropPlacement {
   id: string;
@@ -46,7 +67,7 @@ export interface PropPlacement {
   scale: number;
   /** 是否参与遮挡描边判定。 */
   occluder: boolean;
-  zone: "treeline" | "village" | "pond";
+  zone: "treeline" | "village" | "pond" | "cave-mouth" | "tunnel" | "deep";
 }
 
 /** billboard 的世界尺寸（宽高比 = 1024:765）。 */
@@ -101,6 +122,32 @@ export const PROP_DIMENSIONS: Record<PropKind, PropDimensions> = {
     occluderHalfHeight: 0.45,
     occluderHalfDepth: 0.3,
     occluderCenterY: 0.45,
+  },
+  // 巢穴件沿用木箱/木桶的比例：尺寸按「原贴图宽高比 + 同量级占位」给出，
+  // 遮挡盒与硬碰撞口径与区域 1 一致（窄盒，避免远处误触描边）。
+  "den-crystal": {
+    width: 1.9,
+    height: 1.42,
+    occluderHalfWidth: 0.5,
+    occluderHalfHeight: 0.7,
+    occluderHalfDepth: 0.3,
+    occluderCenterY: 0.7,
+  },
+  "den-cocoon": {
+    width: 2.1,
+    height: 1.57,
+    occluderHalfWidth: 0.55,
+    occluderHalfHeight: 0.75,
+    occluderHalfDepth: 0.3,
+    occluderCenterY: 0.75,
+  },
+  "den-eggs": {
+    width: 1.6,
+    height: 1.2,
+    occluderHalfWidth: 0.45,
+    occluderHalfHeight: 0.55,
+    occluderHalfDepth: 0.3,
+    occluderCenterY: 0.55,
   },
 };
 

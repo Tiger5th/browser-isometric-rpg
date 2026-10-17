@@ -13,7 +13,7 @@
   },
   "tags": ["npc", "quest-giver"],
   "dialogueId": "elder_ma",
-  "questIds": ["quest:cull_slimes"],
+  "questIds": ["quest:cull_slimes", "quest:den_cull"],
   "paletteId": "character_palette:elder_ma",
   "portrait": {
     "image": "assets/portraits/elder_ma.png",

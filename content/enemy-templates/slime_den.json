@@ -1,0 +1,18 @@
+{
+  "id": "enemy_template:slime_den",
+  "displayName": "巢穴史莱姆",
+  "aiProfileId": "ai:melee_chaser",
+  "baseAttributes": {
+    "maxHp": 46,
+    "hp": 46,
+    "attack": 9,
+    "defense": 2,
+    "moveSpeed": 3.4,
+    "xp": 18
+  },
+  "drops": [
+    { "itemId": "item:slime_gel", "chance": 1, "min": 1, "max": 2 },
+    { "itemId": "item:slime_core", "chance": 0.45, "min": 1, "max": 1 }
+  ],
+  "tags": ["enemy", "slime", "cave"]
+}

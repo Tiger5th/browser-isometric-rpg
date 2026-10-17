@@ -20,14 +20,19 @@ import type { Scene } from "@babylonjs/core/scene";
 
 import {
   getPropMeshRecipe,
+  PROP_MESH_RECIPES,
   SPHERE_SEGMENTS,
   CYLINDER_SEGMENTS,
   type PrimitiveKind,
   type PropPart,
 } from "./prop-mesh-recipe";
 
-/** 已网格化的环境件种类（硬碰撞 4 类；灌木保持 billboard）。 */
-export type MeshedPropKind = "tree-large" | "stone-wall" | "barrel" | "crate";
+/**
+ * 已网格化的环境件种类：以 prop-mesh-recipe 的配方表为唯一权威。
+ * 区域 1 的四类硬碰撞件 + 区域 2 的三类巢穴件（票 35）；
+ * 灌木保持 billboard 可穿，不在此表内。
+ */
+export type MeshedPropKind = keyof typeof PROP_MESH_RECIPES;
 
 export interface BuildPropMeshOptions {
   scene: Scene;

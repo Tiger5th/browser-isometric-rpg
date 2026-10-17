@@ -1,0 +1,8 @@
+{
+  "id": "enemy:slime_den_watcher",
+  "templateId": "enemy_template:slime_den",
+  "displayName": "巢穴史莱姆",
+  "regionId": "region:slime_den",
+  "position": { "x": 3.5, "y": 0, "z": -1 },
+  "tags": ["den-guard"]
+}

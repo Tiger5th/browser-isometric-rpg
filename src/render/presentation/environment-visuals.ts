@@ -10,6 +10,7 @@
  * - 遮挡盒：网格件的 OBB 与视觉包围盒一致，供射线-OBB 遮挡描边使用。
  */
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
+import { Color3 } from "@babylonjs/core/Maths/math.color";
 import type { Material } from "@babylonjs/core/Materials/material";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
@@ -27,6 +28,7 @@ import {
   PROPS,
   type GroundPatch,
   type PropKind,
+  type PropPlacement,
 } from "./green-hollow-layout";
 import { buildPropMesh, type MeshedPropKind } from "./prop-mesh-builder";
 import {
@@ -78,9 +80,10 @@ function createGroundPatch(
   root: TransformNode,
   patch: GroundPatch,
   material: Material,
+  namePrefix = "environment",
 ): Mesh {
   const mesh = MeshBuilder.CreateGround(
-    `environment.${patch.id}`,
+    `${namePrefix}.${patch.id}`,
     { width: patch.width, height: patch.depth, subdivisions: 1 },
     scene,
   );
@@ -102,10 +105,11 @@ function createPropBillboard(
   z: number,
   scale: number,
   material: Material,
+  namePrefix = "environment",
 ): Mesh {
   const dimensions = PROP_DIMENSIONS[kind];
   const mesh = MeshBuilder.CreatePlane(
-    `environment.${propId}`,
+    `${namePrefix}.${propId}`,
     { width: dimensions.width * scale, height: dimensions.height * scale },
     scene,
   );
@@ -126,16 +130,43 @@ export async function createGreenHollowEnvironment(
   root: TransformNode,
   forward: { x: number; y: number; z: number },
 ): Promise<EnvironmentVisuals> {
+  return createRegionEnvironment(scene, root, forward, {
+    patches: GROUND_PATCHES,
+    props: PROPS,
+  });
+}
+
+/**
+ * 按任意一组「地面贴片 + 道具」布局创建环境视觉（票 35：区域 2 复用同一管线）。
+ *
+ * 区域 2 不新增渲染机制，只是换一组布局数据与（可选的）贴图 tint；
+ * 因此这里把翠谷的实现收敛成一个参数化入口，翠谷自己只是一次特例调用。
+ */
+export async function createRegionEnvironment(
+  scene: Scene,
+  root: TransformNode,
+  forward: { x: number; y: number; z: number },
+  layout: {
+    patches: readonly GroundPatch[];
+    props: readonly PropPlacement[];
+    /** 整体色调（区域 2 用来把复用的主区域贴图压暗）。 */
+    tint?: Color3;
+    /** 命名空间前缀，避免两区域的网格重名。 */
+    namePrefix?: string;
+  },
+): Promise<EnvironmentVisuals> {
   const textures = await loadEnvironmentTextures(scene);
   const materials: Material[] = [];
+  const prefix = layout.namePrefix ?? "environment";
+  const tint = layout.tint;
 
   const groundMaterials = new Map<string, Material>();
   for (const [id, texture] of Object.entries(textures.ground)) {
     const material = createToonMaterial(
       scene,
-      `material.environment.ground.${id}`,
+      `material.${prefix}.ground.${id}`,
       texture,
-      { useVertexColors: false, unlit: true },
+      { useVertexColors: false, unlit: true, ...(tint ? { tint } : {}) },
     );
     groundMaterials.set(id, material);
     materials.push(material);
@@ -147,26 +178,31 @@ export async function createGreenHollowEnvironment(
   >) {
     const material = createToonMaterial(
       scene,
-      `material.environment.prop.${kind}`,
+      `material.${prefix}.prop.${kind}`,
       texture,
-      { useVertexColors: false, unlit: true, alphaCutoff: 0.35 },
+      {
+        useVertexColors: false,
+        unlit: true,
+        alphaCutoff: 0.35,
+        ...(tint ? { tint } : {}),
+      },
     );
     propMaterials.set(kind, material);
     materials.push(material);
   }
 
-  const groundMeshes = GROUND_PATCHES.map((patch) => {
+  const groundMeshes = layout.patches.map((patch) => {
     const material = groundMaterials.get(patch.texture);
     if (!material) {
       throw new Error(`缺少地面材质：${patch.texture}`);
     }
-    return createGroundPatch(scene, root, patch, material);
+    return createGroundPatch(scene, root, patch, material, prefix);
   });
 
   const propMeshes: Mesh[] = [];
   const meshedParts: Mesh[] = [];
   const occluders: WorldOccluder[] = [];
-  for (const prop of PROPS) {
+  for (const prop of layout.props) {
     const material = propMaterials.get(prop.kind);
     if (!material) {
       throw new Error(`缺少道具材质：${prop.kind}`);
@@ -183,6 +219,7 @@ export async function createGreenHollowEnvironment(
           prop.z,
           prop.scale,
           material,
+          prefix,
         ),
       );
     } else {

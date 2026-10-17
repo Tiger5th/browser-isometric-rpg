@@ -16,7 +16,8 @@
   "paletteId": "character_palette:merchant_bo",
   "vendor": {
     "sell": {
-      "item:slime_gel": 3
+      "item:slime_gel": 3,
+      "item:slime_core": 14
     },
     "buy": {
       "item:healing_herb": 15

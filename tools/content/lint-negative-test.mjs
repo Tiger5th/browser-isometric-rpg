@@ -72,6 +72,8 @@ const dialogues = [
     questTags: [
       { kind: "offer", questId: "quest:cull_slimes" },
       { kind: "turnin", questId: "quest:cull_slimes" },
+      { kind: "offer", questId: "quest:den_cull" },
+      { kind: "turnin", questId: "quest:den_cull" },
     ],
   },
   { id: "merchant_bo", file: "content/dialogues/merchant_bo.ink", questTags: [] },
@@ -166,7 +168,47 @@ const cases = [];
   });
 }
 
-// 5) 等级曲线阈值倒退（票 34）：schema 表达不了区间关系，必须由结构校验拦截。
+// 5) 票 35：区域出口指向不存在的目标区域 → 引用完整性报错。
+{
+  const files = clone(baseFiles);
+  find(files, "content/regions/slime_den.json").data.exits[0].targetRegionId = "region:nowhere";
+  const result = validateContent(files, schemas, dialogues);
+  cases.push({
+    id: "region-exit-unknown-target",
+    label: "区域出口指向未知区域",
+    expectation: "reference 错误指向 /exits/0/targetRegionId",
+    status: result.valid ? "passed" : "failed",
+    caught: result.issues.some(
+      (issue) =>
+        issue.file === "content/regions/slime_den.json" &&
+        issue.code === "reference" &&
+        issue.path === "/exits/0/targetRegionId",
+    ),
+    issues: result.issues,
+  });
+}
+
+// 6) 票 35：区域 2 专属掉落物引用不存在的物品 → 引用完整性报错。
+{
+  const files = clone(baseFiles);
+  find(files, "content/enemy-templates/slime_den.json").data.drops[1].itemId = "item:ghost_core";
+  const result = validateContent(files, schemas, dialogues);
+  cases.push({
+    id: "enemy-drop-unknown-item",
+    label: "敌人掉落引用不存在的物品",
+    expectation: "reference 错误指向 /drops/1/itemId",
+    status: result.valid ? "passed" : "failed",
+    caught: result.issues.some(
+      (issue) =>
+        issue.file === "content/enemy-templates/slime_den.json" &&
+        issue.code === "reference" &&
+        issue.path === "/drops/1/itemId",
+    ),
+    issues: result.issues,
+  });
+}
+
+// 7) 等级曲线阈值倒退（票 34）：schema 表达不了区间关系，必须由结构校验拦截。
 {
   const files = clone(baseFiles);
   const data = find(files, "content/level-curves/standard.json").data;
@@ -184,7 +226,7 @@ const cases = [];
   });
 }
 
-// 6) 等级曲线缺省加成为空：升级将没有任何属性变化。
+// 8) 等级曲线缺省加成为空：升级将没有任何属性变化。
 {
   const files = clone(baseFiles);
   find(files, "content/level-curves/standard.json").data.defaultModifiers = [];
@@ -279,7 +321,8 @@ const cases = [];
   });
 }
 
-// 7) 商人价格表引用不存在的物品（票 33）。
+// 11) 商人价格表引用不存在的物品（票 33）。
+// 9) 商人价格表引用不存在的物品（票 33）。
 {
   const files = clone(baseFiles);
   find(files, "content/npcs/merchant_bo.json").data.vendor.sell["item:mystery_gel"] = 5;
@@ -429,7 +472,7 @@ const allCaught = cases.every((entry) => entry.caught) && control.valid;
 const report = {
   schemaVersion: 1,
   purpose:
-    "L2 负向测试：确认色板卡/立绘引用（票 29）、等级曲线（票 34）、村庄经济（票 33：vendor/patrol/reanchors/safeZones）与宝箱/收集品（票 37）的 schema、引用与结构规则会拦截坏数据",
+    "L2 负向测试：确认色板卡/立绘引用（票 29）、等级曲线（票 34）、村庄经济（票 33：vendor/patrol/reanchors/safeZones）、区域出口/敌人掉落引用（票 35）与宝箱/收集品（票 37）的 schema、引用与结构规则会拦截坏数据",
   exitExpectation: "failed",
   status: allCaught ? "passed" : "failed",
   control: { valid: control.valid, issues: control.issues },

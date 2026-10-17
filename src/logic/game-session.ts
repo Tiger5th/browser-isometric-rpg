@@ -46,7 +46,9 @@ import type {
   EnemyKilledEvent,
   GameSessionEvent,
   GameSessionEventListener,
+  RegionChangedEvent,
 } from "./game-events";
+import { findTriggeredExit } from "./region-linkage";
 import {
   chargeDirection,
   coinPenaltyFor,
@@ -69,6 +71,7 @@ import type {
   CollectibleDefinition,
   CollectSetDefinition,
   ItemDefinition,
+  PlayerDefinition,
   QuestDefinition,
   VendorDefinition,
 } from "./content/types";
@@ -206,6 +209,16 @@ export interface GameSessionIntents {
   equip(entityId: EntityId | string, instanceId: string): void;
   /** 卸下已装备的物品并移除其修饰器。 */
   unequip(entityId: EntityId | string, instanceId: string): void;
+  /**
+   * 玩家走到区域出口 → 切到目标区域（票 35）。
+   */
+  travelToRegion(bundle: ContentBundle, playerPosition: Vec3): void;
+  /** 无异常版本的 travelToRegion；不在路口/目标区域未知时返回 ok=false。 */
+  tryTravelToRegion(bundle: ContentBundle, playerPosition: Vec3): IntentResult;
+  /** 直接进入指定区域（读档路径）；未知区域时用 try* 版本返回 ok=false。 */
+  enterRegion(bundle: ContentBundle, regionId: string): void;
+  /** 无异常版本的 enterRegion。 */
+  tryEnterRegion(bundle: ContentBundle, regionId: string): IntentResult;
   /**
    * 直接发放经验并结算升级（票 34）。击杀奖励已内部走同一路径，
    * 这个入口给的是「非击杀来源的经验」（任务发奖、调试造经验）。
@@ -745,12 +758,178 @@ export class GameSession implements GameSessionIntents {
 
   /**
    * 从内容数据加载一个区域：实例化玩家 + 本区域 NPC/敌人并注册实体，
-   * 同时初始化任务表。P1 只支持单区域会话，重复加载会显式报错。
+   * 同时初始化任务表与物品/敌人档案。
+   *
+   * 首次加载要求会话为空；切换到别的区域必须走 `travelToRegion()`
+   * （它负责卸载旧区域实体并保留跨区域事实），直接 loadRegion 换区域会报错。
    */
   loadRegion(bundle: ContentBundle, regionId: string): void {
     if (this.regionId !== null) {
-      throw new Error(`已加载区域 ${this.regionId}，P1 不支持切换区域`);
+      throw new Error(
+        `已加载区域 ${this.regionId}；切换到 ${regionId} 请走 travelToRegion()`,
+      );
     }
+    this.installRegion(bundle, regionId, { resetQuests: true });
+  }
+
+  /**
+   * 玩家走到路口 → 切到目标区域（票 35）。
+   *
+   * 判定用 region-linkage 的纯几何规则：当前区域任一 `exits` 点落在
+   * 触发半径内即生效。切区是玩家可感知的意图，因此进 GameSessionIntents：
+   * 成功广播 `region-changed`，失败用 try* 版本返回 ok=false。
+   *
+   * 跨区域保留：玩家实体（背包/等级/属性/已领奖励/生命值）、任务进度、游戏时钟。
+   * 不保留：出发区域的 NPC 与敌人（回到该区域时按内容定义重置）。
+   */
+  travelToRegion(bundle: ContentBundle, playerPosition: Vec3): void {
+    if (this.regionId === null) {
+      throw new Error("会话尚未加载区域，无法切换");
+    }
+    const fromRegionId = this.regionId;
+    const index = createContentIndex(bundle);
+    const region = index.regions.get(fromRegionId);
+    if (region === undefined) {
+      throw new Error(`内容包缺少当前区域：${fromRegionId}`);
+    }
+    const exit = findTriggeredExit(region.exits ?? [], playerPosition);
+    if (exit === null) {
+      throw new Error(`当前位置没有可用的区域出口（区域 ${fromRegionId}）`);
+    }
+    const target = index.regions.get(exit.targetRegionId);
+    if (target === undefined) {
+      throw new Error(`出口 ${exit.id} 指向未知区域：${exit.targetRegionId}`);
+    }
+    this.carryOverTo(bundle, exit.targetRegionId, target.player, fromRegionId, exit.id);
+  }
+
+  /**
+   * 直接进入指定区域，不经路口判定（读档路径用）。
+   *
+   * 读档时我们**已经知道**快照属于哪个区域；而 restoreSnapshot 要求会话
+   * 已加载同一区域，否则会拒绝恢复。跨区域保留的事实与 travelToRegion 一致。
+   */
+  enterRegion(bundle: ContentBundle, regionId: string): void {
+    const index = createContentIndex(bundle);
+    const target = index.regions.get(regionId);
+    if (target === undefined) {
+      throw new Error(`未知区域：${regionId}`);
+    }
+    this.carryOverTo(bundle, regionId, target.player, this.regionId, "exit:load");
+  }
+
+  /** 无异常版本的 travelToRegion；玩家不在路口/目标区域未知时返回 ok=false。 */
+  tryTravelToRegion(bundle: ContentBundle, playerPosition: Vec3): IntentResult {
+    return this.runIntent(() => this.travelToRegion(bundle, playerPosition));
+  }
+
+  /** 无异常版本的 enterRegion；未知区域时返回 ok=false。 */
+  tryEnterRegion(bundle: ContentBundle, regionId: string): IntentResult {
+    return this.runIntent(() => this.enterRegion(bundle, regionId));
+  }
+
+  /**
+   * 切区的公共实现：保留玩家状态 → 卸载旧区域实体 → 装载目标区域 →
+   * 合并玩家状态 → 广播 region-changed（区域没变时不广播）。
+   */
+  private carryOverTo(
+    bundle: ContentBundle,
+    targetRegionId: string,
+    target: PlayerDefinition,
+    fromRegionId: string | null,
+    exitId: string,
+  ): void {
+    // 玩家实体跨区域保留：背包/等级/属性/已领奖励账本不能被出生点重置。
+    let carriedPlayer: Entity | null = null;
+    let carriedHp: number | null = null;
+    if (this.playerId !== null) {
+      const existing = this.entities.get(this.playerId);
+      if (existing === undefined) {
+        throw new Error(`会话记录的玩家实体不存在：${this.playerId}`);
+      }
+      carriedPlayer = existing;
+      carriedHp = this.combat.get(existing.id)?.hp ?? null;
+    }
+
+    this.clearRegionEntities();
+    this.installRegion(bundle, targetRegionId, { resetQuests: false });
+
+    if (carriedPlayer !== null) {
+      this.restoreCarriedPlayer(carriedPlayer, target, carriedHp);
+    }
+
+    if (fromRegionId !== targetRegionId) {
+      const event: RegionChangedEvent = {
+        type: "region-changed",
+        fromRegionId: fromRegionId ?? targetRegionId,
+        toRegionId: targetRegionId,
+        exitId,
+      };
+      this.publish(event);
+    }
+  }
+
+  /**
+   * 卸载当前区域的全部实体。切区时玩家也要卸掉——它的状态由
+   * restoreCarriedPlayer 合并进目标区域的新实例，留着会与新实例重名。
+   */
+  private clearRegionEntities(): void {
+    this.dialogue = null;
+    for (const id of [...this.entities.keys()]) {
+      this.entities.delete(id);
+      this.movements.delete(id);
+      this.combat.delete(id);
+      this.spawns.delete(id);
+      this.enemyProfiles.delete(id);
+      this.lastPublishedHp.delete(id);
+    }
+  }
+
+  /**
+   * 把跨区域带过来的玩家状态合并进目标区域的新实例：
+   * 背包/属性/修饰器/已领奖励/等级经验沿用，位置与朝向改用目标区域出生点。
+   */
+  private restoreCarriedPlayer(
+    carried: Entity,
+    target: PlayerDefinition,
+    carriedHp: number | null,
+  ): void {
+    const id = carried.id as EntityId;
+    const fresh = this.entities.get(id);
+    const runtime = this.combat.get(id);
+    if (fresh === undefined || runtime === undefined) {
+      throw new Error(`目标区域缺少玩家实体：${id}`);
+    }
+    fresh.baseAttributes = { ...carried.baseAttributes };
+    fresh.modifiers = carried.modifiers.map(cloneModifier);
+    fresh.container.items = carried.container.items.map((item) => ({ ...item }));
+    fresh.claimedRewardIds = [...carried.claimedRewardIds];
+    fresh.state.position = cloneVec3(target.spawn.position);
+    fresh.state.rotation = cloneVec3(target.spawn.rotation ?? { x: 0, y: 0, z: 0 });
+
+    // 生命值沿用，但受目标区域属性上限约束；移动/攻击意图不跨区。
+    runtime.hp = Math.min(carriedHp ?? runtime.hp, this.maxHpOf(fresh));
+    runtime.alive = runtime.hp > 0;
+    runtime.targetId = null;
+    runtime.cooldownMs = 0;
+    runtime.heavyCooldownMs = 0;
+    runtime.windupMs = 0;
+    runtime.windupReady = false;
+    runtime.heavyStrike = false;
+    this.lastPublishedHp.set(id, runtime.hp);
+    this.spawns.set(id, {
+      position: cloneVec3(fresh.state.position),
+      rotation: cloneVec3(fresh.state.rotation),
+    });
+    this.movements.delete(id);
+  }
+
+  /** 装载区域实体 + 任务定义 + 物品/敌人档案；resetQuests 决定是否重建任务进度。 */
+  private installRegion(
+    bundle: ContentBundle,
+    regionId: string,
+    options: { resetQuests: boolean },
+  ): void {
     const index = createContentIndex(bundle);
     const region = index.regions.get(regionId);
     if (region === undefined) {
@@ -771,7 +950,9 @@ export class GameSession implements GameSessionIntents {
     for (const quest of bundle.quests) {
       this.questDefinitions.set(quest.id, quest);
     }
-    this.questLog = new QuestLog(bundle.quests);
+    if (options.resetQuests) {
+      this.questLog = new QuestLog(bundle.quests);
+    }
 
     for (const item of index.items.values()) {
       this.itemDefinitions.set(item.id, structuredClone(item));
@@ -788,7 +969,7 @@ export class GameSession implements GameSessionIntents {
         continue;
       }
       const template = index.enemyTemplates.get(enemy.templateId);
-      if (!template) {
+      if (template === undefined) {
         throw new Error(`敌人 ${enemy.id} 引用了未知模板：${enemy.templateId}`);
       }
       this.enemyProfiles.set(enemy.id as EntityId, {

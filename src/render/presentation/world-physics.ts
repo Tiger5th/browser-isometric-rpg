@@ -26,6 +26,10 @@ export const HARD_COLLIDER_KINDS: readonly PropKind[] = [
   "stone-wall",
   "barrel",
   "crate",
+  // 巢穴件（票 35）：晶簇/茧/蛋是实心障碍，茧蛋比灌木高所以不可穿。
+  "den-crystal",
+  "den-cocoon",
+  "den-eggs",
 ];
 
 /** 可穿过的环境件（无碰撞，仅有进入视觉反馈）。 */
@@ -47,6 +51,9 @@ export const COLLIDER_HEIGHTS: Record<PropKind, number> = {
   "stone-wall": 1.5,
   barrel: 0.9,
   crate: 0.9,
+  "den-crystal": 1.3,
+  "den-cocoon": 1.4,
+  "den-eggs": 1.0,
 };
 
 export type ColliderShape = "cylinder" | "box";
@@ -486,6 +493,14 @@ export const LANDSCAPE_TREES: readonly LandscapeTree[] = (() => {
  * 环带自检：景观不得压进行走区域，且四方向都必须有内容。
  * 与 green-hollow-layout 的 validateLayout 同一风格：返回问题列表，空 = 通过。
  */
+/** 区域可行走区的二维边界（翠谷与区域 2 共用同一形状）。 */
+export interface Bounds2DLike {
+  readonly minX: number;
+  readonly maxX: number;
+  readonly minZ: number;
+  readonly maxZ: number;
+}
+
 export interface LandscapeIssue {
   id: string;
   message: string;
@@ -494,7 +509,7 @@ export interface LandscapeIssue {
 export function validateLandscape(
   hills: readonly LandscapeHill[] = LANDSCAPE_HILLS,
   trees: readonly LandscapeTree[] = LANDSCAPE_TREES,
-  bounds = GREEN_HOLLOW_BOUNDS,
+  bounds: Bounds2DLike = GREEN_HOLLOW_BOUNDS,
 ): LandscapeIssue[] {
   const issues: LandscapeIssue[] = [];
 
