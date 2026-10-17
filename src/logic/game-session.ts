@@ -233,12 +233,30 @@ export type CombatEvent =
       position: Vec3;
     };
 
+/** 可 JSON 序列化的任意值（世界状态容器的内容类型）。 */
+export type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonValue[]
+  | { [key: string]: JsonValue };
+
 /** 可 JSON 序列化的完整游戏状态。 */
 export interface GameSessionSnapshot {
   version: number;
   /** 已加载区域；会话尚未加载区域时为 null。 */
   regionId: string | null;
   elapsedMs: number;
+  /** 玩家当前等级（票 31 入档；升级结算本体在成长系统）。 */
+  playerLevel: number;
+  /** 玩家累计经验（读档后成长进度连续，不回退）。 */
+  cumulativeXp: number;
+  /**
+   * 世界状态通用容器（票 31）：宝箱开启、收集计数、门机关等一切
+   * 「世界事实」挂这里，逻辑层只透传不解释结构。
+   */
+  worldState: Record<string, JsonValue>;
   /** 下一个自动生成的物品实例序号；读档后继续保证实例 id 唯一。 */
   nextItemInstanceId: number;
   /** 玩家死亡后的重生时刻；无待重生时为 null。 */
@@ -308,6 +326,43 @@ function assertFiniteVec3(value: Vec3, label: string): void {
 
 function cloneVec3(value: Vec3): Vec3 {
   return { x: value.x, y: value.y, z: value.z };
+}
+
+/**
+ * 深拷贝世界状态容器。JSON 往返保证会话内部不持有调用方的可变引用；
+ * 值域已由 assertJsonValue 校验为合法 JSON 值。
+ */
+function cloneJsonValue(value: Record<string, JsonValue>): Record<string, JsonValue> {
+  return JSON.parse(JSON.stringify(value)) as Record<string, JsonValue>;
+}
+
+/** 世界状态只透传不解释：这里只保证「可 JSON 序列化」这一条契约。 */
+function assertJsonValue(value: unknown, path: string): asserts value is JsonValue {
+  if (value === null || typeof value === "string" || typeof value === "boolean") {
+    return;
+  }
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) {
+      throw new Error(`worldState.${path} 必须是有限数值`);
+    }
+    return;
+  }
+  if (Array.isArray(value)) {
+    value.forEach((entry, index) => {
+      assertJsonValue(entry, `${path}[${index}]`);
+    });
+    return;
+  }
+  if (typeof value === "object") {
+    for (const [key, entry] of Object.entries(value)) {
+      if (entry === undefined) {
+        throw new Error(`worldState.${path}.${key} 必须是可 JSON 序列化的值`);
+      }
+      assertJsonValue(entry, `${path}.${key}`);
+    }
+    return;
+  }
+  throw new Error(`worldState.${path} 必须是可 JSON 序列化的值`);
 }
 
 function cloneModifier(modifier: Modifier): Modifier {
@@ -421,6 +476,14 @@ export class GameSession implements GameSessionIntents {
   private playerId: EntityId | null = null;
   private respawnAtMs: number | null = null;
   private nextItemInstanceId = 1;
+  private playerLevel = 1;
+  private cumulativeXp = 0;
+  private worldState: Record<string, JsonValue> = {};
+
+  /** 世界状态容器的当前值（深拷贝，调用方改动不穿透会话状态）。 */
+  getWorldState(): Record<string, JsonValue> {
+    return cloneJsonValue(this.worldState) as Record<string, JsonValue>;
+  }
 
   constructor(options: GameSessionOptions = {}) {
     this.random = options.random ?? createSeededRandom(0x5eed);
@@ -1670,6 +1733,9 @@ export class GameSession implements GameSessionIntents {
       version: GAME_SESSION_SNAPSHOT_VERSION,
       regionId: this.regionId,
       elapsedMs: this.elapsedMs,
+      playerLevel: this.playerLevel,
+      cumulativeXp: this.cumulativeXp,
+      worldState: cloneJsonValue(this.worldState),
       nextItemInstanceId: this.nextItemInstanceId,
       respawnAtMs: this.respawnAtMs,
       entities,
@@ -1741,6 +1807,16 @@ export class GameSession implements GameSessionIntents {
     ) {
       throw new Error("快照 nextItemInstanceId 必须是正整数");
     }
+    if (!Number.isInteger(snapshot.playerLevel) || snapshot.playerLevel < 1) {
+      throw new Error("快照 playerLevel 必须是大于 0 的整数");
+    }
+    if (!Number.isInteger(snapshot.cumulativeXp) || snapshot.cumulativeXp < 0) {
+      throw new Error("快照 cumulativeXp 必须是非负整数");
+    }
+    if (typeof snapshot.worldState !== "object" || snapshot.worldState === null || Array.isArray(snapshot.worldState)) {
+      throw new Error("快照 worldState 必须是对象");
+    }
+    assertJsonValue(snapshot.worldState, "");
 
     if (!Array.isArray(snapshot.entities)) {
       throw new Error("快照 entities 必须是数组");
@@ -1870,6 +1946,9 @@ export class GameSession implements GameSessionIntents {
     this.elapsedMs = snapshot.elapsedMs;
     this.respawnAtMs = snapshot.respawnAtMs;
     this.nextItemInstanceId = snapshot.nextItemInstanceId;
+    this.playerLevel = snapshot.playerLevel;
+    this.cumulativeXp = snapshot.cumulativeXp;
+    this.worldState = cloneJsonValue(snapshot.worldState);
 
     for (const entitySnapshot of snapshot.entities) {
       const entity = this.entities.get(entitySnapshot.id);
