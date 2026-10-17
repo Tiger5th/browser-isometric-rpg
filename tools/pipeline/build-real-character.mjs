@@ -30,8 +30,55 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
-import { convertVrmToGlb } from "./vrm-to-glb.mjs";
+import { convertVrmToGlb, parseGlb, writeGlb } from "./vrm-to-glb.mjs";
 import { extractAnimations, retargetAnimations } from "./retarget-animations.mjs";
+
+/**
+ * 裁剪 morph targets：VRoid 导出常带 100+ 表情 shape keys，而游戏运行时
+ * 只驱动眨眼；toon shader 一旦带 MORPHTARGETS 定义，顶点着色器会为每个
+ * target 付出额外顶点成本（票 30 实测 129 targets 时 p1-world 掉到 45fps）。
+ * 只保留 keepPattern 命中的 target，同步裁 mesh.weights 与 extras.targetNames。
+ */
+export function filterMorphTargets(json, keepPattern) {
+  if (!keepPattern) {
+    return { kept: 0, removed: 0 };
+  }
+  const pattern = new RegExp(keepPattern, "i");
+  let kept = 0;
+  let removed = 0;
+  for (const mesh of json.meshes ?? []) {
+    for (const primitive of mesh.primitives ?? []) {
+      const targets = primitive.targets ?? [];
+      const filtered = [];
+      const keptIndices = [];
+      targets.forEach((target, index) => {
+        const name = mesh.extras?.targetNames?.[index];
+        if (name && pattern.test(name)) {
+          keptIndices.push(index);
+          filtered.push(target);
+        }
+      });
+      if (filtered.length === targets.length) {
+        kept += targets.length;
+        continue;
+      }
+      removed += targets.length - filtered.length;
+      kept += filtered.length;
+      if (filtered.length > 0) {
+        primitive.targets = filtered;
+      } else {
+        delete primitive.targets;
+      }
+      if (mesh.extras?.targetNames) {
+        mesh.extras.targetNames = keptIndices.map((index) => mesh.extras.targetNames[index]);
+      }
+      if (mesh.weights) {
+        mesh.weights = keptIndices.map((index) => mesh.weights[index]);
+      }
+    }
+  }
+  return { kept, removed };
+}
 
 const ROOT = resolve(import.meta.dirname, "../..");
 const DEFAULT_CONFIG = resolve(ROOT, "assets/character-real.config.json");
@@ -102,7 +149,19 @@ async function main() {
     console.log("[build-real-character] 无动画源（跳过重定向）");
   }
 
-  // ---- 2. VRM 扩展剥离 → 标准 glTF GLB
+  // ---- 2. morph 裁剪（默认只留眨眼；配置 morphs.keep 为正则字符串）
+  const parsed = parseGlb(characterBuffer);
+  const morphStats = filterMorphTargets(
+    parsed.json,
+    config.morphs?.keep ?? "blink|まばたき",
+  );
+  characterBuffer = writeGlb(parsed.json, parsed.bin);
+  console.log(
+    `[build-real-character] morph 裁剪（keep=${config.morphs?.keep ?? "blink|まばたき"}）：` +
+      `保留 ${morphStats.kept} · 移除 ${morphStats.removed}`,
+  );
+
+  // ---- 3. VRM 扩展剥离 → 标准 glTF GLB
   const { glb, stats } = convertVrmToGlb(characterBuffer);
   await writeFile(outputPath, glb);
   console.log(`[build-real-character] 产出：assets/${outputPath.split("/").pop()}`);
