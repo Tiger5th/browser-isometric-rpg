@@ -3,6 +3,7 @@ import { charactersScenario } from "./characters";
 import { crowdHotSwapScenario } from "./crowd-hot-swap";
 import { crowdNavScenario } from "./crowd-nav";
 import { helloScenario } from "./hello";
+import { occlusionOutlineScenario } from "./occlusion-outline";
 
 /**
  * 内置 scenario 注册表。
@@ -13,4 +14,5 @@ export function registerBuiltinScenarios(harness: P0Harness): void {
   harness.registerScenario(charactersScenario);
   harness.registerScenario(crowdNavScenario);
   harness.registerScenario(crowdHotSwapScenario);
+  harness.registerScenario(occlusionOutlineScenario);
 }
