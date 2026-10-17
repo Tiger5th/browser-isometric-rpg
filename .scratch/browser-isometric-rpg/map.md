@@ -40,7 +40,8 @@
 - **14 号票已完成合并**（3b83e8a：50MB 区域 preload 55ms 但首帧 shader 编译卡 ~200ms——黑场须盖预热；**Editor git 友好，不触发 LDtk 降级**）。
 - **13 号票已完成合并**（381a63f：24 角色描边 60fps，HighlightLayer 0.65ms/帧——**描边方案可用**；scene.pick 有 GC 长帧坑，用零分配射线-OBB 替代）。
 - **17 号票已完成合并**（98d7866：toon 渲染验证通过（自定义 shader，Babylon 9.31 无官方 ToonMaterial）；VRoid 真人链路 blocked——用户手做指引在票 Comments；VRM→GLB 工具就绪）。
-- **当前 frontier：18 号票可开工（全部前置完成）。**
+- **18 号票已完成合并（3501caf）——P0 全部 9 张票完成**。最终报告：artifacts/p0-final-report.md。冒烟 9/9；**300 角色干净重跑 60fps 但无余量**（必须动态分辨率）；预算已修正；三个降级预案均未触发；建议进入 P1（前置：用户手做 VRoid + 装 Blender）。
+- **下一步：code-review p0-integration → 修复 → P0 收尾。**
 
 ## Fog
 
