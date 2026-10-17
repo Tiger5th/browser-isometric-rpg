@@ -16,12 +16,28 @@ export interface QuestLoopUiOptions {
   onChoose(choiceIndex: number): void;
   /** 调试战斗入口：用真实战斗攻击最近的敌人（方便手动验证任务进度）。 */
   onDebugKill?(): void;
+  /** 手动存档。 */
+  onSave?(): void;
+  /** 手动读档。 */
+  onLoad?(): void;
+  /** 删除存档。 */
+  onClearSave?(): void;
 }
+
+export type SaveStatusKind = "idle" | "ok" | "error";
 
 export interface QuestLoopUi {
   update(snapshot: GameSessionSnapshot): void;
+  /** 存档/读档结果反馈（右下角 HUD 的持久化状态行）。 */
+  setSaveStatus(text: string, kind?: SaveStatusKind): void;
   dispose(): void;
 }
+
+const SAVE_STATUS_COLOR: Record<SaveStatusKind, string> = {
+  idle: "#94a3b8",
+  ok: "#4ade80",
+  error: "#f87171",
+};
 
 const STATUS_LABEL: Record<QuestStatus, string> = {
   available: "可接取",
@@ -83,9 +99,19 @@ export function createQuestLoopUi(options: QuestLoopUiOptions): QuestLoopUi {
       "box-shadow:0 22px 60px rgba(0,0,0,0.55);font-size:14px;line-height:1.6",
     ].join(";"),
   );
+  hud.dataset.testid = "quest-hud";
+  dialogue.dataset.testid = "dialogue-panel";
 
   root.append(hud, dialogue);
   mount.append(root);
+
+  const saveStatus = element(
+    "div",
+    "margin-top:8px;font-size:11px;line-height:1.45;color:#94a3b8;",
+    "存档：未检查",
+  );
+  saveStatus.dataset.testid = "save-status";
+  saveStatus.dataset.state = "idle";
 
   let lastKey = "";
 
@@ -158,6 +184,36 @@ export function createQuestLoopUi(options: QuestLoopUiOptions): QuestLoopUi {
       );
     }
 
+    if (options.onSave !== undefined || options.onLoad !== undefined) {
+      const row = element("div", "display:flex;gap:6px;margin-top:10px;");
+      const addSaveButton = (
+        label: string,
+        action: string,
+        handler: (() => void) | undefined,
+      ): void => {
+        if (handler === undefined) {
+          return;
+        }
+        const button = element(
+          "button",
+          [
+            "flex:1;cursor:pointer;font:inherit;font-size:11px",
+            "color:#e6e9ef;border:1px solid rgba(148,163,184,0.35);border-radius:8px",
+            "background:#1a2230;padding:6px 8px;",
+          ].join(";"),
+          label,
+        );
+        button.type = "button";
+        button.dataset.action = action;
+        button.addEventListener("click", handler);
+        row.append(button);
+      };
+      addSaveButton("存档", "save", options.onSave);
+      addSaveButton("读档", "load", options.onLoad);
+      addSaveButton("删除存档", "clear-save", options.onClearSave);
+      hud.append(row);
+    }
+
     if (options.onDebugKill !== undefined) {
       const button = element(
         "button",
@@ -172,6 +228,8 @@ export function createQuestLoopUi(options: QuestLoopUiOptions): QuestLoopUi {
       button.addEventListener("click", () => options.onDebugKill?.());
       hud.append(button);
     }
+
+    hud.append(saveStatus);
   };
 
   const renderDialogue = (snapshot: GameSessionSnapshot): void => {
@@ -230,6 +288,12 @@ export function createQuestLoopUi(options: QuestLoopUiOptions): QuestLoopUi {
       lastKey = key;
       renderHud(snapshot);
       renderDialogue(snapshot);
+    },
+
+    setSaveStatus(text, kind = "idle") {
+      saveStatus.textContent = text;
+      saveStatus.dataset.state = kind;
+      saveStatus.style.color = SAVE_STATUS_COLOR[kind];
     },
 
     dispose() {
