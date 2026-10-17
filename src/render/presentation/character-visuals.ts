@@ -18,6 +18,7 @@ import { Color3 } from "@babylonjs/core/Maths/math.color";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import type { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
+import type { MorphTargetManager } from "@babylonjs/core/Morph/morphTargetManager";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import type { Scene } from "@babylonjs/core/scene";
 import "@babylonjs/loaders/glTF";
@@ -29,11 +30,14 @@ import {
   createCharacterPrototype,
   createCharacterSkeleton,
 } from "../character-proto";
+import { createWhiteTexture } from "./textures";
 
 const OUTLINE_WIDTH = 0.022;
 const OUTLINE_COLOR = new Color3(0.05, 0.04, 0.08);
 const BLINK_INTERVAL_MS = 3_600;
 const BLINK_DURATION_MS = 140;
+/** 眨眼 morph 目标名（占位资产 morph_anime_placeholder_blink；VRM 系 blink/まばたき）。 */
+const BLINK_MORPH_PATTERN = /blink|まばたき/i;
 
 export interface PlayerCharacter {
   rootNode: TransformNode;
@@ -66,6 +70,18 @@ function baseTextureOf(material: Material | null) {
   return active[0] ?? null;
 }
 
+/** 从 glTF 材质读基色（PBR/Standard/Unlit 都落在 albedo/diffuse 上）。 */
+function baseColorOf(material: Material | null): Color3 | null {
+  if (!material) {
+    return null;
+  }
+  const candidate = material as Material & {
+    albedoColor?: Color3;
+    diffuseColor?: Color3;
+  };
+  return candidate.albedoColor ?? candidate.diffuseColor ?? null;
+}
+
 async function fetchGlb(url: string, fileName: string): Promise<File> {
   const response = await fetch(url);
   if (!response.ok) {
@@ -94,18 +110,27 @@ export async function loadPlayerCharacter(
   const materials: Material[] = [];
   let morphTargetCount = 0;
   const morphTargetNames: string[] = [];
+  /** 无贴图网格共享的白贴图（懒创建，整个角色一张）。 */
+  let fallbackTexture: BaseTexture | null = null;
 
   for (const mesh of meshes) {
     const useVertexColors = mesh.isVerticesDataPresent("color");
-    const texture = baseTextureOf(mesh.material);
+    let texture = baseTextureOf(mesh.material);
+    let tint: Color3 | undefined;
     if (!texture) {
-      throw new Error(`角色网格 ${mesh.name} 缺少 baseColor 贴图`);
+      // VRM 常见单色材质网格（无贴图，只有 baseColor 因子）：
+      // 用共享白贴图 + 材质基色 tint 保持颜色，不再直接报错。
+      if (!fallbackTexture) {
+        fallbackTexture = createWhiteTexture(scene);
+      }
+      texture = fallbackTexture;
+      tint = baseColorOf(mesh.material) ?? undefined;
     }
     const material = createToonMaterial(
       scene,
       `material.player.${mesh.name}`,
       texture,
-      { useVertexColors, rimStrength: 0.55 },
+      { useVertexColors, rimStrength: 0.55, tint },
     );
     materials.push(material);
     mesh.material = material;
@@ -149,13 +174,49 @@ export async function loadPlayerCharacter(
   let morphShaderReady = false;
   let morphShaderCheckedAt = 0;
 
-  const firstManager = meshes[0]?.morphTargetManager ?? null;
+  /**
+   * 眨眼 morph 定位：真实 VRM 是多网格资产，morph 目标通常只挂在头部网格
+   * （占位资产是单网格），且目标顺序不保证（VRM 1.0 表情命名驱动）。
+   * 因此按名字扫描所有网格的 morphTargetManager，找 blink/まばたき 目标；
+   * 找不到名字匹配时退回第一个有 morph 的网格的 0 号目标（占位行为）。
+   */
+  let blinkManager: MorphTargetManager | null = null;
+  let blinkTargetIndexValue = 0;
+  let blinkMaterial: Material | null = null;
+  for (let index = 0; index < meshes.length; index += 1) {
+    const manager = meshes[index].morphTargetManager;
+    if (!manager || manager.numTargets === 0) {
+      continue;
+    }
+    if (!blinkManager) {
+      // 兜底：第一个有 morph 的网格
+      blinkManager = manager;
+      blinkTargetIndexValue = 0;
+      blinkMaterial = materials[index] ?? null;
+    }
+    for (let targetIndex = 0; targetIndex < manager.numTargets; targetIndex += 1) {
+      const target = manager.getTarget(targetIndex);
+      if (target && BLINK_MORPH_PATTERN.test(target.name)) {
+        blinkManager = manager;
+        blinkTargetIndexValue = targetIndex;
+        blinkMaterial = materials[index] ?? null;
+        break;
+      }
+    }
+    if (
+      blinkManager === manager &&
+      blinkTargetIndexValue !== 0 &&
+      blinkMaterial === materials[index]
+    ) {
+      break; // 已按名字命中，停止扫描
+    }
+  }
 
   const blinkInfluence = (): number => {
-    if (!firstManager || firstManager.numTargets === 0) {
+    if (!blinkManager) {
       return 0;
     }
-    return firstManager.getTarget(0)?.influence ?? 0;
+    return blinkManager.getTarget(blinkTargetIndexValue)?.influence ?? 0;
   };
 
   const player: PlayerCharacter = {
@@ -188,8 +249,8 @@ export async function loadPlayerCharacter(
     triggerBlink(holdMs = BLINK_DURATION_MS): void {
       blinkUntil = performance.now() + holdMs;
       nextBlinkAt = blinkUntil + BLINK_INTERVAL_MS;
-      if (firstManager && firstManager.numTargets > 0) {
-        const target = firstManager.getTarget(0);
+      if (blinkManager) {
+        const target = blinkManager.getTarget(blinkTargetIndexValue);
         if (target) {
           target.influence = 1;
         }
@@ -201,8 +262,8 @@ export async function loadPlayerCharacter(
       if (now >= nextBlinkAt) {
         player.triggerBlink();
       }
-      if (firstManager && firstManager.numTargets > 0 && now > blinkUntil) {
-        const target = firstManager.getTarget(0);
+      if (blinkManager && now > blinkUntil) {
+        const target = blinkManager.getTarget(blinkTargetIndexValue);
         if (target && target.influence !== 0) {
           target.influence = 0;
         }
@@ -210,9 +271,10 @@ export async function loadPlayerCharacter(
       void deltaMs;
 
       // shader 编译是异步的：每 500ms 检查一次 morph 定义是否生效。
+      // 检查的是携带眨眼 morph 的网格材质（真实 VRM 的 morph 不在 0 号网格）。
       if (!morphShaderReady && now - morphShaderCheckedAt > 500) {
         morphShaderCheckedAt = now;
-        const effect = materials[0]?.getEffect();
+        const effect = blinkMaterial?.getEffect() ?? materials[0]?.getEffect();
         if (effect?.defines?.includes("MORPHTARGETS")) {
           morphShaderReady = true;
         }

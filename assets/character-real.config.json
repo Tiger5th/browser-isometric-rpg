@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "_comment": "票 30 真实角色资产构建配置（数据驱动）。字段路径相对仓库根。",
+  "sourceVrm": "assets/vrm/seed-san.vrm",
+  "_sourceVrmNote": "Booth 高精度免费 VRM 下载需登录（被卡环节记录在票 30 与 artifacts/ticket-30-vrm-candidates/README.md）。当前使用 VRM 官方样例 Seed-san（VirtualCast, Inc.，VRM Public License 1.0：avatarPermission=everyone、可改可再配布、需署名、43 morph）。用户从 Booth 选定候选后只需换 sourceVrm 路径重跑。",
+  "animations": {
+    "source": "assets/animation-sources/ual_standard.glb",
+    "_sourceNote": "Quaternius Universal Animation Library（CC0 1.0，UE 骨架，43 动作）。Mixamo 官网需 Adobe 登录，走此免登录 CC0 替代；three.js Soldier.glb（Mixamo rig CC0）已验证为第二条路径。",
+    "names": ["Walk_Loop", "Jog_Fwd_Loop", "Sword_Attack"],
+    "rename": {
+      "Walk_Loop": "walk",
+      "Jog_Fwd_Loop": "run",
+      "Sword_Attack": "attack"
+    },
+    "map": "vrm"
+  },
+  "textures": {
+    "_todo": "TODO(票 29)：色板卡（character palette card）产出后，在这里填每槽位贴图路径，并运行 tools/pipeline/blender/prepare_vrm_character.py 的 --texture-map body=<path>。在票 29 产出前保持 null——角色用 VRM 自带贴图。",
+    "body": null,
+    "face": null
+  }
+}

@@ -440,15 +440,19 @@ interface MotionSample {
 /** 采样一只腿骨的旋转范围与帧率，证明骨骼动画确实在推进。 */
 function sampleMotion(
   scene: Scene,
-  skeleton: Skeleton | null,
+  skeletons: readonly Skeleton[],
   durationMs = 450,
 ): Promise<MotionSample> {
+  // 真实 VRM 有多个 skin（发/身/饰品各一个骨架）；skeletons[0] 可能是
+  // 头发等不动骨架，会导致 motion range 恒 0。跨全部骨架按人形关键骨查找。
+  const findBone = (pattern: RegExp) =>
+    skeletons
+      .flatMap((skeleton) => skeleton.bones)
+      .find((candidate) => pattern.test(candidate.name)) ?? null;
   const bone =
-    skeleton?.bones.find((candidate) =>
-      /upperleg|upleg|thigh/i.test(candidate.name),
-    ) ??
-    skeleton?.bones.find((candidate) => /spine|chest/i.test(candidate.name)) ??
-    skeleton?.bones[0] ??
+    findBone(/upperleg|upleg|thigh/i) ??
+    findBone(/spine|chest/i) ??
+    skeletons.flatMap((skeleton) => skeleton.bones)[0] ??
     null;
 
   return new Promise((resolve) => {
@@ -727,11 +731,7 @@ export const animePipelineScenario: ScenarioDefinition = {
   },
 
   async measure(context) {
-    const motion = await sampleMotion(
-      context.scene,
-      state.skeletons[0] ?? null,
-      450,
-    );
+    const motion = await sampleMotion(context.scene, state.skeletons, 450);
     const activeGroup = state.animationGroups.find(
       (group) => group.name === state.activeAnimation,
     );
@@ -766,7 +766,8 @@ export const animePipelineScenario: ScenarioDefinition = {
         name: "triangleCount",
         value: countTriangles(state.meshes),
         unit: "triangles",
-        threshold: 15000,
+        // 程序化占位 15k；外部 VRM 资产（票 30）按 lint.mjs EXTERNAL_LIMITS 放宽。
+        threshold: state.source === "vroid" ? 60000 : 15000,
         comparison: "lte",
       },
       {

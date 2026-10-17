@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "harness": "P0Harness",
+  "scenario": "hello",
+  "status": "passed",
+  "startedAt": "2026-10-17T13:53:07.908Z",
+  "finishedAt": "2026-10-17T13:53:07.908Z",
+  "durationMs": 0,
+  "environment": {
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "renderBackend": "webgl2",
+    "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+    "capturedAt": "2026-10-17T13:53:07.908Z",
+    "devicePixelRatio": 2,
+    "hardwareConcurrency": 10,
+    "note": "票 30 合并后复测（p2-integration d395e2f + 票 30 全部改动）。本轮机器高负载（load avg 2.3-2.8，多 agent 并行），绝对 fps 系统性偏低约 25%：同窗口 hello/crowd-nav 等 P0 轻量场景也只有 43-47fps（crowd-nav P0 基线 60）。真实角色与占位角色同窗口对比无显著差异（45-47 vs 47fps，drawCalls 均 100）。"
+  },
+  "metrics": [
+    {
+      "name": "activeMeshCount",
+      "value": 73,
+      "unit": "meshes"
+    },
+    {
+      "name": "cameraOrthographic",
+      "value": 1,
+      "unit": "boolean",
+      "threshold": 1,
+      "comparison": "eq",
+      "passed": true
+    },
+    {
+      "name": "entityCount",
+      "value": 6,
+      "unit": "entities"
+    },
+    {
+      "name": "meshCount",
+      "value": 74,
+      "unit": "meshes"
+    },
+    {
+      "name": "regionCount",
+      "value": 1,
+      "unit": "regions"
+    }
+  ],
+  "measurementContext": {
+    "machineLoad": "high (load avg 2.28-2.82, multiple ego-browser instances)",
+    "crossCheck": {
+      "p1WorldRealCharacter": {
+        "fpsAverage": 45.4,
+        "drawCallsAverage": 100
+      },
+      "p1WorldPlaceholderSameWindow": {
+        "fpsAverage": 47.0,
+        "drawCallsAverage": 100
+      },
+      "crowdNavLightScenarioSameWindow": {
+        "fpsAverage": 43.5,
+        "note": "P0 基线 60fps"
+      }
+    },
+    "budgetVerdict": "drawCalls/heap/morph 预算全部通过；fps 绝对值受整机负载影响，负载空闲时复测（assets:real-character 重建后跑 p1-world 冒烟）"
+  },
+  "generatedAt": "2026-10-17T14:08:00Z"
+}
