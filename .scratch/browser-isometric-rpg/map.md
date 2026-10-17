@@ -47,7 +47,7 @@
 - **19 号票已完成**（17a7f0f：GameSession 零引擎依赖——实体集合 + 手动时钟 + moveTo 意图 + 可序列化快照；click-move 场景用 P0 角色经 Crowd V2 走到点击点；渲染层只读快照；L1 6 测试、全量 49/49、build 通过；分支 worktree-agent-a312606604c8cf863，待合入 p1-integration）。
 - **20 号票已完成**（359dc3e：content schema v1（JSON Schema 2020-12 + 引用完整性 + ink 任务标签）与 P1 最小内容集（1 区域/2 NPC/3 个同模板敌人/4 物品/1 任务）；L2 `npm run content:lint` 可运行、负向测试 12 例；GameSession.loadRegion 从内容实例化实体；全量 61/61、build 通过；格式合同见 content/README.md；分支 worktree-agent-a6d3077c444a13262，待合入 p1-integration）。
 - **21 号票已完成**（bdfb182：GameSession 战斗闭环——attack 意图 + 回合冷却、修饰器后属性参与命中/伤害、敌人 idle→patrol→chase→attack→dead 状态机、击杀经验/掉落入背包、玩家死亡延迟重生（出生点/满血/活敌重置）；快照 v2 新增 attributes/combat/container；L1 80/80、build 与 content:lint 通过；combat-loop 场景 ego-browser 冒烟 passed；分支 worktree-agent-a3ffe0543360b177d，待合入 p1-integration）。
-- **22 号票已完成**（4ba7d2d：GameSession 内置对话状态（inkjs 复用、ink 状态可序列化进快照）、任务状态机（可接→进行中→可交→完成）、offer/turnin 标签驱动接取与交付、enemy-killed 事件推进击杀目标、奖励物品入背包 + 修饰器生效；对话经 `EXTERNAL questStatus` 只读查询按任务状态分支；新增 dialogue-quest HUD 场景（HUD 显示目标/进度/背包，ego-browser 冒烟走通全闭环）；与票 21 合流后，会话内击杀经 `onEnemyKilled` 直接推进任务，外部战斗可用 `GameSession.emitCombatEvent({ type: "enemy-killed", enemyId, enemyTemplateId })`；分支 worktree-agent-aa910623c14a0d8dc，已合入 p1-integration）。
+- **22 号票已完成**（4ba7d2d：GameSession 内置对话状态（inkjs 复用、ink 状态可序列化进快照）、任务状态机（可接→进行中→可交→完成）、offer/turnin 标签驱动接取与交付、enemy-killed 事件推进击杀目标、奖励物品入背包 + 修饰器生效；对话经 `EXTERNAL questStatus` 只读查询按任务状态分支；新增 dialogue-quest HUD 场景（HUD 显示目标/进度/背包，ego-browser 冒烟走通全闭环）；与票 21 合流后，会话内击杀经 `onEnemyKilled` 直接推进任务，外部战斗可用 `GameSession.emitCombatEvent({ type: "enemy-killed", enemyId, enemyTemplateId })`；分支 worktree-agent-aa910623c14a0d8dc，合并 781a8c8 已含 p1-integration）。
 
 ## Fog
 

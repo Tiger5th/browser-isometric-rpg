@@ -4,7 +4,7 @@
 
 **Blocked by:** 19, 20
 
-**Status:** resolved（分支 worktree-agent-aa910623c14a0d8dc: 4ba7d2d，已合入 p1-integration；测试 100/100，build 与 content:lint 通过）
+**Status:** resolved（分支 worktree-agent-aa910623c14a0d8dc: 4ba7d2d，合并 781a8c8 已含 p1-integration；测试 100/100，build 与 content:lint 通过）
 
 - [x] 点击 NPC → 对话框 → 选项推进 → 对话结束
 - [x] 对话标签触发任务接取；杀敌计数推进；交任务发奖励（物品入背包 + 修饰器生效）
