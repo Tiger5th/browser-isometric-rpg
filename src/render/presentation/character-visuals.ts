@@ -16,7 +16,7 @@ import type { Material } from "@babylonjs/core/Materials/material";
 import type { BaseTexture } from "@babylonjs/core/Materials/Textures/baseTexture";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
-import type { Mesh } from "@babylonjs/core/Meshes/mesh";
+import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import type { MorphTargetManager } from "@babylonjs/core/Morph/morphTargetManager";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
@@ -365,6 +365,46 @@ export function createSlimeEnemy(
   mesh.renderOutline = true;
   mesh.outlineWidth = OUTLINE_WIDTH;
   mesh.outlineColor = OUTLINE_COLOR;
+
+  return {
+    mesh,
+    skeleton: null,
+    material,
+    dispose() {
+      mesh.dispose();
+      material.dispose();
+    },
+  };
+}
+
+/**
+ * 敌人精灵（票 36）：白底立面贴图抠白后的 billboard。
+ * 两种新敌人（冲锋型/吐弹型）各有独立贴图，史莱姆仍走上面的程序化球体。
+ * 贴图长宽比 1024:765，billboard 用 1.9m × 1.42m 保持不拉伸。
+ */
+export function createSpriteEnemy(
+  scene: Scene,
+  root: TransformNode,
+  prefix: string,
+  texture: BaseTexture,
+  options: { width?: number; height?: number; outline?: boolean } = {},
+): ProceduralCharacter {
+  const width = options.width ?? 1.9;
+  const height = options.height ?? 1.42;
+  const mesh = MeshBuilder.CreatePlane(`${prefix}mesh`, { width, height }, scene);
+  mesh.parent = root;
+  mesh.billboardMode = Mesh.BILLBOARDMODE_ALL;
+  const material = createToonMaterial(scene, `${prefix}material`, texture, {
+    useVertexColors: false,
+    unlit: true,
+    alphaCutoff: 0.35,
+  });
+  mesh.material = material;
+  if (options.outline !== false) {
+    mesh.renderOutline = true;
+    mesh.outlineWidth = OUTLINE_WIDTH;
+    mesh.outlineColor = OUTLINE_COLOR;
+  }
 
   return {
     mesh,

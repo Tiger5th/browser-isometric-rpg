@@ -24,6 +24,7 @@ import { ImageProcessingConfiguration } from "@babylonjs/core/Materials/imagePro
 import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
 import { Matrix, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
+import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import type { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import type { Observer } from "@babylonjs/core/Misc/observable";
@@ -31,8 +32,12 @@ import { DefaultRenderingPipeline } from "@babylonjs/core/PostProcesses/RenderPi
 import { Scene } from "@babylonjs/core/scene";
 import cullSlimesData from "../../../content/quests/cull_slimes.json";
 import elderMaCompiled from "../../../content/dialogues/elder_ma.ink?ink";
+import chargerTemplateData from "../../../content/enemy-templates/charger.json";
 import slimeTemplateData from "../../../content/enemy-templates/slime.json";
+import spitterTemplateData from "../../../content/enemy-templates/spitter.json";
+import chargerMeadowData from "../../../content/enemies/charger_meadow.json";
 import slimeBlueData from "../../../content/enemies/slime_blue.json";
+import spitterPondData from "../../../content/enemies/spitter_pond.json";
 import slimeElderData from "../../../content/enemies/slime_elder.json";
 import slimeMeadowData from "../../../content/enemies/slime_meadow.json";
 import healingHerbData from "../../../content/items/healing_herb.json";
@@ -84,6 +89,7 @@ import { takeTitleEntryIntent } from "../title-entry";
 import {
   createProceduralNpc,
   createSlimeEnemy,
+  createSpriteEnemy,
   loadPlayerCharacter,
   type PlayerCharacter,
   type ProceduralCharacter,
@@ -128,8 +134,13 @@ import {
   type CombatFeedbackLayer,
 } from "../presentation/combat-feedback";
 import { CombatAudio } from "../presentation/combat-audio";
+import { createToonMaterial } from "../anime/toonMaterial";
 import { createWhiteTexture } from "../presentation/textures";
 import { paletteOf, portraitUrlOf } from "../presentation/character-palettes";
+import {
+  loadEnemySprite,
+  type EnemySpriteKind,
+} from "../presentation/enemy-textures";
 import {
   bushAlphaForOcclusion,
   bushOcclusionAt,
@@ -175,8 +186,14 @@ const REAL_CHARACTER_URL = Object.values(REAL_CHARACTER_URLS)[0] ?? null;
 const CONTENT_BUNDLE = {
   regions: [regionData],
   npcs: [npcElderData, npcScoutData],
-  enemyTemplates: [slimeTemplateData],
-  enemies: [slimeMeadowData, slimeBlueData, slimeElderData],
+  enemyTemplates: [slimeTemplateData, chargerTemplateData, spitterTemplateData],
+  enemies: [
+    slimeMeadowData,
+    slimeBlueData,
+    slimeElderData,
+    chargerMeadowData,
+    spitterPondData,
+  ],
   items: [healingHerbData, oldCoinData, slimeGelData, travelerSwordData],
   quests: [cullSlimesData],
   levelCurves: [levelCurveData],
@@ -193,6 +210,7 @@ interface EntityVisual {
 }
 
 interface P1WorldState {
+  scene: Scene;
   root: TransformNode;
   session: GameSession;
   visuals: Map<string, EntityVisual>;
@@ -272,6 +290,13 @@ interface P1WorldState {
   hitReacts: Map<string, { until: number; dirX: number; dirZ: number }>;
   /** 票 27：选中目标并同步反馈层的目标圈常显。 */
   selectEnemy: (enemyId: string | null) => void;
+  /** 票 36：逻辑层投射物的渲染节点（id → 网格）；位置每次从快照同步。 */
+  projectileVisuals: Map<string, Mesh>;
+  projectileMaterial: Material;
+  /** 票 36：敌人精灵贴图的抠白透明占比，写入场景证据。 */
+  enemySpriteRatio: number;
+  /** 票 36：敌人精灵贴图（按 AI 档案种类索引），创建视觉时传入。 */
+  enemySprites: Map<EnemySpriteKind, BaseTexture>;
 }
 
 /** ego-browser 验证入口：只经 snapshot 读取、只经意图写入。 */
@@ -346,6 +371,21 @@ export interface P1WorldDebugApi {
   };
   /** 保持眯眼/眨眼 ms，便于截图（默认 500ms）。 */
   blink(holdMs?: number): void;
+  /** 票 36：两种新敌人的 AI 状态 + 投射物 + 死亡惩罚证据。 */
+  getEnemyAiEvidence(): {
+    enemies: Array<{
+      id: string;
+      templateId: string;
+      aiState: string | null;
+      hp: number;
+      position: { x: number; z: number };
+    }>;
+    projectiles: Array<{ id: string; ownerId: string; position: { x: number; z: number } }>;
+    enemySpriteTransparentRatio: number;
+    enemySpriteTextures: string[];
+    colliderCount: number;
+    coins: number;
+  };
   /** 两段式交互：点击远处 NPC（只靠近不出气泡）。 */
   interactNpc(npcId: string): void;
   /** 第二段：点击头顶气泡，开对话（双方互转面对面 + 立绘）。 */
@@ -560,10 +600,22 @@ function createGradingPipeline(scene: Scene): DefaultRenderingPipeline {
   return pipeline;
 }
 
+/**
+ * 吐弹型敌人的投射物材质（票 36）：孢子绿球 + 自发光色。
+ * 投射物的位置/速度/命中判定全在逻辑层，这里只画一个球。
+ */
+function createProjectileMaterial(scene: Scene): ShaderMaterial {
+  return createToonMaterial(scene, "material.projectile", null, {
+    useVertexColors: false,
+    tint: Color3.FromHexString("#a6e85a"),
+    rimStrength: 1.1,
+  });
+}
+
 function createEntityVisual(
   scene: Scene,
   root: TransformNode,
-  state: Pick<P1WorldState, "whiteTexture" | "materials">,
+  state: Pick<P1WorldState, "whiteTexture" | "materials" | "enemySprites">,
   entity: EntitySnapshot,
 ): EntityVisual {
   const id = entity.id;
@@ -593,26 +645,86 @@ function createEntityVisual(
       baseTint: Color3.FromHexString(palette.primary),
     };
   } else {
-    const tint = entity.identity.displayName.includes("蓝") ? "#60a5fa" : "#86efac";
-    const procedural = createSlimeEnemy(
-      scene,
-      root,
-      `${id}.`,
-      Color3.FromHexString(tint),
-      state.whiteTexture,
-    );
-    state.materials.push(procedural.material);
-    procedural.mesh.metadata = { entityId: id };
-    visual = {
-      node: procedural.mesh,
-      mesh: procedural.mesh,
-      targetY: 0.45,
-      procedural,
-      baseTint: Color3.FromHexString(tint),
-    };
+    // 票 36：冲锋型/吐弹型走各自的独立精灵贴图；史莱姆仍是程序化球体。
+    const spriteKind = ENEMY_SPRITE_KINDS.get(entity.identity.templateId);
+    const spriteTexture =
+      spriteKind === undefined ? undefined : state.enemySprites.get(spriteKind);
+    if (spriteTexture !== undefined) {
+      const procedural = createSpriteEnemy(scene, root, `${id}.`, spriteTexture);
+      state.materials.push(procedural.material);
+      procedural.mesh.metadata = { entityId: id };
+      visual = {
+        node: procedural.mesh,
+        mesh: procedural.mesh,
+        targetY: spriteKind === "ranged-kite" ? 0.71 : 0.74,
+        procedural,
+        baseTint: null,
+      };
+    } else {
+      const tint = entity.identity.displayName.includes("蓝") ? "#60a5fa" : "#86efac";
+      const procedural = createSlimeEnemy(
+        scene,
+        root,
+        `${id}.`,
+        Color3.FromHexString(tint),
+        state.whiteTexture,
+      );
+      state.materials.push(procedural.material);
+      procedural.mesh.metadata = { entityId: id };
+      visual = {
+        node: procedural.mesh,
+        mesh: procedural.mesh,
+        targetY: 0.45,
+        procedural,
+        baseTint: Color3.FromHexString(tint),
+      };
+    }
   }
 
   return visual;
+}
+
+/**
+ * 敌人精灵路由（票 36）：模板 → AI 档案种类 → 独立贴图。
+ * 保持在一处，内容新增同类敌人时只改这张表。
+ */
+const ENEMY_SPRITE_KINDS = new Map<string, EnemySpriteKind>([
+  ["enemy_template:charger", "windup-charge"],
+  ["enemy_template:spitter", "ranged-kite"],
+]);
+
+/** 投射物节点池：新建/复用/回收，跟随逻辑层快照。 */
+function syncProjectileVisuals(state: P1WorldState): void {
+  const { scene } = state;
+  const alive = new Set<string>();
+  for (const projectile of state.session.projectileSnapshots()) {
+    alive.add(projectile.id);
+    let mesh = state.projectileVisuals.get(projectile.id);
+    if (mesh === undefined || mesh.isDisposed()) {
+      mesh = MeshBuilder.CreateSphere(
+        `projectile.${projectile.id}`,
+        { diameter: projectile.radius * 2, segments: 8 },
+        scene,
+      );
+      mesh.material = state.projectileMaterial;
+      mesh.parent = state.root;
+      mesh.isPickable = false;
+      state.projectileVisuals.set(projectile.id, mesh);
+    }
+    mesh.setEnabled(true);
+    mesh.position.set(
+      projectile.position.x,
+      projectile.position.y + 0.55,
+      projectile.position.z,
+    );
+  }
+  for (const [id, mesh] of state.projectileVisuals) {
+    if (alive.has(id)) {
+      continue;
+    }
+    mesh.dispose();
+    state.projectileVisuals.delete(id);
+  }
 }
 
 function syncVisualToSnapshot(
@@ -638,7 +750,7 @@ function syncVisualToSnapshot(
     }
     visual.node.setEnabled(true);
     if (entity.identity.type === "enemy") {
-      visual.node.position.set(entity.position.x, 0.45, entity.position.z);
+      visual.node.position.set(entity.position.x, visual.targetY, entity.position.z);
     } else if (entity.identity.type === "npc") {
       // NPC：逻辑位置不变，视觉位置由 NpcIdleController 每帧叠加（呼吸/踱步）。
       // 这里只同步 Y 与朝向，避免覆盖待机演出的位移。
@@ -1236,6 +1348,36 @@ function installDebugApi(scene: Scene, state: P1WorldState): void {
       };
     },
     blink: (holdMs = 500) => state.player.triggerBlink(holdMs),
+    getEnemyAiEvidence: () => {
+      const snapshot = state.session.snapshot();
+      const player = snapshot.entities.find((entity) => entity.id === PLAYER_ID);
+      return {
+        enemies: snapshot.entities
+          .filter((entity) => entity.identity.type === "enemy")
+          .map((entity) => ({
+            id: entity.id,
+            templateId: entity.identity.templateId,
+            aiState: entity.combat.aiState,
+            hp: entity.combat.hp,
+            position: { x: round(entity.position.x, 3), z: round(entity.position.z, 3) },
+          })),
+        projectiles: state.session.projectileSnapshots().map((projectile) => ({
+          id: projectile.id,
+          ownerId: projectile.ownerId,
+          position: {
+            x: round(projectile.position.x, 3),
+            z: round(projectile.position.z, 3),
+          },
+        })),
+        enemySpriteTransparentRatio: round(state.enemySpriteRatio, 4),
+        enemySpriteTextures: [...state.enemySprites.values()].map((texture) => texture.name),
+        colliderCount: state.colliders.length,
+        coins:
+          player?.container.items
+            .filter((item) => item.templateId === "item:old_coin")
+            .reduce((sum, item) => sum + item.quantity, 0) ?? 0,
+      };
+    },
     interactNpc: (npcId) => {
       // 两段式第一段：只靠近（远处）或出气泡（距离内），不开对话。
       const player = playerSnapshot(state.session);
@@ -1447,8 +1589,24 @@ export const p1WorldScenario: ScenarioDefinition = {
     const pipeline = createGradingPipeline(scene);
     const whiteTexture = createWhiteTexture(scene);
 
+    // 票 36：两种新敌人的独立精灵贴图（抠白后与 prop 同一套 billboard 基建）。
+    const enemySpriteKinds: EnemySpriteKind[] = ["windup-charge", "ranged-kite"];
+    const loadedSprites = await Promise.all(
+      enemySpriteKinds.map(async (kind) => ({ kind, sprite: await loadEnemySprite(scene, kind) })),
+    );
+    const enemySprites = new Map<EnemySpriteKind, BaseTexture>();
+    let enemySpriteRatio = 0;
+    for (const entry of loadedSprites) {
+      enemySprites.set(entry.kind, entry.sprite.texture);
+      enemySpriteRatio += entry.sprite.transparentRatio;
+    }
+    enemySpriteRatio /= enemySpriteKinds.length;
+
     const session = new GameSession();
     session.registerDialogue("elder_ma", elderMaCompiled);
+    // 票 36：把票 28 的硬碰撞清单交给逻辑层，冲锋挡停与投射物撞墙都用它，
+    // navmesh 也从同一份 collider 生成（colliderObstacleSpecs）——单一数据源。
+    session.setWorldObstacles(colliders);
     session.loadRegion(CONTENT_BUNDLE, GREEN_HOLLOW_REGION_ID);
     const navigation = await createGreenHollowNavigation();
 
@@ -1481,7 +1639,7 @@ export const p1WorldScenario: ScenarioDefinition = {
       }
       visuals.set(
         entity.id,
-        createEntityVisual(scene, root, { whiteTexture, materials }, entity),
+        createEntityVisual(scene, root, { whiteTexture, materials, enemySprites }, entity),
       );
     }
 
@@ -1531,6 +1689,7 @@ export const p1WorldScenario: ScenarioDefinition = {
     };
 
     const state: P1WorldState = {
+      scene,
       root,
       session,
       visuals,
@@ -1602,6 +1761,10 @@ export const p1WorldScenario: ScenarioDefinition = {
       selectEnemy: () => undefined,
       dyingEnemies: new Map(),
       hitReacts: new Map(),
+      projectileVisuals: new Map(),
+      projectileMaterial: createProjectileMaterial(scene),
+      enemySpriteRatio,
+      enemySprites,
     };
     states.set(context, state);
     holder.state = state;
@@ -1918,6 +2081,10 @@ export const p1WorldScenario: ScenarioDefinition = {
           state.deadEnemies.add(entityId);
         }
       }
+
+      // 票 36：投射物渲染。每帧从逻辑层的 projectileSnapshots() 同步位置——
+      // 命中判定与消失都在逻辑层，表现层只是把球画在它说的地方。
+      syncProjectileVisuals(state);
 
       // 票 28：玩家视觉位置再过一遍硬碰撞求解。navmesh 已排除障碍，
       // 但逻辑层是直线推进，逐帧 moveTo 的插值可能切过障碍角；

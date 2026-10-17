@@ -23,6 +23,9 @@
 - **修饰器（Modifier）**：属性变更的统一机制。装备加成、任务奖励、buff 共用同一修饰器模型。
 - **数据驱动（Data-driven）**：内容 = 纯数据（JSON/ink），系统 = 通用逻辑。AI Agent 按此生产内容，L2 校验把关。
 - **行为状态机 → 行为树**：敌人 AI 决策层，状态机起步（P2），行为树在 P3 引入。
+- **AI 档案（aiProfile）**：敌人模板上的一段纯数据，决定状态机分支：`chaser`（近战追击）/ `windup-charge`（蓄力冲锋：windup → charge → recovery）/ `ranged-kite`（保持距离吐弹）。逻辑层解释为状态机参数，缺省即 `chaser`。
+- **冲锋链路（windup-charge）**：明显前摇 → 直线高速冲锋（路径命中判定一次，被硬碰撞挡停）→ recovery 硬直。方向在前摇结束时锁定，因此前摇中横移即可走位躲开。
+- **投射物（Projectile）**：吐弹型敌人的远程攻击，是**逻辑层实体**：位置、速度、命中判定全在 `GameSession`，表现层只渲染 `projectile-spawned`/`projectile-removed` 两个事件。
 
 ## 资产与管线
 
