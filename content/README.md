@@ -20,6 +20,9 @@ content/
   items/              物品
   quests/             任务
   character-palettes/ 角色色板卡（票 29：3D 贴图/立绘/头像同卡生成）
+  chests/             宝箱（票 37：位置 + 战利品表）
+  collectibles/       收集品（票 37：萤光草，拾取即计数）
+  collect-sets/       收集集（票 37：全收集奖励）
   dialogues/          ink 对话源文件
 ```
 
@@ -45,6 +48,9 @@ content/
   | 玩家实体 | `entity:` | `entity:player` |
   | 角色色板卡 | `character_palette:` | `character_palette:elder_ma` |
   | 等级曲线 | `level_curve:` | `level_curve:standard` |
+  | 宝箱 | `chest:` | `chest:hollow_stone` |
+  | 收集品 | `collectible:` | `collectible:glow_moss_a` |
+  | 收集集 | `collect_set:` | `collect_set:glow_moss` |
 
 - 坐标：世界坐标，单位米，Y 轴向上；`position`/`rotation` 均为 `{x,y,z}`，旋转单位为弧度（`Entity.state.rotation` 同一约定）。
 - `attributes` 是**开放数值表**：`maxHp`/`hp`/`attack`/`defense`/`moveSpeed`/`xp`/`xpToNext` 是 P1 识别的一组键，其余键原样保留。新增键不需要改 schema。
@@ -56,6 +62,41 @@ content/
   最终属性 = `(base + Σadd) × (1 + Σmultiply)`。
 
 ## 各类型字段
+
+### 宝箱 `chests/<local>.json`（票 37）
+
+| 字段 | 必填 | 含义 |
+|---|---|---|
+| `id` / `displayName` | 是 | 同通用约定 |
+| `regionId` | 是 | 所在区域，必须存在 |
+| `position` / `rotation` | 位置必填、旋转可选 | 放置 |
+| `loot` | 是 | 至少一项。`{itemId, quantity(≥1)}`；`itemId` 必须存在 |
+
+开箱 = 走近点一下：loot 逐件入包（发 `item-gained`），再发 `chest-opened`；
+「已开过」记在 worldState 的 `chest:<local>`（`{opened:true}`）里，一次性。
+
+### 收集品 `collectibles/<local>.json`（票 37）
+
+| 字段 | 必填 | 含义 |
+|---|---|---|
+| `id` / `displayName` | 是 | 同通用约定 |
+| `regionId` | 是 | 所在区域，必须存在 |
+| `position` / `rotation` | 位置必填、旋转可选 | 放置 |
+| `itemId` / `quantity` | 是 | 拾取进包的东西；物品必须存在，quantity ≥1 |
+| `setId` | 否 | 收集集 id，必须存在；缺省时用自身 id 自成一集 |
+
+收集品**没有新系统**：拾取就是普通物品入包。计数是 worldState 的**聚合**结果
+（数 `collectible:<local>` 条目数），不是另存的计数器——因此读档天然不回退。
+集内全收集时自动把 `collect-sets` 定义的奖励发进背包（只发一次，记
+`collect_reward:<local>`），并发 `collectible-collected` / `collect-set-completed`。
+
+### 收集集 `collect-sets/<local>.json`（票 37）
+
+| 字段 | 必填 | 含义 |
+|---|---|---|
+| `id` / `displayName` | 是 | 同通用约定 |
+| `rewardItemId` | 是 | 全收集奖励物品，必须存在 |
+| `rewardQuantity` | 否 | 奖励数量（≥1，缺省 1） |
 
 ### 等级曲线 `level-curves/<local>.json`
 

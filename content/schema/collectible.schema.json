@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:content:collectible",
+  "title": "收集品",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "displayName", "regionId", "position", "itemId", "quantity"],
+  "properties": {
+    "id": { "$ref": "urn:content:common#/$defs/collectibleId" },
+    "displayName": { "$ref": "urn:content:common#/$defs/displayName" },
+    "regionId": { "$ref": "urn:content:common#/$defs/regionId" },
+    "position": { "$ref": "urn:content:common#/$defs/vec3" },
+    "rotation": { "$ref": "urn:content:common#/$defs/vec3" },
+    "itemId": { "$ref": "urn:content:common#/$defs/itemId" },
+    "quantity": { "type": "integer", "minimum": 1 },
+    "setId": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+:[a-z0-9_]+$",
+      "description": "收集集 id；缺省时用自身 id 当集 id"
+    }
+  }
+}

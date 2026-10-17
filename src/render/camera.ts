@@ -3,6 +3,9 @@ import { Camera } from "@babylonjs/core/Cameras/camera";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { Scene } from "@babylonjs/core/scene";
 
+/** 等距相机的到焦点距离；正交下不影响画面大小，只作为预设的 radius 值。 */
+export const ISOMETRIC_RADIUS = 40;
+
 /** 标准等距视角：方位 -45°，仰角 arccos(1/√3) ≈ 35.26°。 */
 export const ISOMETRIC_ALPHA = -Math.PI / 4;
 export const ISOMETRIC_BETA = Math.acos(1 / Math.sqrt(3));
@@ -43,13 +46,19 @@ export function cameraVerticalSpan(
     : fallback;
 }
 
-/** 创建锁死的正交等距相机（P0 灰盒场景基准视角）。 */
+/**
+ * 创建正交等距相机（P0 灰盒场景基准视角）。
+ *
+ * 相机本身仍然 `inputs.clear()` + `detachControl()`——输入统一由票 37 的
+ * 相机控制器（camera-presets.ts）接管：滚轮缩放、右键拖拽旋转、预设复位，
+ * 范围都由那边夹取，而不是放开门 Babylon 的自由输入。
+ */
 export function createIsometricCamera(scene: Scene, verticalSpan = 20): ArcRotateCamera {
   const camera = new ArcRotateCamera(
     "camera.isometric",
     ISOMETRIC_ALPHA,
     ISOMETRIC_BETA,
-    40,
+    ISOMETRIC_RADIUS,
     Vector3.Zero(),
     scene,
   );

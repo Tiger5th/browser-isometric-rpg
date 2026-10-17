@@ -66,6 +66,12 @@ export interface CombatFeedbackLayer {
   update(scene: Scene, deltaMs: number, nowMs: number): number;
   /** 玩家选中/取消选中目标：目标圈常显的来源。 */
   setSelected(entityId: string | null): void;
+  /**
+   * 震屏开关（票 37）。玩家按「复位视角」时会被临时关掉：
+   * 震屏是往 camera.alpha 上加随机抖动，不关掉的话复位永远差那么一点，
+   * 「回预设值」也没法断言。复位动画结束后由调用方恢复。
+   */
+  setCameraShakeEnabled(enabled: boolean): void;
   /** 登记实体的世界锚点（mesh）与头顶高度，供投影用。 */
   trackEntity(entityId: string, mesh: { absolutePosition: Vector3 } | null, headHeight: number): void;
   /** 首次用户交互时解锁音效。 */
@@ -160,6 +166,7 @@ export function createCombatFeedbackLayer(
   let hitStopRemainingMs = 0;
   let shakeRemainingMs = 0;
   let shakeIntensity = 0;
+  let cameraShakeEnabled = true;
   let flashRemainingMs = 0;
   let levelFlashRemainingMs = 0;
   const levelFlash = document.createElement("div");
@@ -487,12 +494,13 @@ export function createCombatFeedbackLayer(
       const camera = scene.activeCamera as
         | (Camera & { alpha?: number })
         | null;
-      if (camera && shakeRemainingMs > 0) {
+      if (cameraShakeEnabled && camera && shakeRemainingMs > 0) {
         shakeRemainingMs = Math.max(0, shakeRemainingMs - deltaMs);
         const jitter = (Math.random() - 0.5) * 2 * shakeIntensity;
         camera.alpha = (camera.alpha ?? 0) + jitter;
       } else {
         shakeIntensity = 0;
+        shakeRemainingMs = 0;
       }
 
       return effectiveDelta;
@@ -506,6 +514,10 @@ export function createCombatFeedbackLayer(
       if (entityId !== null) {
         core.setPinned(entityId, true);
       }
+    },
+
+    setCameraShakeEnabled(enabled) {
+      cameraShakeEnabled = enabled;
     },
 
     trackEntity(entityId, mesh, headHeight) {

@@ -43,6 +43,10 @@
 - **自动存档（Autosave）**：关键节点（区域切换/任务状态变化/获得重要物品）与 `beforeunload` 兜底时写入 `auto` 槽的存档动作。自动存档永不抛错，失败只通报不影响游戏。
 - **安全区（Safe Zone）**：敌人 AI 被逻辑层拒止不得进入的地带。村庄聚点位于安全区内。
 - **欣赏模式（Showcase Mode）**：相机自由缩放旋转的状态；一键复位回到出厂等距预设（alpha/beta/radius 常量）。
+- **宝箱（Chest）**：探索回报的载体。content 定义位置与 loot 表，运行时开启 = loot 逐件入包 + worldState 记 `chest:<local>.opened`，一次性（见 `src/logic/exploration.ts`）。
+- **收集品（Collectible）**：拾取即入包的普通物品，**没有新系统**。计数是 worldState 里 `collectible:<local>` 条目的**聚合**，不是另存的计数器——读档因此天然不回退。
+- **收集集（Collect Set）**：一组收集品共用的进度与全收集奖励。集内全收集时把 `collect-sets/` 定义的饰品发进背包一次（记 `collect_reward:<local>`）。
+- **相机预设（Camera Preset）**：一组 alpha/beta/radius/verticalSpan 常量。当前出厂一位（默认等距），`CAMERA_PRESETS` 的结构支持将来多位。复位是按**时长线性插值**回预设，不是指数逼近，因此「回预设值」可断言。
 - **等级曲线（Level Curve）**：累计经验 → 等级的阈值表 + 每级属性加成（票 34）。内容数据（`content/level-curves/*.json`），解释口 `src/logic/leveling.ts`。升级加成走修饰器系统的 `level` 源，按当前等级**整源重算**（不是逐次叠加），因此读档与跨级都不会重复入账。
 - **等级徽标（Level Badge）**：HUD 上的 `Lv.N` 与经验条。显示值由 `src/render/ui/level-hud.ts` 的纯函数 `levelHudView()` 换算，HUD 只搭 DOM。
 - **换锚点（Re-anchor）**：任务状态变化时 NPC 移动到新默认位置的机制——「世界因你而变」的最小实现。

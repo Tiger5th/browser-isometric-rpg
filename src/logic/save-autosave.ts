@@ -27,6 +27,14 @@ export interface GameSaveAutoSaverOptions {
     slotId: typeof AUTO_SLOT_ID,
     snapshot: GameSessionSnapshot,
   ): Promise<unknown>;
+  /**
+   * 读自动槽（票 37）。场景启动时必须**先读后写**：
+   * 拿不到已有进度就直接 notifyRegionChanged()，会用空快照盖掉玩家的世界事实。
+   * 缺省（不注入）时视为「没有自动槽」。
+   */
+  readAutoSlot?(): Promise<GameSessionSnapshot | null>;
+  /** 把自动槽快照写回会话（渲染层传 `session.restoreSnapshot`）。 */
+  restoreSnapshot?(snapshot: GameSessionSnapshot): void;
   /** 自动存档失败时的通报（默认静默吞掉）。 */
   onError?(error: unknown): void;
 }
@@ -108,6 +116,46 @@ export class GameSaveAutoSaver {
       this.lastSavedRegionId = this.options.getSnapshot().regionId;
     } catch {
       // 会话已经拆掉（场景切换中卸载）也属正常。
+    }
+  }
+
+  /**
+   * 自动槽里是否已有可用进度（票 37）。
+   * 读取失败按「没有进度」处理：宁可开局从零写一次，也不让脏存档卡住场景。
+   */
+  async hasAutoSnapshot(): Promise<boolean> {
+    if (this.options.readAutoSlot === undefined) {
+      return false;
+    }
+    try {
+      return (await this.options.readAutoSlot()) !== null;
+    } catch (error) {
+      this.report(error);
+      return false;
+    }
+  }
+
+  /**
+   * 把自动槽的快照恢复进会话（票 37）。
+   * 返回是否真的恢复了；恢复成功后同时记住区域 id，避免紧接着的
+   * notifyRegionChanged 把刚读回来的档又覆盖一遍。
+   */
+  async restoreAuto(): Promise<boolean> {
+    const { readAutoSlot, restoreSnapshot } = this.options;
+    if (readAutoSlot === undefined || restoreSnapshot === undefined) {
+      return false;
+    }
+    try {
+      const snapshot = await readAutoSlot();
+      if (snapshot === null) {
+        return false;
+      }
+      restoreSnapshot(snapshot);
+      this.lastSavedRegionId = snapshot.regionId;
+      return true;
+    } catch (error) {
+      this.report(error);
+      return false;
     }
   }
 

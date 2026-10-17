@@ -1,0 +1,11 @@
+{
+  "id": "chest:pond_shore",
+  "displayName": "池畔旧箱",
+  "regionId": "region:green_hollow",
+  "position": { "x": -9, "y": 0, "z": 17 },
+  "rotation": { "x": 0, "y": 1.9, "z": 0 },
+  "loot": [
+    { "itemId": "item:old_coin", "quantity": 15 },
+    { "itemId": "item:healing_herb", "quantity": 3 }
+  ]
+}

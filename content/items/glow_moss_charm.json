@@ -1,0 +1,15 @@
+{
+  "id": "item:glow_moss_charm",
+  "displayName": "萤光坠饰",
+  "kind": "equipment",
+  "description": "用整株萤光草编成的坠饰，戴着时连夜路都像被照亮了一层。",
+  "maxStack": 1,
+  "value": 60,
+  "equipment": {
+    "slot": "accessory",
+    "modifiers": [
+      { "attribute": "maxHp", "operation": "add", "value": 15 },
+      { "attribute": "defense", "operation": "add", "value": 2 }
+    ]
+  }
+}

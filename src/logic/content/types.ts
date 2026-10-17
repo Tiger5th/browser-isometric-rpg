@@ -17,7 +17,10 @@ export type ContentKind =
   | "item"
   | "quest"
   | "character-palette"
-  | "level-curve";
+  | "level-curve"
+  | "chest"
+  | "collectible"
+  | "collect-set";
 
 export interface ContentFileInput {
   kind: ContentKind;
@@ -271,6 +274,38 @@ export interface LevelCurveFileDefinition {
   }>;
 }
 
+/** 宝箱（票 37）：世界实体新类型，位置与战利品表都在内容里。 */
+export interface ChestDefinition {
+  id: string;
+  displayName: string;
+  regionId: string;
+  position: Vec3;
+  rotation?: Vec3;
+  loot: Array<{ itemId: string; quantity: number }>;
+}
+
+/** 收集品（票 37）：拾取即进背包，计数聚合到 worldState。 */
+export interface CollectibleDefinition {
+  id: string;
+  displayName: string;
+  regionId: string;
+  position: Vec3;
+  rotation?: Vec3;
+  itemId: string;
+  quantity: number;
+  /** 收集集 id；缺省时用自身 id 当集 id。 */
+  setId?: string;
+}
+
+/** 收集集（票 37）：集内全收集后自动发一件饰品。 */
+export interface CollectSetDefinition {
+  id: string;
+  displayName: string;
+  rewardItemId: string;
+  /** 奖励数量，缺省 1。 */
+  rewardQuantity?: number;
+}
+
 /** 一个章节/切片的全量内容数据。 */
 export interface ContentBundle {
   regions: RegionDefinition[];
@@ -283,6 +318,12 @@ export interface ContentBundle {
   characterPalettes?: CharacterPaletteDefinition[];
   /** 等级曲线（票 34）；缺省视为无成长系统。 */
   levelCurves?: LevelCurveFileDefinition[];
+  /** 宝箱（票 37）；缺省视为空集。 */
+  chests?: ChestDefinition[];
+  /** 收集品（票 37）；缺省视为空集。 */
+  collectibles?: CollectibleDefinition[];
+  /** 收集集（票 37）；缺省视为无全收集奖励。 */
+  collectSets?: CollectSetDefinition[];
 }
 
 /** 工具链扫描 ink 文件后交给校验器的对话元数据。 */
@@ -309,6 +350,9 @@ export interface ContentSchemas {
   quest: object;
   characterPalette: object;
   levelCurve: object;
+  chest: object;
+  collectible: object;
+  collectSet: object;
 }
 
 export type ContentIssueCode =

@@ -65,9 +65,26 @@ import { createContentIndex, instantiateRegionEntities } from "./content/region-
 import type {
   ContentBundle,
   DropDefinition,
+  ChestDefinition,
+  CollectibleDefinition,
+  CollectSetDefinition,
   ItemDefinition,
   QuestDefinition,
 } from "./content/types";
+import {
+  chestKey,
+  chestOpenedState,
+  collectibleCollectedState,
+  collectibleKey,
+  collectProgress,
+  collectRewardGrantedState,
+  collectRewardKey,
+  collectSetIdOf,
+  isChestOpened,
+  isCollectibleCollected,
+  withinInteractRange,
+  type CollectProgress,
+} from "./exploration";
 import { interactionTarget } from "./interaction";
 import {
   levelForXp,
@@ -571,6 +588,12 @@ export class GameSession implements GameSessionIntents {
   private playerLevel = 1;
   private cumulativeXp = 0;
   private worldState: Record<string, JsonValue> = {};
+  /** 票 37：宝箱内容表（会话内按 id 索引，来自内容包）。 */
+  private readonly chests = new Map<string, ChestDefinition>();
+  /** 票 37：收集品内容表。 */
+  private readonly collectibles = new Map<string, CollectibleDefinition>();
+  /** 票 37：收集集内容表（全收集奖励）。 */
+  private readonly collectSets = new Map<string, CollectSetDefinition>();
 
   /** 世界状态容器的当前值（深拷贝，调用方改动不穿透会话状态）。 */
   getWorldState(): Record<string, JsonValue> {
@@ -720,6 +743,20 @@ export class GameSession implements GameSessionIntents {
       throw new Error(`内容包提供了 ${curves.length} 条等级曲线，P2 只支持一条`);
     }
     this.levelCurve = curves[0] === undefined ? null : { ...curves[0] };
+
+    // 票 37：宝箱/收集品/收集集。内容包可缺省（没有探索内容的世界照常跑）。
+    this.chests.clear();
+    for (const chest of bundle.chests ?? []) {
+      this.chests.set(chest.id, structuredClone(chest));
+    }
+    this.collectibles.clear();
+    for (const collectible of bundle.collectibles ?? []) {
+      this.collectibles.set(collectible.id, structuredClone(collectible));
+    }
+    this.collectSets.clear();
+    for (const set of bundle.collectSets ?? []) {
+      this.collectSets.set(set.id, structuredClone(set));
+    }
 
     this.regionId = regionId;
   }
@@ -2379,6 +2416,190 @@ export class GameSession implements GameSessionIntents {
         attributesGained: [...gained].map(([attribute, delta]) => ({ attribute, delta })),
       });
     }
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 探索回报（票 37）                                                    */
+  /* ------------------------------------------------------------------ */
+
+  /** 已加载区域内的宝箱内容表（读档后判定「还在不在」用）。 */
+  chestDefinitions(): ChestDefinition[] {
+    return [...this.chests.values()].map((chest) => structuredClone(chest));
+  }
+
+  /** 已加载区域内的收集品内容表。 */
+  collectibleDefinitions(): CollectibleDefinition[] {
+    return [...this.collectibles.values()].map((entry) => structuredClone(entry));
+  }
+
+  /** 某宝箱是否已开启（一次性）。 */
+  isChestOpened(chestId: string): boolean {
+    return isChestOpened(this.worldState, chestId);
+  }
+
+  /** 某收集品是否已拾取（一次性）。 */
+  isCollectibleCollected(collectibleId: string): boolean {
+    return (
+      this.collectibles.has(collectibleId) &&
+      isCollectibleCollected(this.worldState, collectibleId)
+    );
+  }
+
+  /**
+   * 某个收集集的进度（worldState 聚合，读档后自然连续）。
+   * 集合成员按「收集品自身的 setId 分组」得到，缺省 setId 的收集品自成一集。
+   */
+  collectProgress(setId: string): CollectProgress {
+    return collectProgress(
+      this.worldState,
+      setId,
+      this.membersOfCollectSet(setId),
+    );
+  }
+
+  /** 全部收集集的进度（内容包里有几个集就返回几个，按集 id 排序）。 */
+  allCollectProgress(): CollectProgress[] {
+    return [...new Set(this.collectSets.keys())]
+      .sort()
+      .map((setId) => this.collectProgress(setId));
+  }
+
+  private membersOfCollectSet(setId: string): CollectibleDefinition[] {
+    return [...this.collectibles.values()]
+      .filter((entry) => collectSetIdOf(entry) === setId)
+      .map((entry) => structuredClone(entry));
+  }
+
+  /**
+   * 开启宝箱（一次性）：loot 入包 + worldState 记开启状态 + 发 chest-opened 事件。
+   * 已被开过 / 未知宝箱 / 距离不够都拒绝，不发任何事件。
+   */
+  openChest(entityId: EntityId | string, chestId: string): IntentResult {
+    const chest = this.chests.get(chestId);
+    if (chest === undefined) {
+      throw new Error(`未知宝箱：${chestId}`);
+    }
+    const opener = this.requireEntity(entityId);
+    if (!withinInteractRange(opener.state.position, chest.position)) {
+      throw new Error(`离宝箱太远：${chestId}`);
+    }
+    if (isChestOpened(this.worldState, chestId)) {
+      throw new Error(`宝箱已经开过：${chestId}`);
+    }
+
+    const loot = chest.loot.map((entry) => ({ itemId: entry.itemId, quantity: entry.quantity }));
+    // 先发 item-gained（逐件），再发 chest-opened——反馈层可按顺序播战利品与开箱闪光。
+    for (const entry of loot) {
+      this.addItem(opener, entry.itemId, entry.quantity);
+      this.events.push({
+        type: "loot",
+        at: this.elapsedMs,
+        entityId: opener.id,
+        itemId: entry.itemId,
+        quantity: entry.quantity,
+      });
+      this.publish({
+        type: "item-gained",
+        entityId: opener.id,
+        itemId: entry.itemId,
+        quantity: entry.quantity,
+      });
+    }
+
+    this.worldState[chestKey(chestId)] = chestOpenedState();
+    this.publish({ type: "chest-opened", chestId, entityId: opener.id, loot });
+    return { ok: true };
+  }
+
+  /** 无异常版本的 openChest（表现层点击宝箱用）。 */
+  tryOpenChest(entityId: EntityId | string, chestId: string): IntentResult {
+    return this.runIntent(() => this.openChest(entityId, chestId));
+  }
+
+  /**
+   * 拾取收集品（一次性）：物品入包 + worldState 记已收集；
+   * 若这一件让所在收集集满，自动把收集集定义的奖励饰品发进背包（只发一次）。
+   */
+  collectCollectible(entityId: EntityId | string, collectibleId: string): IntentResult {
+    const entry = this.collectibles.get(collectibleId);
+    if (entry === undefined) {
+      throw new Error(`未知收集品：${collectibleId}`);
+    }
+    const collector = this.requireEntity(entityId);
+    if (!withinInteractRange(collector.state.position, entry.position)) {
+      throw new Error(`离收集品太远：${collectibleId}`);
+    }
+    if (this.isCollectibleCollected(collectibleId)) {
+      throw new Error(`收集品已经捡过了：${collectibleId}`);
+    }
+
+    const setId = collectSetIdOf(entry);
+    const quantity = Math.max(1, Math.floor(entry.quantity));
+    this.addItem(collector, entry.itemId, quantity);
+    this.events.push({
+      type: "loot",
+      at: this.elapsedMs,
+      entityId: collector.id,
+      itemId: entry.itemId,
+      quantity,
+    });
+    this.publish({
+      type: "item-gained",
+      entityId: collector.id,
+      itemId: entry.itemId,
+      quantity,
+    });
+
+    // 先写「已收集」再算进度：进度是 worldState 的聚合结果，写入顺序即事实。
+    this.worldState[collectibleKey(collectibleId)] = collectibleCollectedState();
+    const progress = collectProgress(this.worldState, setId, this.membersOfCollectSet(setId));
+
+    let reward: { itemId: string; quantity: number } | null = null;
+    const setDefinition = this.collectSets.get(setId);
+    if (
+      progress.complete &&
+      !progress.rewardGranted &&
+      setDefinition !== undefined
+    ) {
+      reward = {
+        itemId: setDefinition.rewardItemId,
+        quantity: Math.max(1, Math.floor(setDefinition.rewardQuantity ?? 1)),
+      };
+      this.addItem(collector, reward.itemId, reward.quantity);
+      this.publish({
+        type: "item-gained",
+        entityId: collector.id,
+        itemId: reward.itemId,
+        quantity: reward.quantity,
+      });
+      this.worldState[collectRewardKey(setId)] = collectRewardGrantedState();
+    }
+
+    this.publish({
+      type: "collectible-collected",
+      collectibleId,
+      entityId: collector.id,
+      itemId: entry.itemId,
+      quantity,
+      collected: progress.collected,
+      total: progress.total,
+      setCompleted: progress.complete,
+    });
+    if (reward !== null) {
+      this.publish({
+        type: "collect-set-completed",
+        setId,
+        entityId: collector.id,
+        rewardItemId: reward.itemId,
+        rewardQuantity: reward.quantity,
+      });
+    }
+    return { ok: true };
+  }
+
+  /** 无异常版本的 collectCollectible。 */
+  tryCollectCollectible(entityId: EntityId | string, collectibleId: string): IntentResult {
+    return this.runIntent(() => this.collectCollectible(entityId, collectibleId));
   }
 
   /** 背包入栈：按 maxStack 合并，返回实际创建的实例 id。 */

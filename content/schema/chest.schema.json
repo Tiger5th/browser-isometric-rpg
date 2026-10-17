@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:content:chest",
+  "title": "宝箱",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "displayName", "regionId", "position", "loot"],
+  "properties": {
+    "id": { "$ref": "urn:content:common#/$defs/chestId" },
+    "displayName": { "$ref": "urn:content:common#/$defs/displayName" },
+    "regionId": { "$ref": "urn:content:common#/$defs/regionId" },
+    "position": { "$ref": "urn:content:common#/$defs/vec3" },
+    "rotation": { "$ref": "urn:content:common#/$defs/vec3" },
+    "loot": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["itemId", "quantity"],
+        "properties": {
+          "itemId": { "$ref": "urn:content:common#/$defs/itemId" },
+          "quantity": { "type": "integer", "minimum": 1 }
+        }
+      }
+    }
+  }
+}

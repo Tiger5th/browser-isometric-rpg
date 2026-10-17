@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "purpose": "L2 负向测试：确认色板卡/立绘引用（票 29）与等级曲线（票 34）的 schema、引用与结构规则会拦截坏数据",
+  "purpose": "L2 负向测试：确认色板卡/立绘引用（票 29）、等级曲线（票 34）与宝箱/收集品（票 37）的 schema、引用与结构规则会拦截坏数据",
   "exitExpectation": "failed",
   "status": "passed",
   "control": {
@@ -101,6 +101,66 @@
           "file": "content/level-curves/standard.json",
           "path": "/defaultModifiers",
           "message": "must NOT have fewer than 1 items"
+        }
+      ]
+    },
+    {
+      "id": "chest-bad-loot-ref",
+      "label": "宝箱 loot 引用不存在的物品",
+      "expectation": "reference 错误指向 /loot/0/itemId",
+      "status": "failed",
+      "caught": true,
+      "issues": [
+        {
+          "code": "reference",
+          "file": "content/chests/hollow_stone.json",
+          "path": "/loot/0/itemId",
+          "message": "物品不存在：item:missing"
+        }
+      ]
+    },
+    {
+      "id": "chest-empty-loot",
+      "label": "宝箱 loot 为空数组",
+      "expectation": "schema 错误指向 /loot",
+      "status": "failed",
+      "caught": true,
+      "issues": [
+        {
+          "code": "schema",
+          "file": "content/chests/market_crate.json",
+          "path": "/loot",
+          "message": "must NOT have fewer than 1 items"
+        }
+      ]
+    },
+    {
+      "id": "collectible-bad-set-ref",
+      "label": "收集品 setId 指向不存在的收集集",
+      "expectation": "reference 错误指向 /setId",
+      "status": "failed",
+      "caught": true,
+      "issues": [
+        {
+          "code": "reference",
+          "file": "content/collectibles/glow_moss_a.json",
+          "path": "/setId",
+          "message": "收集集不存在：collect_set:missing"
+        }
+      ]
+    },
+    {
+      "id": "collect-set-bad-reward-ref",
+      "label": "收集集奖励物品不存在",
+      "expectation": "reference 错误指向 /rewardItemId",
+      "status": "failed",
+      "caught": true,
+      "issues": [
+        {
+          "code": "reference",
+          "file": "content/collect-sets/glow_moss.json",
+          "path": "/rewardItemId",
+          "message": "奖励物品不存在：item:missing"
         }
       ]
     }
