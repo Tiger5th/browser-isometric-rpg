@@ -110,6 +110,16 @@ const PLACEHOLDER_URLS = import.meta.glob(
 ) as Record<string, string>;
 const PLACEHOLDER_URL = Object.values(PLACEHOLDER_URLS)[0] ?? null;
 
+/**
+ * 真实 VRM 角色（票 30）：`npm run assets:real-character` 产出后自动优先于
+ * 占位角色。与 anime-pipeline 的 character_vroid_lod0.glb 约定一致。
+ */
+const REAL_CHARACTER_URLS = import.meta.glob(
+  "../../../assets/character_vroid_lod0.glb",
+  { eager: true, query: "?url", import: "default" },
+) as Record<string, string>;
+const REAL_CHARACTER_URL = Object.values(REAL_CHARACTER_URLS)[0] ?? null;
+
 const CONTENT_BUNDLE = {
   regions: [regionData],
   npcs: [npcElderData, npcScoutData],
@@ -767,9 +777,11 @@ export const p1WorldScenario: ScenarioDefinition = {
       );
     }
 
-    if (!PLACEHOLDER_URL) {
+    const playerCharacterUrl = REAL_CHARACTER_URL ?? PLACEHOLDER_URL;
+    if (!playerCharacterUrl) {
       throw new Error(
-        "缺少占位角色资产 assets/character_anime_placeholder.glb（先运行 npm run assets:anime）",
+        "缺少角色资产 assets/character_vroid_lod0.glb（npm run assets:real-character）" +
+          "或 assets/character_anime_placeholder.glb（npm run assets:anime）",
       );
     }
 
@@ -790,8 +802,10 @@ export const p1WorldScenario: ScenarioDefinition = {
 
     const player = await loadPlayerCharacter(
       scene,
-      PLACEHOLDER_URL,
-      "character_anime_placeholder.glb",
+      playerCharacterUrl,
+      playerCharacterUrl === REAL_CHARACTER_URL
+        ? "character_vroid_lod0.glb"
+        : "character_anime_placeholder.glb",
     );
     player.rootNode.metadata = { entityId: PLAYER_ID };
     if (player.rootNode.parent === null) {

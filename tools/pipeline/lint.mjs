@@ -41,6 +41,25 @@ const MAX_TEXTURE_SIZE = 2048;
 const MAX_MATERIALS = 4;
 const MAX_TEXTURES = 8;
 
+/**
+ * 外部（人工制作）资产：Booth 免费 VRM 等，经 assets:real-character 管线产出。
+ *
+ * 这些资产的命名（VRoid/Blender 惯例：J_Bip、hair1.001）、拓扑（发片开放
+ * 网格、非流形边）与材质数量天然不符合程序化资产约定；强行重命名/减面
+ * 只会破坏可调试性与质量。对外部资产：
+ * - 命名/拓扑违规降级为 warning（仍全部上报，不阻断）；
+ * - 预算改用下方放宽限额（仍受控，防止无脑塞高模）。
+ * 结构性错误（morph 结构、skin 一致性、动画悬空通道）不放宽——那是管线
+ * 消费硬约束。
+ */
+const EXTERNAL_ASSETS = new Set(["character_vroid_lod0.glb"]);
+const EXTERNAL_LIMITS = {
+  perMeshTriangles: 30000,
+  totalTriangles: 60000,
+  materials: 32,
+  textures: 24,
+};
+
 const NAME_PATTERN =
   /^(b_[a-z0-9_]+|(character|environment|prop|material|texture|anim|collider|light|camera|scene|skin|primitive|attr|morph|sampler|node)_[a-z0-9_]+)$/;
 
@@ -56,16 +75,16 @@ function triangleLimitFor(name) {
   return TRIANGLE_LIMITS[categoryOf(name)] ?? TRIANGLE_LIMITS.default;
 }
 
-function checkName(name, path, violations) {
+function checkName(name, path, violations, severity = "error") {
   if (!name || name.trim() === "") {
-    violations.push(violation("naming", "error", path, "缺少名称"));
+    violations.push(violation("naming", severity, path, "缺少名称"));
     return;
   }
   if (!NAME_PATTERN.test(name)) {
     violations.push(
       violation(
         "naming",
-        "error",
+        severity,
         path,
         `名称 "${name}" 不符合小写蛇形/类别前缀约定（骨骼用 b_ 前缀）`,
       ),
@@ -145,22 +164,27 @@ function analyzeTopology(primitive) {
   };
 }
 
-function lintDocument(document, fileName) {
+function lintDocument(document, fileName, { external = false } = {}) {
   const violations = [];
   const root = document.getRoot();
   const topology = [];
+  /** 外部资产：命名/拓扑违规降级为 warning（见文件头 EXTERNAL_ASSETS 注释）。 */
+  const severityFor = (base) => (external ? "warning" : base);
+  const materialLimit = external ? EXTERNAL_LIMITS.materials : MAX_MATERIALS;
+  const textureLimit = external ? EXTERNAL_LIMITS.textures : MAX_TEXTURES;
 
   for (const node of root.listNodes()) {
-    checkName(node.getName(), `node:${node.getName() || "(unnamed)"}`, violations);
+    checkName(node.getName(), `node:${node.getName() || "(unnamed)"}`, violations, severityFor("error"));
   }
   for (const mesh of root.listMeshes()) {
-    checkName(mesh.getName(), `mesh:${mesh.getName() || "(unnamed)"}`, violations);
+    checkName(mesh.getName(), `mesh:${mesh.getName() || "(unnamed)"}`, violations, severityFor("error"));
   }
   for (const material of root.listMaterials()) {
     checkName(
       material.getName(),
       `material:${material.getName() || "(unnamed)"}`,
       violations,
+      severityFor("error"),
     );
   }
   for (const texture of root.listTextures()) {
@@ -168,6 +192,7 @@ function lintDocument(document, fileName) {
       texture.getName(),
       `texture:${texture.getName() || "(unnamed)"}`,
       violations,
+      severityFor("error"),
     );
   }
   for (const animation of root.listAnimations()) {
@@ -175,26 +200,27 @@ function lintDocument(document, fileName) {
       animation.getName(),
       `animation:${animation.getName() || "(unnamed)"}`,
       violations,
+      severityFor("error"),
     );
   }
 
-  if (root.listMaterials().length > MAX_MATERIALS) {
+  if (root.listMaterials().length > materialLimit) {
     violations.push(
       violation(
         "material-count",
         "error",
         "document",
-        `材质数 ${root.listMaterials().length} 超过上限 ${MAX_MATERIALS}`,
+        `材质数 ${root.listMaterials().length} 超过上限 ${materialLimit}`,
       ),
     );
   }
-  if (root.listTextures().length > MAX_TEXTURES) {
+  if (root.listTextures().length > textureLimit) {
     violations.push(
       violation(
         "texture-count",
         "error",
         "document",
-        `贴图数 ${root.listTextures().length} 超过上限 ${MAX_TEXTURES}`,
+        `贴图数 ${root.listTextures().length} 超过上限 ${textureLimit}`,
       ),
     );
   }
@@ -276,7 +302,7 @@ function lintDocument(document, fileName) {
           violations.push(
             violation(
               "non-manifold",
-              "error",
+              severityFor("error"),
               `mesh:${mesh.getName()}`,
               `非流形边 ${analysis.nonManifoldEdges} 条（>2 个面共边）`,
             ),
@@ -286,7 +312,7 @@ function lintDocument(document, fileName) {
           violations.push(
             violation(
               "degenerate-triangle",
-              "error",
+              severityFor("error"),
               `mesh:${mesh.getName()}`,
               `退化三角 ${analysis.degenerateTriangles} 个`,
             ),
@@ -315,7 +341,9 @@ function lintDocument(document, fileName) {
       }
     }
 
-    const limit = triangleLimitFor(mesh.getName());
+    const limit = external
+      ? EXTERNAL_LIMITS.perMeshTriangles
+      : triangleLimitFor(mesh.getName());
     if (meshTriangles > limit) {
       violations.push(
         violation(
@@ -323,6 +351,20 @@ function lintDocument(document, fileName) {
           "error",
           `mesh:${mesh.getName()}`,
           `三角数 ${Math.round(meshTriangles)} 超过 ${categoryOf(mesh.getName())} 上限 ${limit}`,
+        ),
+      );
+    }
+  }
+
+  if (external) {
+    const totalTriangles = topology.reduce((sum, item) => sum + item.triangleCount, 0);
+    if (totalTriangles > EXTERNAL_LIMITS.totalTriangles) {
+      violations.push(
+        violation(
+          "triangle-budget",
+          "error",
+          "document",
+          `外部资产总三角数 ${Math.round(totalTriangles)} 超过上限 ${EXTERNAL_LIMITS.totalTriangles}`,
         ),
       );
     }
@@ -403,7 +445,10 @@ export async function lintAssets(paths) {
   const files = [];
   for (const path of paths) {
     const document = await io.read(path);
-    files.push(lintDocument(document, path));
+    const baseName = path.split("/").pop() ?? path;
+    files.push(
+      lintDocument(document, path, { external: EXTERNAL_ASSETS.has(baseName) }),
+    );
   }
 
   return {
