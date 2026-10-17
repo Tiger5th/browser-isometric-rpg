@@ -149,3 +149,14 @@ Blocked by: —
 5. **流程 = 风格锚定先行**：先出 3–5 张锚定参考图供用户挑选，定稿后批量生成环境贴图集，避免风格漂移返工。
 
 原「VRoid + Mixamo + toon 拉齐」方案中：toon 渲染/描边/色彩分级（引擎侧最大杠杆）**继续有效**（作用于 3D 角色），VRoid/Mixamo 环节作废。票 15 的 Blender 补测与票 17 的 VRoid 遗留项随之关闭（不阻塞任何票）。
+
+### 2026-10-17 · 锚定图定稿（用户确认）
+
+anchor-v1.png（artifacts/style-anchor/）定调：清新暖绿草地 + 灰石围墙/石板路 + 木质半木结构小屋（青灰/赭红瓦顶）+ 圆润卡通树 + 柔和饱和配色。相机 = 45° 等距俯视，所有环境贴图按此视角生成。进入批量生成阶段，一致性 = 每次生成以 anchor-v1 为参考图喂给 Gemini。
+
+### 2026-10-17 · 第一批环境贴图集完成（Gemini 批量生成）
+
+artifacts/style-anchor/tiles/ 共 9 张，全部通过 md5 去重校验：
+- 地面平铺（1024²、正俯视、可平铺）：grass / stone-path / dirt-path / water
+- 立面物件（1024×765、45° 等距、白底单件）：stone-wall / tree-large / bush / barrel / crate
+生成流程固化：同一会话喂 anchor-v1 参考图 + 风格前缀提示词 → 等待生成完成（轮询"正在创建您的图片"消失 + blob 数增加）→ canvas 导出 → md5 去重。坑：连续生成时"最后一张 blob"可能未刷新导致重复保存，必须 hash 校验。
