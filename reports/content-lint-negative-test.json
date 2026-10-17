@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "purpose": "L2 负向测试：确认色板卡/立绘引用的 schema 与引用规则会拦截坏数据（票 29）",
+  "purpose": "L2 负向测试：确认色板卡/立绘/区域出口/敌人掉落引用的 schema 与引用规则会拦截坏数据（票 29/35）",
   "exitExpectation": "failed",
   "status": "passed",
   "control": {
@@ -71,6 +71,36 @@
           "file": "content/npcs/scout_lin.json",
           "path": "/portrait",
           "message": "must have required property 'image'"
+        }
+      ]
+    },
+    {
+      "id": "region-exit-unknown-target",
+      "label": "区域出口指向未知区域",
+      "expectation": "reference 错误指向 /exits/0/targetRegionId",
+      "status": "failed",
+      "caught": true,
+      "issues": [
+        {
+          "code": "reference",
+          "file": "content/regions/slime_den.json",
+          "path": "/exits/0/targetRegionId",
+          "message": "目标区域不存在：region:nowhere"
+        }
+      ]
+    },
+    {
+      "id": "enemy-drop-unknown-item",
+      "label": "敌人掉落引用不存在的物品",
+      "expectation": "reference 错误指向 /drops/1/itemId",
+      "status": "failed",
+      "caught": true,
+      "issues": [
+        {
+          "code": "reference",
+          "file": "content/enemy-templates/slime_den.json",
+          "path": "/drops/1/itemId",
+          "message": "物品不存在：item:ghost_core"
         }
       ]
     }

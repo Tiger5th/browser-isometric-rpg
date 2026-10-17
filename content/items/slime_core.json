@@ -1,0 +1,8 @@
+{
+  "id": "item:slime_core",
+  "displayName": "巢穴核心",
+  "kind": "misc",
+  "description": "巢穴深处凝结的暗紫黏核，表面还在缓慢搏动。村民出高价收购。",
+  "maxStack": 99,
+  "value": 12
+}

@@ -1,0 +1,32 @@
+{
+  "id": "region:slime_den",
+  "displayName": "史莱姆巢穴",
+  "asset": {
+    "model": "assets/regions/slime_den.glb"
+  },
+  "player": {
+    "id": "entity:player",
+    "templateId": "player_template:hero",
+    "displayName": "旅人",
+    "spawn": {
+      "position": { "x": 0, "y": 0, "z": -6 },
+      "rotation": { "x": 0, "y": 0, "z": 0 }
+    },
+    "baseAttributes": {
+      "maxHp": 100,
+      "hp": 100,
+      "attack": 12,
+      "defense": 4,
+      "moveSpeed": 5.5,
+      "xpToNext": 100
+    }
+  },
+  "exits": [
+    {
+      "id": "exit:den_to_hollow",
+      "targetRegionId": "region:green_hollow",
+      "position": { "x": 0, "y": 0, "z": -11 },
+      "rotation": { "x": 0, "y": 3.141592653589793, "z": 0 }
+    }
+  ]
+}

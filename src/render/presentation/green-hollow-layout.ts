@@ -46,7 +46,7 @@ export interface PropPlacement {
   scale: number;
   /** 是否参与遮挡描边判定。 */
   occluder: boolean;
-  zone: "treeline" | "village" | "pond";
+  zone: "treeline" | "village" | "pond" | "cave-mouth" | "tunnel" | "deep";
 }
 
 /** billboard 的世界尺寸（宽高比 = 1024:765）。 */

@@ -98,9 +98,25 @@ export interface PlayerLevelUpEvent {
   attributesGained: Array<{ attribute: string; delta: number }>;
 }
 
+/**
+ * 区域切换的事实（票 35）：玩家走到路口触发切区后广播一次。
+ * 渲染层据此做黑场过场与场景重建，自动存档据此判断区域是否变化
+ * （GameSaveAutoSaver.notifyRegionChanged）——两者都不需要轮询快照。
+ */
+export interface RegionChangedEvent {
+  type: "region-changed";
+  /** 出发区域 id。 */
+  fromRegionId: string;
+  /** 目标区域 id（= 触发出口的 targetRegionId）。 */
+  toRegionId: string;
+  /** 触发的出口 id。 */
+  exitId: string;
+}
+
 /** GameSession 对外事件：战斗事件 + 对话/任务状态变化。 */
 export type GameSessionEvent =
   | EnemyKilledEvent
+  | RegionChangedEvent
   | DamageDealtEvent
   | HealthChangedEvent
   | AttackWindupStartedEvent

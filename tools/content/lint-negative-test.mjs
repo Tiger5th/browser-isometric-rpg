@@ -58,7 +58,14 @@ async function loadFiles() {
 const schemas = await loadSchemas();
 const baseFiles = await loadFiles();
 const dialogues = [
-  { id: "elder_ma", file: "content/dialogues/elder_ma.ink", questTags: [{ kind: "offer", questId: "quest:cull_slimes" }] },
+  {
+    id: "elder_ma",
+    file: "content/dialogues/elder_ma.ink",
+    questTags: [
+      { kind: "offer", questId: "quest:cull_slimes" },
+      { kind: "offer", questId: "quest:den_cull" },
+    ],
+  },
 ];
 
 function clone(files) {
@@ -149,13 +156,53 @@ const cases = [];
   });
 }
 
-// 5) 对照组：原始内容集必须通过。
+// 5) 票 35：区域出口指向不存在的目标区域 → 引用完整性报错。
+{
+  const files = clone(baseFiles);
+  find(files, "content/regions/slime_den.json").data.exits[0].targetRegionId = "region:nowhere";
+  const result = validateContent(files, schemas, dialogues);
+  cases.push({
+    id: "region-exit-unknown-target",
+    label: "区域出口指向未知区域",
+    expectation: "reference 错误指向 /exits/0/targetRegionId",
+    status: result.valid ? "passed" : "failed",
+    caught: result.issues.some(
+      (issue) =>
+        issue.file === "content/regions/slime_den.json" &&
+        issue.code === "reference" &&
+        issue.path === "/exits/0/targetRegionId",
+    ),
+    issues: result.issues,
+  });
+}
+
+// 6) 票 35：区域 2 专属掉落物引用不存在的物品 → 引用完整性报错。
+{
+  const files = clone(baseFiles);
+  find(files, "content/enemy-templates/slime_den.json").data.drops[1].itemId = "item:ghost_core";
+  const result = validateContent(files, schemas, dialogues);
+  cases.push({
+    id: "enemy-drop-unknown-item",
+    label: "敌人掉落引用不存在的物品",
+    expectation: "reference 错误指向 /drops/1/itemId",
+    status: result.valid ? "passed" : "failed",
+    caught: result.issues.some(
+      (issue) =>
+        issue.file === "content/enemy-templates/slime_den.json" &&
+        issue.code === "reference" &&
+        issue.path === "/drops/1/itemId",
+    ),
+    issues: result.issues,
+  });
+}
+
+// 7) 对照组：原始内容集必须通过。
 const control = validateContent(clone(baseFiles), schemas, dialogues);
 
 const allCaught = cases.every((entry) => entry.caught) && control.valid;
 const report = {
   schemaVersion: 1,
-  purpose: "L2 负向测试：确认色板卡/立绘引用的 schema 与引用规则会拦截坏数据（票 29）",
+  purpose: "L2 负向测试：确认色板卡/立绘/区域出口/敌人掉落引用的 schema 与引用规则会拦截坏数据（票 29/35）",
   exitExpectation: "failed",
   status: allCaught ? "passed" : "failed",
   control: { valid: control.valid, issues: control.issues },

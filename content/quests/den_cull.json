@@ -1,0 +1,24 @@
+{
+  "id": "quest:den_cull",
+  "title": "清剿巢穴",
+  "description": "马婆婆请你下到南边的史莱姆巢穴，清掉里面的史莱姆，再回去向她复命。",
+  "giverNpcId": "npc:elder_ma",
+  "turnInNpcId": "npc:elder_ma",
+  "objectives": [
+    {
+      "id": "objective:kill_den_slimes",
+      "type": "kill",
+      "enemyTemplateId": "enemy_template:slime_den",
+      "count": 3
+    }
+  ],
+  "rewards": {
+    "items": [
+      { "itemId": "item:healing_herb", "quantity": 3 },
+      { "itemId": "item:old_coin", "quantity": 20 }
+    ],
+    "modifiers": [
+      { "attribute": "maxHp", "operation": "add", "value": 8 }
+    ]
+  }
+}

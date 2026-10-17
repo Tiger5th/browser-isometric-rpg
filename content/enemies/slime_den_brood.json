@@ -1,0 +1,15 @@
+{
+  "id": "enemy:slime_den_brood",
+  "templateId": "enemy_template:slime_den",
+  "displayName": "巢穴史莱姆",
+  "regionId": "region:slime_den",
+  "position": { "x": -4, "y": 0, "z": 2 },
+  "overrides": {
+    "baseAttributes": {
+      "maxHp": 34,
+      "hp": 34,
+      "attack": 7
+    }
+  },
+  "tags": ["den-guard"]
+}

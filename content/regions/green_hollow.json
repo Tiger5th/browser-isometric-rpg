@@ -20,5 +20,13 @@
       "moveSpeed": 5.5,
       "xpToNext": 100
     }
-  }
+  },
+  "exits": [
+    {
+      "id": "exit:cave_mouth",
+      "targetRegionId": "region:slime_den",
+      "position": { "x": 0, "y": 0, "z": 19 },
+      "rotation": { "x": 0, "y": 3.141592653589793, "z": 0 }
+    }
+  ]
 }

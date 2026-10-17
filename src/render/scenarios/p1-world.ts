@@ -29,19 +29,11 @@ import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import type { Observer } from "@babylonjs/core/Misc/observable";
 import { DefaultRenderingPipeline } from "@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/defaultRenderingPipeline";
 import { Scene } from "@babylonjs/core/scene";
-import cullSlimesData from "../../../content/quests/cull_slimes.json";
 import elderMaCompiled from "../../../content/dialogues/elder_ma.ink?ink";
-import slimeTemplateData from "../../../content/enemy-templates/slime.json";
-import slimeBlueData from "../../../content/enemies/slime_blue.json";
-import slimeElderData from "../../../content/enemies/slime_elder.json";
-import slimeMeadowData from "../../../content/enemies/slime_meadow.json";
-import healingHerbData from "../../../content/items/healing_herb.json";
-import oldCoinData from "../../../content/items/old_coin.json";
-import slimeGelData from "../../../content/items/slime_gel.json";
-import travelerSwordData from "../../../content/items/traveler_sword.json";
-import npcElderData from "../../../content/npcs/elder_ma.json";
-import npcScoutData from "../../../content/npcs/scout_lin.json";
-import regionData from "../../../content/regions/green_hollow.json";
+import {
+  GREEN_HOLLOW_REGION,
+  SAMPLE_CONTENT_BUNDLE,
+} from "../../logic/content/sample-content";
 import type { ContentBundle } from "../../logic/content/types";
 import {
   GameSession,
@@ -85,19 +77,48 @@ import {
   type PlayerCharacter,
   type ProceduralCharacter,
 } from "../presentation/character-visuals";
+import { getLoadingGate } from "../loadingGate";
 import {
-  createGreenHollowEnvironment,
-  type EnvironmentVisuals,
-} from "../presentation/environment-visuals";
+  createRegionRuntime,
+  type RegionRuntime,
+  type RegionRuntimeLayout,
+} from "../presentation/region-runtime";
 import {
+  GREEN_HOLLOW_BOUNDS,
   GREEN_HOLLOW_REGION_ID,
+  GROUND_PATCHES,
   PROPS,
   validateLayout,
+  type PropPlacement,
 } from "../presentation/green-hollow-layout";
 import {
-  createGreenHollowNavigation,
-  type GreenHollowNavigation,
-} from "../presentation/green-hollow-navigation";
+  SLIME_DEN_BOUNDS,
+  SLIME_DEN_EXITS,
+  SLIME_DEN_GROUND_PATCHES,
+  SLIME_DEN_HILLS,
+  SLIME_DEN_LANDSCAPE_BOUNDS,
+  SLIME_DEN_PROPS,
+  SLIME_DEN_REGION_ID,
+  SLIME_DEN_TINT,
+  SLIME_DEN_TREES,
+  slimeDenTextureCoverage,
+  slimeDenWaterPatch,
+  validateSlimeDenLandscape,
+  validateSlimeDenLayout,
+} from "../presentation/slime-den-layout";
+import {
+  findTriggeredExit,
+  type RegionLinkageExit,
+} from "../../logic/region-linkage";
+import {
+  LANDSCAPE_BOUNDS as HOLLOW_LANDSCAPE_BOUNDS,
+  LANDSCAPE_GROUND_COLOR,
+  LANDSCAPE_HILL_COLOR,
+  LANDSCAPE_HILLS as HOLLOW_HILLS,
+  LANDSCAPE_TREE_COLOR,
+  LANDSCAPE_TREES as HOLLOW_TREES,
+} from "../presentation/world-physics";
+import type { GreenHollowNavigation } from "../presentation/green-hollow-navigation";
 import {
   createLandscapeRing,
   installLandscapeFog,
@@ -130,7 +151,6 @@ import { paletteOf, portraitUrlOf } from "../presentation/character-palettes";
 import {
   bushAlphaForOcclusion,
   bushOcclusionAt,
-  buildPropColliders,
   isBlockedByCollider,
   keyLightAzimuthDegrees,
   keyLightElevationDegrees,
@@ -149,6 +169,11 @@ const PLAYER_ID = "entity:player";
 const PLAYER_MODEL_YAW_OFFSET = 0;
 const CAMERA_VERTICAL_SPAN = 30;
 const SAMPLE_DURATION_MS = 4_000;
+/**
+ * 区域切换黑场时长（毫秒）。淡入淡出各一次：正好盖住新区域的贴图抠白、
+ * navmesh 构建与首帧上传，切换本身不会看到中间态。
+ */
+const REGION_FADE_MS = 420;
 /** 07 修正预算：基础 ≤300 + 描边/VFX ≤50。 */
 const DRAW_CALL_BUDGET = 350;
 const JS_HEAP_BUDGET_MB = 1500;
@@ -169,14 +194,7 @@ const REAL_CHARACTER_URLS = import.meta.glob(
 ) as Record<string, string>;
 const REAL_CHARACTER_URL = Object.values(REAL_CHARACTER_URLS)[0] ?? null;
 
-const CONTENT_BUNDLE = {
-  regions: [regionData],
-  npcs: [npcElderData, npcScoutData],
-  enemyTemplates: [slimeTemplateData],
-  enemies: [slimeMeadowData, slimeBlueData, slimeElderData],
-  items: [healingHerbData, oldCoinData, slimeGelData, travelerSwordData],
-  quests: [cullSlimesData],
-} as unknown as ContentBundle;
+const CONTENT_BUNDLE: ContentBundle = SAMPLE_CONTENT_BUNDLE;
 
 interface EntityVisual {
   node: TransformNode;
@@ -195,13 +213,16 @@ interface P1WorldState {
   deadEnemies: Set<string>;
   player: PlayerCharacter;
   whiteTexture: BaseTexture;
-  environment: EnvironmentVisuals;
+  /** 当前区域的可视部分（票 35）：环境网格 + 硬碰撞体 + navmesh。 */
+  runtime: RegionRuntime;
   /** 边界景观环带 + 渐暗雾（票 28）。 */
   landscape: LandscapeVisuals;
+  /** 区域切换进行中（黑场期间为 true，输入意图被忽略）。 */
+  traveling: boolean;
   /** 全场唯一主光（票 28；main.ts 的默认双光源已关闭）。 */
   keyLight: DirectionalLight | null;
-  /** 硬碰撞体（树/墙/桶/箱；灌木可穿）。 */
-  colliders: PropCollider[];
+  /** 硬碰撞体（树/墙/桶/箱；灌木可穿）；切区时整体换掉。 */
+  colliders: readonly PropCollider[];
   /** NPC 待机演出（呼吸/踱步）。 */
   npcIdle: Map<string, NpcIdleController>;
   materials: Material[];
@@ -314,6 +335,25 @@ export interface P1WorldDebugApi {
   setSelectedTarget(enemyId: string | null): void;
   /** 票 27：音效是否已解锁（首次交互后为 true）。 */
   isAudioUnlocked(): boolean;
+  /**
+   * 票 35：当前区域 id；走到路口时逐帧自动触发区域切换。
+   * `tryTravel` 是显式触发（ego-browser 冒烟用，等价于走到路口）。
+   */
+  getRegion(): { regionId: string | null; traveling: boolean; exits: Array<{ id: string; targetRegionId: string; x: number; z: number }> };
+  /** 显式触发一次区域切换（x/z 缺省用玩家当前逻辑位置）。 */
+  tryTravel(x?: number, z?: number): Promise<string | null>;
+  /** 传送到指定区域（按该区域某个出口的坐标触发，L4 双向冒烟用）。 */
+  travelToExit(targetRegionId: string): Promise<string | null>;
+  /** 区域相关证据：两区域的网格/碰撞/出口规模与自动存档后的区域 id。 */
+  getRegionEvidence(): Promise<{
+    regionId: string | null;
+    landscapeMeshCount: number;
+    meshedPartCount: number;
+    colliderCount: number;
+    exitCount: number;
+    gateMasked: boolean;
+    autoSaveRegionId: string | null;
+  }>;
   /** 画质档位：运行时切换，返回最终 renderScale。 */
   setQuality(level: QualityLevel): number;
   getQuality(): {
@@ -1147,6 +1187,50 @@ function installDebugApi(scene: Scene, state: P1WorldState): void {
         devicePixelRatio: window.devicePixelRatio || 1,
       };
     },
+    getRegion: () => ({
+      regionId: state.session.currentRegionId,
+      traveling: state.traveling,
+      exits: exitsForRegion(state.session.currentRegionId).map((exit) => ({
+        id: exit.id,
+        targetRegionId: exit.targetRegionId,
+        x: exit.position.x,
+        z: exit.position.z,
+      })),
+    }),
+    tryTravel: async (x?: number, z?: number) => {
+      const player = playerSnapshot(state.session);
+      const target =
+        x === undefined || z === undefined
+          ? { x: player?.position.x ?? 0, z: player?.position.z ?? 0 }
+          : { x, z };
+      return travelToRegion(state, scene, forwardVector(scene), target);
+    },
+    travelToExit: async (targetRegionId) => {
+      // 直接用目标区域里指回当前区域的那个出口坐标触发往返。
+      const exit = CONTENT_BUNDLE.regions
+        .flatMap((region) => region.exits ?? [])
+        .find((entry) => entry.targetRegionId === targetRegionId);
+      if (exit === undefined) {
+        throw new Error(`没有指回 ${targetRegionId} 的出口`);
+      }
+      return travelToRegion(state, scene, forwardVector(scene), {
+        x: exit.position.x,
+        z: exit.position.z,
+      });
+    },
+    getRegionEvidence: async () => {
+      const entries = await state.slotService.listSlots();
+      const auto = entries.find((entry) => entry.slotId === "auto");
+      return {
+        regionId: state.session.currentRegionId,
+        landscapeMeshCount: state.landscape.meshes.length,
+        meshedPartCount: state.runtime.environment.meshedParts.length,
+        colliderCount: state.runtime.colliders.length,
+        exitCount: exitsForRegion(state.session.currentRegionId).length,
+        gateMasked: getLoadingGate().isMasked(),
+        autoSaveRegionId: auto?.snapshot?.regionId ?? null,
+      };
+    },
     getOcclusion: () => ({
       occluded: [...state.occlusion.occludedIds],
       outlined: state.occlusion.outlinedCount,
@@ -1154,9 +1238,9 @@ function installDebugApi(scene: Scene, state: P1WorldState): void {
     }),
     probeOcclusion: (holdMs = 0) => {
       // 用低矮石墙做探针：角色上半身可见，描边高亮在截图里更清楚。
-      const occluder = PROPS.find(
+      const occluder = propsForRegion(state.session.currentRegionId).find(
         (prop) => prop.id === "prop.wall.north-west",
-      );
+      ) ?? propsForRegion(state.session.currentRegionId).find((prop) => prop.kind === "stone-wall");
       if (!occluder) {
         throw new Error("布局缺少可用于遮挡探针的石墙");
       }
@@ -1263,10 +1347,12 @@ function installDebugApi(scene: Scene, state: P1WorldState): void {
         }
       }
       return {
-        meshedPartCount: state.environment.meshedParts.length,
+        meshedPartCount: state.runtime.environment.meshedParts.length,
         colliderCount: state.colliders.length,
         colliderKinds: [...new Set(state.colliders.map((collider) => collider.kind))].sort(),
-        bushCount: PROPS.filter((prop) => prop.kind === "bush").length,
+        bushCount: propsForRegion(state.session.currentRegionId).filter(
+          (prop) => prop.kind === "bush",
+        ).length,
         fogEnabled: scene.fogEnabled,
         fogStart: scene.fogStart,
         fogEnd: scene.fogEnd,
@@ -1373,6 +1459,29 @@ export const p1WorldScenario: ScenarioDefinition = {
       );
     }
 
+    // 票 35：区域 2 的布局/景观/贴图自检同样在 setup 阶段拦。
+    // 巢穴只有走到路口才会被创建，因此自检必须在切区之前跑一次。
+    const denLayoutIssues = validateSlimeDenLayout();
+    if (denLayoutIssues.length > 0) {
+      throw new Error(
+        `slime_den 布局自检失败：${denLayoutIssues
+          .map((issue) => `${issue.id}: ${issue.message}`)
+          .join("；")}`,
+      );
+    }
+    const denLandscapeIssues = validateSlimeDenLandscape();
+    if (denLandscapeIssues.length > 0) {
+      throw new Error(
+        `slime_den 景观自检失败：${denLandscapeIssues
+          .map((issue) => `${issue.id}: ${issue.message}`)
+          .join("；")}`,
+      );
+    }
+    const denTextureIssues = slimeDenTextureCoverage();
+    if (denTextureIssues.length > 0) {
+      throw new Error(`slime_den 贴图自检失败：${denTextureIssues.join("；")}`);
+    }
+
     // 票 30：真实 VRM 角色优先于占位角色。
     const playerCharacterUrl = REAL_CHARACTER_URL ?? PLACEHOLDER_URL;
     if (!playerCharacterUrl) {
@@ -1388,20 +1497,23 @@ export const p1WorldScenario: ScenarioDefinition = {
       ? camera.getDirection(new Vector3(0, 0, 1)).normalize()
       : new Vector3(-0.408, -0.816, 0.408).normalize();
 
-    const environment = await createGreenHollowEnvironment(scene, root, forward);
+    // 票 35：翠谷与史莱姆巢穴共用同一个「区域运行时」工厂；
+    // 两区域各自的布局/自检/景观摆位由 region-layouts 提供。
+    const runtime = await createRegionRuntime(scene, root, forward, GREEN_HOLLOW_RUNTIME_LAYOUT);
+    const environment = runtime.environment;
     // 边界景观环带 + 渐暗雾 + 全场唯一主光（票 28）。
-    const landscape = createLandscapeRing(scene, root);
+    const landscape = createLandscapeRing(scene, root, landscapeOptionsFor(GREEN_HOLLOW_REGION_ID));
     const keyLight = installUnifiedKeyLight(scene);
     installLandscapeFog(scene);
     // 硬碰撞体：树/石墙/木桶/木箱（灌木可穿，见 world-physics）。
-    const colliders = buildPropColliders();
+    const colliders = runtime.colliders;
     const pipeline = createGradingPipeline(scene);
     const whiteTexture = createWhiteTexture(scene);
 
     const session = new GameSession();
     session.registerDialogue("elder_ma", elderMaCompiled);
     session.loadRegion(CONTENT_BUNDLE, GREEN_HOLLOW_REGION_ID);
-    const navigation = await createGreenHollowNavigation();
+    const navigation = runtime.navigation;
 
     const player = await loadPlayerCharacter(
       scene,
@@ -1488,8 +1600,9 @@ export const p1WorldScenario: ScenarioDefinition = {
       deadEnemies: new Set<string>(),
       player,
       whiteTexture,
-      environment,
+      runtime,
       landscape,
+      traveling: false,
       keyLight,
       colliders,
       npcIdle,
@@ -1864,6 +1977,25 @@ export const p1WorldScenario: ScenarioDefinition = {
         }
       }
 
+      // 票 35：走到路口 → 黑场切区。判定用逻辑层位置（比视觉更早，
+      // 因为 navmesh 路点与视觉插值可能差半米）；同一次判定只在
+      // traveling=false 时发起，切换期间不重复触发。
+      if (!state.traveling && state.session.currentRegionId !== null) {
+        const playerLogic = snapshot.entities.find((entity) => entity.id === PLAYER_ID);
+        if (playerLogic !== undefined && playerLogic.combat.alive) {
+          const hit = findTriggeredExit(
+            exitsForRegion(state.session.currentRegionId),
+            playerLogic.position,
+          );
+          if (hit !== null) {
+            void travelToRegion(state, scene, forwardVector(scene), {
+              x: playerLogic.position.x,
+              z: playerLogic.position.z,
+            });
+          }
+        }
+      }
+
       // 票 28：玩家视觉位置再过一遍硬碰撞求解。navmesh 已排除障碍，
       // 但逻辑层是直线推进，逐帧 moveTo 的插值可能切过障碍角；
       // 这里保证「玩家/敌人均不可穿」在渲染层也成立（灌木不在此列）。
@@ -1897,11 +2029,13 @@ export const p1WorldScenario: ScenarioDefinition = {
       }
 
       // 灌木进入反馈：玩家在灌木内时轻微半透明（草丛机制视觉预留）。
-      const bushes = PROPS.filter((prop) => prop.kind === "bush").map((prop) => ({
-        id: prop.id,
-        x: prop.x,
-        z: prop.z,
-      }));
+      const bushes = propsForRegion(state.session.currentRegionId)
+        .filter((prop) => prop.kind === "bush")
+        .map((prop) => ({
+          id: prop.id,
+          x: prop.x,
+          z: prop.z,
+        }));
       const proximity = bushOcclusionAt(
         player.rootNode.position.x,
         player.rootNode.position.z,
@@ -2266,6 +2400,21 @@ export const p1WorldScenario: ScenarioDefinition = {
           : {}),
       },
       {
+        // 票 35：区域联动证据。当前区域 + 出口数 + 两区域共有的运行时规模。
+        name: "region.exitCount",
+        value: exitsForRegion(state.session.currentRegionId).length,
+        unit: "exits",
+        threshold: 1,
+        comparison: "eq",
+      },
+      {
+        name: "region.landscapeMeshCount",
+        value: state.landscape.meshes.length,
+        unit: "meshes",
+        threshold: 30,
+        comparison: "gte",
+      },
+      {
         name: "sampledFrames",
         value: summary.count,
         unit: "frames",
@@ -2328,8 +2477,9 @@ export const p1WorldScenario: ScenarioDefinition = {
       material.dispose();
     }
     state.player.dispose();
-    state.navigation.dispose();
-    state.environment.dispose();
+    // runtime 自己持有并释放 navmesh（state.navigation 只是同一个实例的别名，
+    // 切区后指向新区；这里不能重复 dispose）。
+    state.runtime.dispose();
     // 票 28：景观环带 + 唯一主光 + 雾效清理；雾与光照恢复默认，
     // 否则会影响后续 scenario（共享 scene）。
     state.landscape.dispose();
@@ -2349,6 +2499,227 @@ export const p1WorldScenario: ScenarioDefinition = {
     delete window.P1WorldDebug;
   },
 };
+
+// ---------------------------------------------------------------------------
+// 票 35：区域注册表与切换
+// ---------------------------------------------------------------------------
+
+/**
+ * 每个区域的「运行时布局」。这是渲染层唯一的区域差异点：
+ * 贴片、道具摆位、暗色调、出口。翠谷用原色，巢穴压暗（资产 agent
+ * 产出 artifacts/region2/ 暗色瓦片后，把 namePrefix/tint 换成真资产即可）。
+ */
+const REGION_RUNTIME_LAYOUTS: Record<string, RegionRuntimeLayout> = {
+  [GREEN_HOLLOW_REGION_ID]: {
+    regionId: GREEN_HOLLOW_REGION_ID,
+    bounds: GREEN_HOLLOW_BOUNDS,
+    groundPatches: GROUND_PATCHES,
+    props: PROPS,
+    // content 的 exits 是区域联动的权威；渲染层只读位置用于提前判定与地形留空。
+    exits: greenHollowExits(),
+    namePrefix: "environment",
+  },
+  [SLIME_DEN_REGION_ID]: {
+    regionId: SLIME_DEN_REGION_ID,
+    bounds: SLIME_DEN_BOUNDS,
+    groundPatches: SLIME_DEN_GROUND_PATCHES,
+    props: SLIME_DEN_PROPS,
+    exits: SLIME_DEN_EXITS,
+    tint: SLIME_DEN_TINT,
+    namePrefix: "den",
+    ...(slimeDenWaterPatch() ? { waterPatch: slimeDenWaterPatch() } : {}),
+  },
+};
+
+const GREEN_HOLLOW_RUNTIME_LAYOUT = REGION_RUNTIME_LAYOUTS[GREEN_HOLLOW_REGION_ID];
+
+/** 翠谷的出口（content 是权威；这里转成联动模块的形状）。 */
+function greenHollowExits(): readonly RegionLinkageExit[] {
+  return (GREEN_HOLLOW_REGION.exits ?? []).map((exit) => ({
+    id: exit.id,
+    targetRegionId: exit.targetRegionId,
+    position: exit.position,
+  }));
+}
+
+/** 区域景观（环带山丘/远景枯木/配色）：巢穴更暗、山丘更矮。 */
+function landscapeOptionsFor(regionId: string): {
+  bounds: { minX: number; maxX: number; minZ: number; maxZ: number };
+  hills: typeof SLIME_DEN_HILLS;
+  trees: typeof SLIME_DEN_TREES;
+  colors: { ground: { r: number; g: number; b: number }; hill: { r: number; g: number; b: number }; tree: { r: number; g: number; b: number } };
+  namePrefix: string;
+} {
+  if (regionId === SLIME_DEN_REGION_ID) {
+    return {
+      bounds: SLIME_DEN_LANDSCAPE_BOUNDS,
+      hills: SLIME_DEN_HILLS,
+      trees: SLIME_DEN_TREES,
+      colors: {
+        ground: { r: 0.2, g: 0.21, b: 0.26 },
+        hill: { r: 0.22, g: 0.24, b: 0.32 },
+        tree: { r: 0.16, g: 0.2, b: 0.24 },
+      },
+      namePrefix: "den.landscape",
+    };
+  }
+  return {
+    bounds: HOLLOW_LANDSCAPE_BOUNDS,
+    hills: HOLLOW_HILLS,
+    trees: HOLLOW_TREES,
+    colors: {
+      ground: LANDSCAPE_GROUND_COLOR,
+      hill: LANDSCAPE_HILL_COLOR,
+      tree: LANDSCAPE_TREE_COLOR,
+    },
+    namePrefix: "landscape",
+  };
+}
+
+/** 某个区域当前的道具清单（遮挡探针/灌木反馈按区域取）。 */
+function propsForRegion(regionId: string | null): readonly PropPlacement[] {
+  const layout =
+    regionId === null ? undefined : REGION_RUNTIME_LAYOUTS[regionId];
+  return layout?.props ?? PROPS;
+}
+
+/** 某区域的出口清单（逻辑层 travelToRegion 会再校验一次，这里只用于提前判定）。 */
+function exitsForRegion(regionId: string | null): readonly RegionLinkageExit[] {
+  const layout =
+    regionId === null ? undefined : REGION_RUNTIME_LAYOUTS[regionId];
+  return layout?.exits ?? [];
+}
+
+/**
+ * 区域切换（票 35）：
+ *   黑场淡入 → 会话切区（保留玩家/任务进度）→ 销毁旧区域、装新区 →
+ *   重建遮挡/碰撞/路点 → 自动存档（票 31）→ 黑场淡出。
+ *
+ * 返回切换后的区域 id；玩家不在路口时返回 null（什么都不做）。
+ */
+async function travelToRegion(
+  state: P1WorldState,
+  scene: Scene,
+  forward: { x: number; y: number; z: number },
+  position: { x: number; z: number },
+): Promise<string | null> {
+  if (state.traveling) {
+    return null;
+  }
+  const fromRegionId = state.session.currentRegionId;
+  const exit = findTriggeredExit(exitsForRegion(fromRegionId), position);
+  if (exit === null) {
+    return null;
+  }
+  const layout = REGION_RUNTIME_LAYOUTS[exit.targetRegionId];
+  if (layout === undefined) {
+    state.ui.setSaveStatus(`目标区域未配置渲染布局：${exit.targetRegionId}`, "error");
+    return null;
+  }
+
+  state.traveling = true;
+  // 黑场：先把 mask 拉满，正好挡住下一个区域的资源加载与首帧上传。
+  const gate = getLoadingGate();
+  await gate.maskIn(REGION_FADE_MS);
+  try {
+    const travel = state.session.tryTravelToRegion(CONTENT_BUNDLE, {
+      x: position.x,
+      y: 0,
+      z: position.z,
+    });
+    if (!travel.ok) {
+      state.ui.setSaveStatus(`区域切换失败：${travel.message ?? "未知原因"}`, "error");
+      return null;
+    }
+
+    clearWaypoints(state);
+    state.deadEnemies.clear();
+    state.dyingEnemies.clear();
+    state.hitReacts.clear();
+    state.selectEnemy(null);
+    // 对话指向的是上一区域的 NPC，切区后已无意义。
+    state.session.endDialogue();
+    setInteractionPhase(state.interaction, createInteractionState());
+    closeDialoguePresentation(state);
+    state.zoomProgress = 0;
+
+    // 视觉：旧区域的网格/碰撞/navmesh 整体卸载，装载新区域。
+    state.runtime.dispose();
+    state.landscape.dispose();
+    const runtime = await createRegionRuntime(scene, state.root, forward, layout);
+    state.runtime = runtime;
+    state.colliders = runtime.colliders.slice();
+    state.landscape = createLandscapeRing(scene, state.root, landscapeOptionsFor(layout.regionId));
+    state.navigation = runtime.navigation;
+    rebuildRegionVisuals(state, scene, runtime);
+    syncVisualToSnapshot(state, state.session.snapshot());
+
+    // 自动存档：区域切换是关键节点（票 31 的触发时机之一）。
+    await state.autoSaver.notifyRegionChanged();
+    state.ui.setSaveStatus(`已进入 ${layout.regionId}`, "ok");
+    return layout.regionId;
+  } finally {
+    await gate.maskOut(REGION_FADE_MS);
+    state.traveling = false;
+  }
+}
+
+/** 新区域的遮挡描边与灌木遮挡目标重建（旧的指向已销毁网格）。 */
+function rebuildRegionVisuals(
+  state: P1WorldState,
+  scene: Scene,
+  runtime: RegionRuntime,
+): void {
+  const camera = scene.activeCamera;
+  const forward = camera
+    ? camera.getDirection(new Vector3(0, 0, 1)).normalize()
+    : new Vector3(-0.408, -0.816, 0.408).normalize();
+
+  state.occlusion = new OcclusionOutlineController(
+    state.layer,
+    runtime.environment.occluders.map((occluder) => occluder.box),
+    forward,
+  );
+  for (const mesh of [
+    ...runtime.environment.groundMeshes,
+    ...runtime.environment.propMeshes,
+    ...runtime.environment.meshedParts,
+  ]) {
+    state.layer.addExcludedMesh(mesh);
+  }
+
+  const targets = [...state.visuals.entries()]
+    .map(([id, visual]) => ({
+      id,
+      mesh: visual.mesh as Mesh,
+      anchor: visual.node.position,
+      targetY: visual.targetY,
+    }))
+    .filter((target) => scene.getMeshByName(target.mesh.name) !== null);
+  state.occlusionTargets = targets;
+  for (const [id, visual] of state.visuals) {
+    state.feedback.trackEntity(id, visual.node, visual.targetY + 0.35);
+  }
+  state.environmentMetrics = {
+    textureCount: runtime.environment.textures.textures.length,
+    keyedTransparentRatio:
+      runtime.environment.keyStats.reduce(
+        (sum, entry) => sum + entry.transparentRatio,
+        0,
+      ) / Math.max(1, runtime.environment.keyStats.length),
+    occluderCount: runtime.environment.occluders.length,
+    meshedPartCount: runtime.environment.meshedParts.length,
+    colliderCount: runtime.colliders.length,
+  };
+}
+
+/** 当前相机的水平前向（遮挡盒与 billboard 朝向的唯一来源）。 */
+function forwardVector(scene: Scene): Vector3 {
+  const camera = scene.activeCamera;
+  return camera
+    ? camera.getDirection(new Vector3(0, 0, 1)).normalize()
+    : new Vector3(-0.408, -0.816, 0.408).normalize();
+}
 
 function snapshotEntities(session: GameSession): string[] {
   return session.snapshot().entities.map((entity) => entity.id);

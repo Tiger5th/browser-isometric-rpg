@@ -486,6 +486,14 @@ export const LANDSCAPE_TREES: readonly LandscapeTree[] = (() => {
  * 环带自检：景观不得压进行走区域，且四方向都必须有内容。
  * 与 green-hollow-layout 的 validateLayout 同一风格：返回问题列表，空 = 通过。
  */
+/** 区域可行走区的二维边界（翠谷与区域 2 共用同一形状）。 */
+export interface Bounds2DLike {
+  readonly minX: number;
+  readonly maxX: number;
+  readonly minZ: number;
+  readonly maxZ: number;
+}
+
 export interface LandscapeIssue {
   id: string;
   message: string;
@@ -494,7 +502,7 @@ export interface LandscapeIssue {
 export function validateLandscape(
   hills: readonly LandscapeHill[] = LANDSCAPE_HILLS,
   trees: readonly LandscapeTree[] = LANDSCAPE_TREES,
-  bounds = GREEN_HOLLOW_BOUNDS,
+  bounds: Bounds2DLike = GREEN_HOLLOW_BOUNDS,
 ): LandscapeIssue[] {
   const issues: LandscapeIssue[] = [];
 
