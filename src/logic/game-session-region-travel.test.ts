@@ -194,6 +194,56 @@ describe("区域联动（票 35）：路口触发区域切换", () => {
     expect(kept?.quantity).toBe(gel?.quantity);
   });
 
+  it("enterRegion 不经路口直接进入目标区域（读档路径）", () => {
+    const session = sessionInHollow();
+    session.enterRegion(BUNDLE, SLIME_DEN_REGION_ID);
+
+    expect(session.currentRegionId).toBe(SLIME_DEN_REGION_ID);
+    const player = session.snapshot().entities.find((entity) => entity.id === "entity:player");
+    expect(player?.position).toEqual({ x: 0, y: 0, z: -6 });
+  });
+
+  it("enterRegion 保留任务进度，回翠谷后可直接交付", () => {
+    const session = sessionInHollow();
+    acceptDenCull(session);
+    session.enterRegion(BUNDLE, SLIME_DEN_REGION_ID);
+    for (const enemyId of ["enemy:slime_den_watcher", "enemy:slime_den_brood", "enemy:slime_den_core"]) {
+      session.emitCombatEvent({
+        type: "enemy-killed",
+        enemyId,
+        enemyTemplateId: "enemy_template:slime_den",
+      });
+    }
+    session.enterRegion(BUNDLE, GREEN_HOLLOW_REGION_ID);
+
+    expect(
+      session.snapshot().quests.find((quest) => quest.id === "quest:den_cull")?.status,
+    ).toBe("ready_to_turn_in");
+  });
+
+  it("enterRegion 广播 region-changed，读档方能感知区域变化", () => {
+    const session = sessionInHollow();
+    const seen: string[] = [];
+    session.subscribe((event) => {
+      if (event.type === "region-changed") {
+        seen.push(`${event.fromRegionId}->${event.toRegionId}`);
+      }
+    });
+
+    session.enterRegion(BUNDLE, SLIME_DEN_REGION_ID);
+    // 已经在这个区域时不再重复广播。
+    session.enterRegion(BUNDLE, SLIME_DEN_REGION_ID);
+
+    expect(seen).toEqual(["region:green_hollow->region:slime_den"]);
+  });
+
+  it("enterRegion 到未知区域时 try* 版本返回 ok=false", () => {
+    const session = sessionInHollow();
+    const result = session.tryEnterRegion(BUNDLE, "region:nowhere");
+    expect(result.ok).toBe(false);
+    expect(session.currentRegionId).toBe(GREEN_HOLLOW_REGION_ID);
+  });
+
   it("出口指向未知区域时显式报错，会话保持在原区域", () => {
     const session = sessionInHollow();
     const broken = {

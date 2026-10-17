@@ -645,6 +645,55 @@ export class GameSession implements GameSessionIntents {
   }
 
   /**
+   * 直接进入指定区域，不经路口判定（读档路径用）。
+   *
+   * 读档时我们**已经知道**快照属于哪个区域，不需要「走到出口」这一步；
+   * 而 restoreSnapshot 要求会话已加载同一区域，否则会拒绝恢复。
+   * 跨区域保留的事实与 travelToRegion 一致（玩家/任务/时钟），
+   * 同样广播 region-changed，让自动存档知道区域变了。
+   */
+  enterRegion(bundle: ContentBundle, regionId: string): void {
+    const fromRegionId = this.regionId;
+    const index = createContentIndex(bundle);
+    const target = index.regions.get(regionId);
+    if (target === undefined) {
+      throw new Error(`未知区域：${regionId}`);
+    }
+
+    let carriedPlayer: Entity | null = null;
+    let carriedHp: number | null = null;
+    if (this.playerId !== null) {
+      const existing = this.entities.get(this.playerId);
+      if (existing === undefined) {
+        throw new Error(`会话记录的玩家实体不存在：${this.playerId}`);
+      }
+      carriedPlayer = existing;
+      carriedHp = this.combat.get(existing.id)?.hp ?? null;
+    }
+
+    this.clearRegionEntities();
+    this.installRegion(bundle, regionId, { resetQuests: false });
+    if (carriedPlayer !== null) {
+      this.restoreCarriedPlayer(carriedPlayer, target.player, carriedHp);
+    }
+
+    if (fromRegionId !== regionId) {
+      const event: RegionChangedEvent = {
+        type: "region-changed",
+        fromRegionId: fromRegionId ?? regionId,
+        toRegionId: regionId,
+        exitId: "exit:load",
+      };
+      this.publish(event);
+    }
+  }
+
+  /** 无异常版本的 enterRegion。 */
+  tryEnterRegion(bundle: ContentBundle, regionId: string): IntentResult {
+    return this.runIntent(() => this.enterRegion(bundle, regionId));
+  }
+
+  /**
    * 卸载当前区域的全部实体。切区时玩家也要卸掉——它的状态由
    * restoreCarriedPlayer 合并进目标区域的新实例，留着会与新实例重名。
    */

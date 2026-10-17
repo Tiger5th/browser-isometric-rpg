@@ -893,6 +893,22 @@ async function loadFromStorage(state: P1WorldState): Promise<boolean> {
       state.ui.setSaveStatus("无存档：先点「存档」再刷新页面", "idle");
       return false;
     }
+    // 票 35：存档可能来自另一个区域（例如区域 2 的自动存档）。
+    // 先把场景切到存档所在区域，再恢复快照——否则 restoreSnapshot 会
+    // 因为「快照区域与当前已加载区域不一致」而拒绝。
+    if (
+      snapshot.regionId !== null &&
+      snapshot.regionId !== state.session.currentRegionId
+    ) {
+      const entered = await enterRegionForSnapshot(state, snapshot.regionId);
+      if (entered === null) {
+        state.ui.setSaveStatus(
+          `存档属于 ${snapshot.regionId}，但该区域没有渲染布局`,
+          "error",
+        );
+        return false;
+      }
+    }
     state.session.restoreSnapshot(snapshot);
     clearWaypoints(state);
     // 读档不保留「靠近中/气泡待点」这类会话内交互阶段；对话本身由
@@ -956,6 +972,17 @@ async function restoreSlot(state: P1WorldState, slotId: SaveSlotId): Promise<boo
     if (contents === null) {
       state.ui.setSaveStatus(`${slotLabel(slotId)} 是空槽`, "idle");
       return false;
+    }
+    // 票 35：同 loadFromStorage——先切到存档所在区域再恢复。
+    if (
+      contents.snapshot.regionId !== null &&
+      contents.snapshot.regionId !== state.session.currentRegionId
+    ) {
+      const entered = await enterRegionForSnapshot(state, contents.snapshot.regionId);
+      if (entered === null) {
+        state.ui.setSaveStatus(`存档属于未配置的区域`, "error");
+        return false;
+      }
     }
     state.session.restoreSnapshot(contents.snapshot);
     clearWaypoints(state);
@@ -1203,7 +1230,7 @@ function installDebugApi(scene: Scene, state: P1WorldState): void {
         x === undefined || z === undefined
           ? { x: player?.position.x ?? 0, z: player?.position.z ?? 0 }
           : { x, z };
-      return travelToRegion(state, scene, forwardVector(scene), target);
+      return travelToRegion(state, scene, target);
     },
     travelToExit: async (targetRegionId) => {
       // 直接用目标区域里指回当前区域的那个出口坐标触发往返。
@@ -1213,7 +1240,7 @@ function installDebugApi(scene: Scene, state: P1WorldState): void {
       if (exit === undefined) {
         throw new Error(`没有指回 ${targetRegionId} 的出口`);
       }
-      return travelToRegion(state, scene, forwardVector(scene), {
+      return travelToRegion(state, scene, {
         x: exit.position.x,
         z: exit.position.z,
       });
@@ -1988,7 +2015,7 @@ export const p1WorldScenario: ScenarioDefinition = {
             playerLogic.position,
           );
           if (hit !== null) {
-            void travelToRegion(state, scene, forwardVector(scene), {
+            void travelToRegion(state, scene, {
               x: playerLogic.position.x,
               z: playerLogic.position.z,
             });
@@ -2591,6 +2618,68 @@ function exitsForRegion(regionId: string | null): readonly RegionLinkageExit[] {
 }
 
 /**
+ * 直接装载存档/读档需要的目标区域（不经路口判定）。
+ * 与 travelToRegion 的差别只有一个：没有「走到出口」这一步，
+ * 因为调用方已经知道快照属于哪个区域。仍走黑场 + 重建 + 视觉同步。
+ */
+async function enterRegionForSnapshot(
+  state: P1WorldState,
+  regionId: string,
+): Promise<string | null> {
+  const layout = REGION_RUNTIME_LAYOUTS[regionId];
+  if (layout === undefined) {
+    return null;
+  }
+  const scene = state.player.rootNode.getScene();
+  if (state.traveling) {
+    return null;
+  }
+  state.traveling = true;
+  const gate = getLoadingGate();
+  await gate.maskIn(REGION_FADE_MS);
+  try {
+    // 会话侧直接进入该区域（不经路口：读档路径已经知道目标区域）。
+    const enteredSession = state.session.tryEnterRegion(CONTENT_BUNDLE, regionId);
+    if (!enteredSession.ok) {
+      state.ui.setSaveStatus(`进入 ${regionId} 失败：${enteredSession.message}`, "error");
+      return null;
+    }
+    await loadRegionVisuals(state, scene, layout);
+    syncVisualToSnapshot(state, state.session.snapshot());
+    return layout.regionId;
+  } finally {
+    await gate.maskOut(REGION_FADE_MS);
+    state.traveling = false;
+  }
+}
+
+/** 卸载旧区域、装载新区域的可视部分（切区与读档共用）。 */
+async function loadRegionVisuals(
+  state: P1WorldState,
+  scene: Scene,
+  layout: RegionRuntimeLayout,
+): Promise<void> {
+  clearWaypoints(state);
+  state.deadEnemies.clear();
+  state.dyingEnemies.clear();
+  state.hitReacts.clear();
+  state.selectEnemy(null);
+  state.session.endDialogue();
+  setInteractionPhase(state.interaction, createInteractionState());
+  closeDialoguePresentation(state);
+  state.zoomProgress = 0;
+
+  state.runtime.dispose();
+  state.landscape.dispose();
+  const runtime = await createRegionRuntime(scene, state.root, forwardVector(scene), layout);
+  state.runtime = runtime;
+  state.colliders = runtime.colliders.slice();
+  state.landscape = createLandscapeRing(scene, state.root, landscapeOptionsFor(layout.regionId));
+  state.navigation = runtime.navigation;
+  rebuildRegionVisuals(state, scene, runtime);
+}
+
+/**
  * 区域切换（票 35）：
  *   黑场淡入 → 会话切区（保留玩家/任务进度）→ 销毁旧区域、装新区 →
  *   重建遮挡/碰撞/路点 → 自动存档（票 31）→ 黑场淡出。
@@ -2600,7 +2689,6 @@ function exitsForRegion(regionId: string | null): readonly RegionLinkageExit[] {
 async function travelToRegion(
   state: P1WorldState,
   scene: Scene,
-  forward: { x: number; y: number; z: number },
   position: { x: number; z: number },
 ): Promise<string | null> {
   if (state.traveling) {
@@ -2632,26 +2720,9 @@ async function travelToRegion(
       return null;
     }
 
-    clearWaypoints(state);
-    state.deadEnemies.clear();
-    state.dyingEnemies.clear();
-    state.hitReacts.clear();
-    state.selectEnemy(null);
-    // 对话指向的是上一区域的 NPC，切区后已无意义。
-    state.session.endDialogue();
-    setInteractionPhase(state.interaction, createInteractionState());
-    closeDialoguePresentation(state);
-    state.zoomProgress = 0;
-
-    // 视觉：旧区域的网格/碰撞/navmesh 整体卸载，装载新区域。
-    state.runtime.dispose();
-    state.landscape.dispose();
-    const runtime = await createRegionRuntime(scene, state.root, forward, layout);
-    state.runtime = runtime;
-    state.colliders = runtime.colliders.slice();
-    state.landscape = createLandscapeRing(scene, state.root, landscapeOptionsFor(layout.regionId));
-    state.navigation = runtime.navigation;
-    rebuildRegionVisuals(state, scene, runtime);
+    // 视觉：旧区域的网格/碰撞/navmesh 整体卸载，装载新区域
+    // （对话/路点/死亡集合的清理都在 loadRegionVisuals 里）。
+    await loadRegionVisuals(state, scene, layout);
     syncVisualToSnapshot(state, state.session.snapshot());
 
     // 自动存档：区域切换是关键节点（票 31 的触发时机之一）。
