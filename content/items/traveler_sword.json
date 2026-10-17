@@ -1,0 +1,14 @@
+{
+  "id": "item:traveler_sword",
+  "displayName": "旅人短剑",
+  "kind": "equipment",
+  "description": "一把轻便的短剑，剑柄上刻着旅人的记号。",
+  "maxStack": 1,
+  "value": 40,
+  "equipment": {
+    "slot": "weapon",
+    "modifiers": [
+      { "attribute": "attack", "operation": "add", "value": 5 }
+    ]
+  }
+}

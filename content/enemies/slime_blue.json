@@ -1,0 +1,15 @@
+{
+  "id": "enemy:slime_blue",
+  "templateId": "enemy_template:slime",
+  "displayName": "溪边史莱姆",
+  "regionId": "region:green_hollow",
+  "position": { "x": 14, "y": 0, "z": -6 },
+  "tags": ["elite"],
+  "overrides": {
+    "baseAttributes": {
+      "maxHp": 32,
+      "hp": 32,
+      "attack": 7
+    }
+  }
+}

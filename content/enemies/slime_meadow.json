@@ -1,0 +1,14 @@
+{
+  "id": "enemy:slime_meadow",
+  "templateId": "enemy_template:slime",
+  "displayName": "草原史莱姆",
+  "regionId": "region:green_hollow",
+  "position": { "x": 12, "y": 0, "z": -4 },
+  "overrides": {
+    "baseAttributes": {
+      "maxHp": 24,
+      "hp": 24,
+      "attack": 5
+    }
+  }
+}

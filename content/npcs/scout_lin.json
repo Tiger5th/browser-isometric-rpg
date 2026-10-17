@@ -1,0 +1,15 @@
+{
+  "id": "npc:scout_lin",
+  "displayName": "林斥候",
+  "templateId": "npc_template:scout",
+  "regionId": "region:green_hollow",
+  "position": { "x": -6, "y": 0, "z": 3 },
+  "rotation": { "x": 0, "y": 1.5707963267948966, "z": 0 },
+  "baseAttributes": {
+    "maxHp": 60,
+    "hp": 60,
+    "attack": 5,
+    "defense": 3
+  },
+  "tags": ["npc", "watcher"]
+}

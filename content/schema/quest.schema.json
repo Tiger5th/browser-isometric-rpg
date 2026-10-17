@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:content:quest",
+  "title": "任务",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "title", "giverNpcId", "objectives", "rewards"],
+  "properties": {
+    "id": { "$ref": "urn:content:common#/$defs/questId" },
+    "title": { "type": "string", "minLength": 1 },
+    "description": { "$ref": "urn:content:common#/$defs/description" },
+    "giverNpcId": { "$ref": "urn:content:common#/$defs/npcId" },
+    "turnInNpcId": { "$ref": "urn:content:common#/$defs/npcId" },
+    "objectives": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "type", "enemyTemplateId", "count"],
+        "properties": {
+          "id": { "$ref": "urn:content:common#/$defs/objectiveId" },
+          "type": { "const": "kill" },
+          "enemyTemplateId": { "$ref": "urn:content:common#/$defs/enemyTemplateId" },
+          "count": { "type": "integer", "minimum": 1 }
+        }
+      }
+    },
+    "rewards": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["itemId", "quantity"],
+            "properties": {
+              "itemId": { "$ref": "urn:content:common#/$defs/itemId" },
+              "quantity": { "type": "integer", "minimum": 1 }
+            }
+          }
+        },
+        "modifiers": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "urn:content:common#/$defs/modifier" }
+        }
+      }
+    }
+  }
+}

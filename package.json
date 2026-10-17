@@ -18,7 +18,8 @@
     "assets:lint:negative": "node tools/pipeline/lint-negative-test.mjs",
     "assets:blender": "blender --background --factory-startup --python tools/pipeline/blender/export_test_asset.py -- assets/character_test_lod0.glb",
     "assets:blender:repro": "bash tools/pipeline/blender/check_reproducibility.sh",
-    "assets:lod-report": "python3 tools/pipeline/compare-lod-screenshots.py"
+    "assets:lod-report": "python3 tools/pipeline/compare-lod-screenshots.py",
+    "content:lint": "node tools/content/lint.mjs"
   },
   "dependencies": {
     "@babylonjs/core": "9.31.0",
@@ -32,6 +33,7 @@
     "@gltf-transform/core": "4.5.1",
     "@gltf-transform/extensions": "4.5.1",
     "@gltf-transform/functions": "4.5.1",
+    "ajv": "8.17.1",
     "draco3d": "1.5.9",
     "meshoptimizer": "1.3.0",
     "typescript": "7.0.2",

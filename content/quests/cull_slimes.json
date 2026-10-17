@@ -1,0 +1,24 @@
+{
+  "id": "quest:cull_slimes",
+  "title": "清理史莱姆",
+  "description": "马婆婆请你清理翠谷里躁动的史莱姆，然后回去向她复命。",
+  "giverNpcId": "npc:elder_ma",
+  "turnInNpcId": "npc:elder_ma",
+  "objectives": [
+    {
+      "id": "objective:kill_slimes",
+      "type": "kill",
+      "enemyTemplateId": "enemy_template:slime",
+      "count": 3
+    }
+  ],
+  "rewards": {
+    "items": [
+      { "itemId": "item:traveler_sword", "quantity": 1 },
+      { "itemId": "item:healing_herb", "quantity": 2 }
+    ],
+    "modifiers": [
+      { "attribute": "maxHp", "operation": "add", "value": 10 }
+    ]
+  }
+}

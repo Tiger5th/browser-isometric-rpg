@@ -1,0 +1,13 @@
+{
+  "id": "item:healing_herb",
+  "displayName": "疗伤草",
+  "kind": "consumable",
+  "description": "翠谷常见的草药，嚼碎后敷在伤口上能止血。",
+  "maxStack": 9,
+  "value": 12,
+  "consumable": {
+    "effects": [
+      { "type": "restore", "attribute": "hp", "amount": 30 }
+    ]
+  }
+}

@@ -12,6 +12,8 @@ import {
   type EntityIdentity,
   type Vec3,
 } from "./entity";
+import { createContentIndex, instantiateRegionEntities } from "./content/region-loader";
+import type { ContentBundle } from "./content/types";
 
 /** 与 Crowd V2 的 maxSpeed 对齐，逻辑与表现的速度感一致。 */
 export const DEFAULT_MOVE_SPEED = 5.5;
@@ -66,6 +68,7 @@ export class GameSession implements GameSessionIntents {
   private readonly entities = new Map<EntityId, Entity>();
   private readonly movements = new Map<EntityId, Movement>();
   private elapsedMs = 0;
+  private regionId: string | null = null;
 
   /** 注册实体。实体在入会话时深拷贝，调用方后续修改不会穿透逻辑状态。 */
   addEntity(entity: Entity): void {
@@ -73,6 +76,33 @@ export class GameSession implements GameSessionIntents {
       throw new Error(`实体已存在：${entity.id}`);
     }
     this.entities.set(entity.id, cloneEntity(entity));
+  }
+
+  /**
+   * 从内容数据加载一个区域：实例化玩家 + 本区域 NPC/敌人并注册实体。
+   * P1 只支持单区域会话，重复加载会显式报错。
+   */
+  loadRegion(bundle: ContentBundle, regionId: string): void {
+    if (this.regionId !== null) {
+      throw new Error(`已加载区域 ${this.regionId}，P1 不支持切换区域`);
+    }
+    const index = createContentIndex(bundle);
+    const entities = instantiateRegionEntities(index, regionId);
+    // 先整体检查再写入，避免中途失败留下半加载状态。
+    for (const entity of entities) {
+      if (this.entities.has(entity.id)) {
+        throw new Error(`实体已存在：${entity.id}`);
+      }
+    }
+    for (const entity of entities) {
+      this.addEntity(entity);
+    }
+    this.regionId = regionId;
+  }
+
+  /** 当前已加载的区域 id；未加载时为 null。 */
+  get currentRegionId(): string | null {
+    return this.regionId;
   }
 
   /** 提交移动到目标点的意图；重复提交会替换当前移动。 */

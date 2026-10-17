@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:content:enemy-template",
+  "title": "敌人模板",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "displayName", "aiProfileId", "baseAttributes"],
+  "properties": {
+    "id": { "$ref": "urn:content:common#/$defs/enemyTemplateId" },
+    "displayName": { "$ref": "urn:content:common#/$defs/displayName" },
+    "aiProfileId": { "$ref": "urn:content:common#/$defs/aiProfileId" },
+    "baseAttributes": { "$ref": "urn:content:common#/$defs/attributes" },
+    "drops": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["itemId", "chance", "min", "max"],
+        "properties": {
+          "itemId": { "$ref": "urn:content:common#/$defs/itemId" },
+          "chance": { "type": "number", "minimum": 0, "maximum": 1 },
+          "min": { "type": "integer", "minimum": 0 },
+          "max": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "tags": { "$ref": "urn:content:common#/$defs/tags" }
+  }
+}

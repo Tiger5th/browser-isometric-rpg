@@ -1,0 +1,191 @@
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { describe, expect, it } from "vitest";
+
+import type {
+  ContentFileInput,
+  ContentKind,
+  ContentSchemas,
+  DialogueInput,
+} from "./types";
+import { validateContent } from "./validate";
+
+const ROOT = fileURLToPath(new URL("../../../", import.meta.url));
+const CONTENT_DIR = join(ROOT, "content");
+
+const KIND_DIRS: Array<{ kind: ContentKind; dir: string }> = [
+  { kind: "region", dir: "regions" },
+  { kind: "npc", dir: "npcs" },
+  { kind: "enemy-template", dir: "enemy-templates" },
+  { kind: "enemy", dir: "enemies" },
+  { kind: "item", dir: "items" },
+  { kind: "quest", dir: "quests" },
+];
+
+function readJson(relativePath: string): unknown {
+  return JSON.parse(readFileSync(join(ROOT, relativePath), "utf8"));
+}
+
+function loadSchemas(): ContentSchemas {
+  return {
+    common: readJson("content/schema/common.schema.json") as object,
+    region: readJson("content/schema/region.schema.json") as object,
+    npc: readJson("content/schema/npc.schema.json") as object,
+    enemyTemplate: readJson("content/schema/enemy-template.schema.json") as object,
+    enemy: readJson("content/schema/enemy.schema.json") as object,
+    item: readJson("content/schema/item.schema.json") as object,
+    quest: readJson("content/schema/quest.schema.json") as object,
+  };
+}
+
+function loadContentFiles(): ContentFileInput[] {
+  const files: ContentFileInput[] = [];
+  for (const { kind, dir } of KIND_DIRS) {
+    const absoluteDir = join(CONTENT_DIR, dir);
+    for (const name of readdirSync(absoluteDir).filter((entry) => entry.endsWith(".json"))) {
+      files.push({
+        kind,
+        file: `content/${dir}/${name}`,
+        data: readJson(`content/${dir}/${name}`),
+      });
+    }
+  }
+  return files;
+}
+
+function dialogueInputs(): DialogueInput[] {
+  return [
+    {
+      id: "elder_ma",
+      file: "content/dialogues/elder_ma.ink",
+      questTags: [{ kind: "offer", questId: "quest:cull_slimes" }],
+    },
+  ];
+}
+
+function fileOf(files: ContentFileInput[], file: string): ContentFileInput {
+  const found = files.find((entry) => entry.file === file);
+  if (!found) {
+    throw new Error(`测试数据缺少文件：${file}`);
+  }
+  return found;
+}
+
+describe("content 数据 L2 校验", () => {
+  const schemas = loadSchemas();
+  const files = loadContentFiles();
+
+  it("P1 最小内容集通过 schema 与引用完整性校验", () => {
+    const result = validateContent(files, schemas, dialogueInputs());
+    expect(result.issues).toEqual([]);
+    expect(result.valid).toBe(true);
+  });
+
+  it("坏 schema 被拒绝并指出字段路径", () => {
+    const broken = structuredClone(files);
+    const sword = fileOf(broken, "content/items/traveler_sword.json");
+    const data = sword.data as Record<string, unknown>;
+    delete data.equipment;
+
+    const coin = fileOf(broken, "content/items/old_coin.json");
+    (coin.data as Record<string, unknown>).equipment = {
+      slot: "weapon",
+      modifiers: [{ attribute: "attack", operation: "add", value: 1 }],
+    };
+
+    const npc = fileOf(broken, "content/npcs/scout_lin.json");
+    (npc.data as Record<string, unknown>).unknownField = true;
+
+    const result = validateContent(broken, schemas, dialogueInputs());
+    expect(result.valid).toBe(false);
+    const swordIssue = result.issues.find(
+      (entry) => entry.file === sword.file && entry.code === "schema",
+    );
+    expect(swordIssue).toBeDefined();
+    expect(swordIssue!.path).toBe("/");
+    expect(swordIssue!.message).toContain("equipment");
+    expect(
+      result.issues.some((entry) => entry.file === coin.file && entry.code === "schema"),
+    ).toBe(true);
+    expect(
+      result.issues.some((entry) => entry.file === npc.file && entry.code === "schema"),
+    ).toBe(true);
+  });
+
+  it("坏引用被拒绝：任务指向不存在的 NPC/敌人模板/物品", () => {
+    const broken = structuredClone(files);
+    const quest = fileOf(broken, "content/quests/cull_slimes.json");
+    const data = quest.data as {
+      giverNpcId: string;
+      objectives: Array<{ enemyTemplateId: string }>;
+      rewards: { items: Array<{ itemId: string }> };
+    };
+    data.giverNpcId = "npc:missing";
+    data.objectives[0].enemyTemplateId = "enemy_template:missing";
+    data.rewards.items[0].itemId = "item:missing";
+
+    const result = validateContent(broken, schemas, dialogueInputs());
+    expect(result.valid).toBe(false);
+    const references = result.issues.filter(
+      (entry) => entry.file === quest.file && entry.code === "reference",
+    );
+    expect(references.map((entry) => entry.path)).toEqual([
+      "/giverNpcId",
+      "/objectives/0/enemyTemplateId",
+      "/rewards/items/0/itemId",
+    ]);
+  });
+
+  it("NPC/敌人/对话的坏引用同样被拒绝", () => {
+    const broken = structuredClone(files);
+    const npc = fileOf(broken, "content/npcs/elder_ma.json");
+    const npcData = npc.data as { dialogueId: string; regionId: string };
+    npcData.dialogueId = "missing_dialogue";
+    npcData.regionId = "region:missing";
+
+    const enemy = fileOf(broken, "content/enemies/slime_meadow.json");
+    (enemy.data as { templateId: string }).templateId = "enemy_template:missing";
+
+    const result = validateContent(broken, schemas, dialogueInputs());
+    const paths = result.issues
+      .filter((entry) => entry.code === "reference")
+      .map((entry) => `${entry.file}${entry.path}`)
+      .sort();
+    expect(paths).toEqual(
+      [
+        `content/enemies/slime_meadow.json/templateId`,
+        `content/npcs/elder_ma.json/dialogueId`,
+        `content/npcs/elder_ma.json/regionId`,
+      ].sort(),
+    );
+  });
+
+  it("重复 id、文件名与 id 不一致、坏掉落区间被拒绝", () => {
+    const broken = structuredClone(files);
+    const gel = fileOf(broken, "content/items/slime_gel.json");
+    broken.push({ ...structuredClone(gel), file: "content/items/slime_gel_copy.json" });
+    const coin = fileOf(broken, "content/items/old_coin.json");
+    broken.push({ ...structuredClone(coin) });
+    const template = fileOf(broken, "content/enemy-templates/slime.json");
+    (template.data as { drops: Array<{ min: number; max: number }> }).drops[0].max = 0;
+
+    const result = validateContent(broken, schemas, dialogueInputs());
+    expect(result.valid).toBe(false);
+    expect(result.issues.some((entry) => entry.code === "duplicate-id")).toBe(true);
+    expect(result.issues.some((entry) => entry.code === "file-name")).toBe(true);
+    expect(result.issues.some((entry) => entry.code === "range")).toBe(true);
+  });
+
+  it("ink 对话标签引用不存在的任务被拒绝", () => {
+    const brokenDialogues = structuredClone(dialogueInputs());
+    brokenDialogues[0].questTags.push({ kind: "turnin", questId: "quest:missing" });
+
+    const result = validateContent(files, schemas, brokenDialogues);
+    expect(result.valid).toBe(false);
+    const issue = result.issues.find((entry) => entry.code === "dialogue-reference");
+    expect(issue).toBeDefined();
+    expect(issue!.file).toBe("content/dialogues/elder_ma.ink");
+    expect(issue!.path).toBe("/questTags/1");
+  });
+});

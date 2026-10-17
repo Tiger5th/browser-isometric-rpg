@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:content:item",
+  "title": "物品",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "displayName", "kind", "description"],
+  "properties": {
+    "id": { "$ref": "urn:content:common#/$defs/itemId" },
+    "displayName": { "$ref": "urn:content:common#/$defs/displayName" },
+    "kind": { "enum": ["equipment", "consumable", "misc"] },
+    "description": { "$ref": "urn:content:common#/$defs/description" },
+    "maxStack": { "type": "integer", "minimum": 1 },
+    "value": { "type": "number", "minimum": 0 },
+    "equipment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["slot", "modifiers"],
+      "properties": {
+        "slot": { "enum": ["weapon", "armor", "accessory"] },
+        "modifiers": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "urn:content:common#/$defs/modifier" }
+        }
+      }
+    },
+    "consumable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["effects"],
+      "properties": {
+        "effects": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type", "attribute", "amount"],
+            "properties": {
+              "type": { "const": "restore" },
+              "attribute": { "type": "string", "minLength": 1 },
+              "amount": { "type": "number", "exclusiveMinimum": 0 }
+            }
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "kind": { "const": "equipment" } },
+        "required": ["kind"]
+      },
+      "then": { "required": ["equipment"] },
+      "else": { "not": { "required": ["equipment"] } }
+    },
+    {
+      "if": {
+        "properties": { "kind": { "const": "consumable" } },
+        "required": ["kind"]
+      },
+      "then": { "required": ["consumable"] },
+      "else": { "not": { "required": ["consumable"] } }
+    }
+  ]
+}

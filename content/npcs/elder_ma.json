@@ -1,0 +1,17 @@
+{
+  "id": "npc:elder_ma",
+  "displayName": "马婆婆",
+  "templateId": "npc_template:elder",
+  "regionId": "region:green_hollow",
+  "position": { "x": 6, "y": 0, "z": 4 },
+  "rotation": { "x": 0, "y": 3.141592653589793, "z": 0 },
+  "baseAttributes": {
+    "maxHp": 50,
+    "hp": 50,
+    "attack": 1,
+    "defense": 2
+  },
+  "tags": ["npc", "quest-giver"],
+  "dialogueId": "elder_ma",
+  "questIds": ["quest:cull_slimes"]
+}

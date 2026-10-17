@@ -1,0 +1,8 @@
+{
+  "id": "item:old_coin",
+  "displayName": "旧铜币",
+  "kind": "misc",
+  "description": "磨损得看不清年号的铜币，也许还有人愿意收。",
+  "maxStack": 999,
+  "value": 1
+}

@@ -1,0 +1,8 @@
+{
+  "id": "item:slime_gel",
+  "displayName": "史莱姆凝胶",
+  "kind": "misc",
+  "description": "半透明的黏稠凝胶，据说可以入药。",
+  "maxStack": 99,
+  "value": 2
+}

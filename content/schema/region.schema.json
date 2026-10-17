@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:content:region",
+  "title": "区域",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "displayName", "asset", "player"],
+  "properties": {
+    "id": { "$ref": "urn:content:common#/$defs/regionId" },
+    "displayName": { "$ref": "urn:content:common#/$defs/displayName" },
+    "asset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["model"],
+      "properties": {
+        "model": { "type": "string", "minLength": 1 },
+        "navmesh": { "type": "string", "minLength": 1 }
+      }
+    },
+    "player": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "templateId", "displayName", "spawn", "baseAttributes"],
+      "properties": {
+        "id": { "$ref": "urn:content:common#/$defs/entityId" },
+        "templateId": { "$ref": "urn:content:common#/$defs/templateId" },
+        "displayName": { "$ref": "urn:content:common#/$defs/displayName" },
+        "spawn": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["position"],
+          "properties": {
+            "position": { "$ref": "urn:content:common#/$defs/vec3" },
+            "rotation": { "$ref": "urn:content:common#/$defs/vec3" }
+          }
+        },
+        "baseAttributes": { "$ref": "urn:content:common#/$defs/attributes" }
+      }
+    },
+    "exits": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "targetRegionId", "position"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^exit:[a-z0-9_]+$" },
+          "targetRegionId": { "$ref": "urn:content:common#/$defs/regionId" },
+          "position": { "$ref": "urn:content:common#/$defs/vec3" },
+          "rotation": { "$ref": "urn:content:common#/$defs/vec3" }
+        }
+      }
+    }
+  }
+}

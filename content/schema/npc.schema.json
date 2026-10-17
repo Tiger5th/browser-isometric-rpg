@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:content:npc",
+  "title": "NPC",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "displayName", "templateId", "regionId", "position"],
+  "properties": {
+    "id": { "$ref": "urn:content:common#/$defs/npcId" },
+    "displayName": { "$ref": "urn:content:common#/$defs/displayName" },
+    "templateId": { "$ref": "urn:content:common#/$defs/templateId" },
+    "regionId": { "$ref": "urn:content:common#/$defs/regionId" },
+    "position": { "$ref": "urn:content:common#/$defs/vec3" },
+    "rotation": { "$ref": "urn:content:common#/$defs/vec3" },
+    "baseAttributes": { "$ref": "urn:content:common#/$defs/attributes" },
+    "tags": { "$ref": "urn:content:common#/$defs/tags" },
+    "dialogueId": { "$ref": "urn:content:common#/$defs/dialogueId" },
+    "questIds": {
+      "type": "array",
+      "items": { "$ref": "urn:content:common#/$defs/questId" },
+      "uniqueItems": true
+    }
+  }
+}

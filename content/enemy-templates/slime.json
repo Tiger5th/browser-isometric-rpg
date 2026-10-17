@@ -1,0 +1,17 @@
+{
+  "id": "enemy_template:slime",
+  "displayName": "翠谷史莱姆",
+  "aiProfileId": "ai:melee_chaser",
+  "baseAttributes": {
+    "maxHp": 30,
+    "hp": 30,
+    "attack": 6,
+    "defense": 1,
+    "moveSpeed": 3,
+    "xp": 10
+  },
+  "drops": [
+    { "itemId": "item:slime_gel", "chance": 1, "min": 1, "max": 2 }
+  ],
+  "tags": ["enemy", "slime"]
+}
