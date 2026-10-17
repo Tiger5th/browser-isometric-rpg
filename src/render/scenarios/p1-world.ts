@@ -80,6 +80,7 @@ import { setCameraSpan, setGreyboxEnabled } from "../navmesh-scene";
 import { IndexedDbSaveStorage } from "../persistence/indexed-db-save-storage";
 import { createQuestLoopUi, type QuestLoopUi } from "../ui/quest-loop-ui";
 import { createDialogueUi, type DialogueUi } from "../ui/dialogue-portrait";
+import { takeTitleEntryIntent } from "../title-entry";
 import {
   createProceduralNpc,
   createSlimeEnemy,
@@ -407,6 +408,11 @@ export interface P1WorldDebugApi {
     landscapeMeshCount: number;
     drawCalls: number;
   };
+  /**
+   * 票 32：新游戏——回到区域的初始状态（丢弃当前进度）。
+   * 旧的自动/手动槽不动；新游戏后的自动存档会覆盖 auto 槽。
+   */
+  startNewGame(): { playerLevel: number; elapsedMs: number };
 }
 
 declare global {
@@ -982,6 +988,39 @@ async function slotEntries(state: P1WorldState) {
   }));
 }
 
+/**
+ * 票 32：新游戏 = 把会话恢复到区域的初始状态。
+ *
+ * 语义上是「丢弃当前进度」而不是「删档」：旧的手动槽原样留着，玩家随时
+ * 能从标题画面选回来；auto 槽会在新游戏落定后被下一次自动存档接管
+ * （标题画面的二次确认文案已说明这一点）。
+ */
+function startNewGame(state: P1WorldState): { playerLevel: number; elapsedMs: number } {
+  const fresh = new GameSession();
+  fresh.registerDialogue("elder_ma", elderMaCompiled);
+  fresh.loadRegion(CONTENT_BUNDLE, GREEN_HOLLOW_REGION_ID);
+  const snapshot = fresh.snapshot();
+
+  state.session.restoreSnapshot(snapshot);
+  clearWaypoints(state);
+  state.deadEnemies.clear();
+  state.dyingEnemies.clear();
+  state.hitReacts.clear();
+  state.selectedEnemyId = null;
+  state.selectEnemy(null);
+  state.feedback.clearTransient();
+  setInteractionPhase(state.interaction, createInteractionState());
+  closeDialoguePresentation(state);
+  state.zoomProgress = 0;
+  const scene = state.player.rootNode.getScene();
+  setCameraSpan(scene, CAMERA_VERTICAL_SPAN);
+  syncVisualToSnapshot(state, state.session.snapshot());
+  state.ui.update(state.session.snapshot());
+  state.ui.setSaveStatus("新游戏：进度已重置", "ok");
+  const result = state.session.playerLevelProgress();
+  return { playerLevel: result.level, elapsedMs: state.session.snapshot().elapsedMs };
+}
+
 function groundPoint(scene: Scene): Vector3 | null {
   const camera = scene.activeCamera;
   if (!camera) {
@@ -1132,6 +1171,7 @@ function installDebugApi(scene: Scene, state: P1WorldState): void {
     loadFromSlot: (slotId) => restoreSlot(state, slotId),
     deleteSlot: (slotId) => deleteSlot(state, slotId),
     saveToAuto: () => state.autoSaver.notifyRegionChanged(),
+    startNewGame: () => startNewGame(state),
     getMeshPosition: (entityId) => {
       const visual = state.visuals.get(entityId);
       if (!visual) {
@@ -1642,6 +1682,10 @@ export const p1WorldScenario: ScenarioDefinition = {
       onClearSave: () => {
         void clearStoredSave(state);
       },
+      // 票 32：返回标题。标题流程由 main.ts 挂在 window 上（未挂时按钮无效）。
+      onBackToTitle: () => {
+        window.dispatchEvent(new CustomEvent("game:back-to-title"));
+      },
     });
 
     // 票 31：会话事件 → 自动存档（任务状态变化 / 获得重要物品），
@@ -1966,7 +2010,16 @@ export const p1WorldScenario: ScenarioDefinition = {
     await nextFrame();
 
     try {
-      if (await state.saveService.hasSave()) {
+      // 票 32：入场意图决定开局读哪个槽。缺省（harness / L4 直入）沿用旧行为：
+      // 有默认档就读，没有就全新开始。
+      const intent = takeTitleEntryIntent();
+      if (intent.kind === "continue") {
+        if (!(await restoreSlot(state, intent.slotId))) {
+          await loadFromStorage(state);
+        }
+      } else if (intent.kind === "new-game") {
+        startNewGame(state);
+      } else if (await state.saveService.hasSave()) {
         await loadFromStorage(state);
       } else {
         state.ui.setSaveStatus("无存档：点击「存档」创建", "idle");
