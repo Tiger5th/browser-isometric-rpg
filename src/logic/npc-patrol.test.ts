@@ -143,3 +143,30 @@ describe("换锚点（票 33）", () => {
     expect(moved.paused).toBe(true);
   });
 });
+
+describe("dwell 态朝向：index 0 不回绕（review C）", () => {
+  const ROUTE: Vec3[] = [
+    { x: 8, y: 0, z: 0 },
+    { x: 10, y: 0, z: 0 },
+    { x: 12, y: 0, z: 4 },
+  ];
+
+  it("刚换锚点站桩（index 0）朝向内容初始朝向，不背对路线末端", () => {
+    const state = createPatrolState(ROUTE, ROUTE[0], 200);
+    expect(state.waypointIndex).toBe(0);
+    // 旧逻辑在这里回绕到 (12,0,4)，yaw 会算成 atan2(4, 4)≈0.785。
+    expect(patrolSample(state, ROUTE).yaw).toBe(0);
+  });
+
+  it("index > 0 的 dwell 仍按来路方向张望", () => {
+    const state: PatrolState = {
+      ...createPatrolState(ROUTE, ROUTE[0], 200),
+      waypointIndex: 1,
+      // 站桩点已走到第二点，上一段就是起点。
+      position: ROUTE[1],
+      phase: "dwell",
+    };
+    // 张望 = 回望来路：从 (10,0,0) 看向 (8,0,0)，即 -X 方向。
+    expect(patrolSample(state, ROUTE).yaw).toBeCloseTo(-Math.PI / 2, 6);
+  });
+});

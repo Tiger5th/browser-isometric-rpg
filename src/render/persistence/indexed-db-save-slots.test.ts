@@ -151,14 +151,36 @@ describe("IndexedDbSaveStorage 多槽", () => {
     expect(await storage.listSlotIds()).toEqual([]);
   });
 
-  it("默认槽仍是 auto（无参调用即单槽调用方的兼容路径）", async () => {
+  it("默认槽是 slot-1 而不是 auto：手动存档不会覆盖自动存档", async () => {
     const { factory, records } = createFakeFactory();
     const storage = new IndexedDbSaveStorage({ factory });
 
-    await storage.write(saveFile("legacy"));
+    await storage.write(saveFile("manual-default"));
 
-    expect([...records.keys()]).toEqual(["auto"]);
+    expect([...records.keys()]).toEqual(["slot-1"]);
     expect(await storage.read()).not.toBeNull();
+    expect(await storage.read("auto")).toBeNull();
+  });
+
+  it("手动默认槽与 auto 槽互相独立", async () => {
+    const { factory } = createFakeFactory();
+    const storage = new IndexedDbSaveStorage({ factory });
+
+    await storage.write(saveFile("manual"));
+    await storage.write(saveFile("auto"), "auto");
+
+    expect((await storage.read("slot-1"))?.sections.session).toEqual({ marker: "manual" });
+    expect((await storage.read("auto"))?.sections.session).toEqual({ marker: "auto" });
+  });
+
+  it("旧的 slot-1 存量数据用默认槽即可读到", async () => {
+    const { factory, records } = createFakeFactory();
+    const storage = new IndexedDbSaveStorage({ factory });
+
+    records.set("slot-1", saveFile("legacy") as never);
+
+    expect(await storage.read()).not.toBeNull();
+    expect((await storage.read())?.sections.session).toEqual({ marker: "legacy" });
   });
 
   it("显式指定的旧键名 slot-1 仍是合法槽（存量玩家数据不丢）", async () => {

@@ -8,6 +8,8 @@ import { appendModifiers, createModifiers } from "./modifier";
 const REGION_ID = "region:arena";
 const PLAYER_ID = "entity:player";
 const SLIME_ID = "enemy:slime";
+const SLIME_TEMPLATE = "enemy_template:slime";
+const DEN_REGION_ID = "region:den";
 
 /** 最小战斗内容集：玩家与一只默认站在 (1.5, 0, 0) 的史莱姆。 */
 function combatBundle(): ContentBundle {
@@ -549,5 +551,77 @@ describe("GameSession 战斗快照", () => {
     expect(entityOf(session, SLIME_ID).combat.hp).toBe(13);
     expect(entityOf(session, SLIME_ID).container.items).toEqual([]);
     expect(JSON.parse(session.serialize())).toEqual(pristine);
+  });
+});
+
+/**
+ * 死亡回村（票 36 死亡轻惩罚）：玩家在**别的区域**倒下时，
+ * respawn 事件带出回村区域 id，由表现层切区（逻辑层不跨区移动）。
+ */
+describe("死亡后回村复活的事件约定", () => {
+  function twoRegionBundle(): ContentBundle {
+    const bundle = combatBundle();
+    bundle.regions.push({
+      ...bundle.regions[0],
+      id: DEN_REGION_ID,
+      displayName: "巢穴",
+      player: {
+        ...bundle.regions[0].player,
+        spawn: { position: { x: 0, y: 0, z: -6 } },
+      },
+    });
+    return bundle;
+  }
+
+  function dieInDen(): { session: GameSession; events: ReturnType<GameSession["drainEvents"]> } {
+    const bundle = twoRegionBundle();
+    bundle.regions[0].player.baseAttributes.hp = 5;
+    bundle.regions[0].player.baseAttributes.maxHp = 5;
+    bundle.regions[0].player.baseAttributes.defense = 0;
+    // 巢穴里的追兵：玩家进入巢穴就被咬。
+    bundle.enemies.push({
+      id: "enemy:den_slime",
+      templateId: SLIME_TEMPLATE,
+      displayName: "巢穴史莱姆",
+      regionId: DEN_REGION_ID,
+      position: { x: 0, y: 0, z: -6 },
+    });
+    const session = new GameSession({
+      random: () => 0,
+      respawnDelayMs: 200,
+      homeRegionId: REGION_ID,
+    });
+    session.loadRegion(bundle, REGION_ID);
+    session.tryEnterRegion(bundle, DEN_REGION_ID);
+    expect(session.currentRegionId).toBe(DEN_REGION_ID);
+    session.moveTo(PLAYER_ID, { x: 0, y: 0, z: -6 });
+    session.advance(900);
+    return { session, events: session.drainEvents() };
+  }
+
+  it("在巢穴死亡时 respawn 事件带出回村区域 id（翠谷）", () => {
+    const { events } = dieInDen();
+    const respawn = events.find((event) => event.type === "respawn");
+    expect(respawn).toBeDefined();
+    expect(respawn).toMatchObject({ type: "respawn", respawnRegionId: REGION_ID });
+  });
+
+  it("在回村区域死亡时 respawnRegionId 为 null（就地复活）", () => {
+    const bundle = combatBundle();
+    bundle.regions[0].player.baseAttributes.hp = 5;
+    bundle.regions[0].player.baseAttributes.maxHp = 5;
+    bundle.regions[0].player.baseAttributes.defense = 0;
+    // 回村区域就是当前区域（这里把 homeRegionId 指到本区域）。
+    const session = new GameSession({
+      random: () => 0,
+      respawnDelayMs: 200,
+      homeRegionId: REGION_ID,
+    });
+    session.loadRegion(bundle, REGION_ID);
+    session.moveTo(PLAYER_ID, { x: 3, y: 0, z: 0 });
+    session.advance(900);
+
+    const respawn = session.drainEvents().find((event) => event.type === "respawn");
+    expect(respawn).toMatchObject({ type: "respawn", respawnRegionId: null });
   });
 });

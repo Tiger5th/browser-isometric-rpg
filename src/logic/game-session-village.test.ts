@@ -543,3 +543,155 @@ describe("任务完成后换锚点（票 33，user story 16）", () => {
     expect(positionOf(session, VENDOR_ID)).toEqual({ x: -2, z: 0 });
   });
 });
+
+describe("换锚点后巡逻路线随之更新（review 修复）", () => {
+  it("patrolSampleOf 用的是新路线的点位，而不是内容里的旧路线", () => {
+    const session = newSession();
+    // 换锚点前：路线 = 内容里的两点（2,0,0) → (4,0,2)。
+    const before = session.patrolSampleOf(ELDER_ID);
+    expect(before).not.toBeNull();
+
+    completeQuest(session);
+
+    const after = session.patrolSampleOf(ELDER_ID);
+    expect(after).not.toBeNull();
+    expect(after!.position).toEqual({ x: 8, y: 0, z: 0 });
+    // 站着不动时（刚换锚点，index 0）朝向前一点 (10,0,0)，即 +X（π/2）。
+    // 若 patrolRoutes 还是旧路线，这里会算成朝旧路线的 (4,0,2) 方向。
+    session.advance(300);
+    const walking = session.patrolSampleOf(ELDER_ID)!;
+    expect(walking.moving).toBe(true);
+    expect(walking.position.x).toBeGreaterThan(8);
+  });
+
+  it("读档恢复后巡逻点位同样是新路线（patrolRoutes 进快照的实体位置一致）", () => {
+    const session = newSession();
+    completeQuest(session);
+    session.advance(600);
+    const live = session.patrolSampleOf(ELDER_ID)!.position;
+
+    const restored = new GameSession();
+    restored.registerDialogue("elder_ma", compileInk(elderMaInk()));
+    restored.registerDialogue("merchant_bo", compileInk(merchantInk()));
+    restored.loadRegion(villageBundle(), REGION_ID);
+    restored.restoreSnapshot(JSON.parse(session.serialize()) as never);
+
+    expect(restored.patrolSampleOf(ELDER_ID)!.position).toEqual(live);
+  });
+});
+
+/**
+ * 安全区拒止对**所有** AI 档案生效（review 修复）：
+ * 原先只有 melee_chaser 查 playerIsSheltered，冲锋型与吐弹型直接绕过，
+ * 于是玩家站在村口也会被冲锋/吐弹命中。
+ */
+function specializedAiBundle(aiProfile: unknown): ContentBundle {
+  const bundle = villageBundle();
+  bundle.enemyTemplates = [
+    {
+      id: "enemy_template:charger",
+      displayName: "角冲兽",
+      aiProfileId: "ai:windup_charge",
+      aiProfile: aiProfile as never,
+      baseAttributes: {
+        maxHp: 34,
+        hp: 34,
+        attack: 9,
+        defense: 1,
+        moveSpeed: 4,
+        aggroRadius: 30,
+        xp: 14,
+      },
+      drops: [],
+    },
+  ];
+  // 敌人放在安全区**内**，玩家也在区内：没有拒止的话冲锋型会直接起手。
+  bundle.enemies = [
+    {
+      id: "enemy:special",
+      templateId: "enemy_template:charger",
+      displayName: "测试用敌",
+      regionId: REGION_ID,
+      position: { x: 5, y: 0, z: 0 },
+    },
+  ];
+  return bundle;
+}
+
+function newAiSession(aiProfile: unknown): GameSession {
+  const session = new GameSession();
+  session.loadRegion(specializedAiBundle(aiProfile), REGION_ID);
+  session.moveTo(PLAYER_ID, { x: 0, y: 0, z: 0 });
+  return session;
+}
+
+const CHARGE_PROFILE = {
+  kind: "windup-charge",
+  windupMs: 600,
+  chargeSpeed: 14,
+  chargeDistance: 8,
+  recoveryMs: 900,
+  triggerRange: 6,
+  hitRadius: 1,
+};
+
+const KITE_PROFILE = {
+  kind: "ranged-kite",
+  preferredRange: 8,
+  retreatRange: 5,
+  fireIntervalMs: 2000,
+  projectileSpeed: 16,
+  projectileDamage: 7,
+  projectileRadius: 0.35,
+  projectileLifetimeMs: 2500,
+};
+
+describe("安全区拒止对冲锋/吐弹同样生效（review 修复）", () => {
+  it("冲锋型在玩家处于安全区时不起手前摇、不冲锋", () => {
+    const session = newAiSession(CHARGE_PROFILE);
+    const events: GameSessionEvent[] = [];
+    session.subscribe((event) => events.push(event));
+
+    session.advance(4000);
+
+    expect(events.some((event) => event.type === "attack-windup-started")).toBe(false);
+    // 敌人原地不动（没有朝向玩家的移动意图），玩家满血。
+    expect(positionOf(session, "enemy:special")).toEqual({ x: 5, z: 0 });
+    const player = session.snapshot().entities.find((entry) => entry.id === PLAYER_ID);
+    expect(player?.combat.hp).toBe(player?.baseAttributes.maxHp);
+  });
+
+  it("冲锋型在玩家出安全区后恢复正常（拒止不是永久失效）", () => {
+    const session = newAiSession(CHARGE_PROFILE);
+    const events: GameSessionEvent[] = [];
+    session.subscribe((event) => events.push(event));
+
+    session.moveTo(PLAYER_ID, { x: 20, y: 0, z: 0 });
+    session.advance(4000);
+
+    expect(events.some((event) => event.type === "attack-windup-started")).toBe(true);
+  });
+
+  it("吐弹型在玩家处于安全区时不发射投射物", () => {
+    const session = newAiSession(KITE_PROFILE);
+    const events: GameSessionEvent[] = [];
+    session.subscribe((event) => events.push(event));
+
+    session.advance(4000);
+
+    expect(events.some((event) => event.type === "projectile-spawned")).toBe(false);
+    const player = session.snapshot().entities.find((entry) => entry.id === PLAYER_ID);
+    expect(player?.combat.hp).toBe(player?.baseAttributes.maxHp);
+  });
+
+  it("吐弹型在玩家出安全区后恢复开火", () => {
+    const session = newAiSession(KITE_PROFILE);
+    const events: GameSessionEvent[] = [];
+    session.subscribe((event) => events.push(event));
+
+    session.moveTo(PLAYER_ID, { x: 20, y: 0, z: 0 });
+    session.advance(4000);
+
+    expect(events.some((event) => event.type === "projectile-spawned")).toBe(true);
+  });
+});

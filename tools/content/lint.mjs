@@ -7,6 +7,7 @@
  * - id 唯一 + 文件名与 id 对应
  * - 引用完整性：区域/NPC/敌人模板/敌人/物品/任务之间的交叉引用
  * - ink 对话可编译，任务标签引用的任务存在
+ * - 内容引用的资产文件（立绘等）真实存在
  *
  * 用法：node tools/content/lint.mjs
  * 结果写入 reports/content-lint.json；有错误时退出码为 1。
@@ -120,9 +121,36 @@ async function loadDialogues(issues) {
   const dialogues = [];
   for (const name of names.filter((entry) => entry.endsWith(".ink")).sort()) {
     const file = `content/dialogues/${name}`;
-    const source = await readFile(join(absoluteDir, name), "utf8");
-    const compiler = new Compiler(source);
-    const story = compiler.Compile();
+    let source;
+    try {
+      source = await readFile(join(absoluteDir, name), "utf8");
+    } catch (error) {
+      // 单个 .ink 读不出来（权限/编码）不该让整轮 lint 崩掉：
+      // 记一条 issue，后续仍然继续扫别的对话。
+      issues.push({
+        code: "ink",
+        file,
+        path: "/",
+        message: `ink 文件读取失败：${error.message}`,
+      });
+      continue;
+    }
+
+    let compiler;
+    let story = null;
+    try {
+      compiler = new Compiler(source);
+      story = compiler.Compile();
+    } catch (error) {
+      // Compiler 构造/编译抛异常（而非返回 errors）时同样降级为一条 issue。
+      issues.push({
+        code: "ink",
+        file,
+        path: "/",
+        message: `ink 编译异常：${error.message}`,
+      });
+      continue;
+    }
     if (story === null || compiler.errors.length > 0) {
       const errors =
         compiler.errors.length > 0 ? compiler.errors : [{ message: "未知编译错误" }];
@@ -145,12 +173,42 @@ async function loadDialogues(issues) {
   return dialogues;
 }
 
+/**
+ * 资产文件清单：内容 JSON 里引用的立绘等文件必须真实存在。
+ * 纯逻辑的 validateContent 不碰文件系统，所以由这里扫出仓库内
+ * assets/ 下的文件路径集合注入。
+ */
+async function loadExistingAssets() {
+  const paths = new Set();
+  const walk = async (relativeDir) => {
+    let entries;
+    try {
+      entries = await readdir(join(ROOT, relativeDir), { withFileTypes: true });
+    } catch {
+      return; // 目录不存在 = 没有资产，不是错误。
+    }
+    for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+      const relative = `${relativeDir}/${entry.name}`;
+      if (entry.isDirectory()) {
+        await walk(relative);
+      } else {
+        paths.add(relative);
+      }
+    }
+  };
+  await walk("assets");
+  return paths;
+}
+
 const toolIssues = [];
 const schemas = await loadSchemas();
 const files = await loadContentFiles(toolIssues);
 const dialogues = await loadDialogues(toolIssues);
+const existingAssets = await loadExistingAssets();
 
-const result = validateContent(files, schemas, dialogues);
+const result = validateContent(files, schemas, dialogues, {
+  existingFiles: existingAssets,
+});
 const issues = [...toolIssues, ...result.issues];
 const valid = issues.length === 0;
 

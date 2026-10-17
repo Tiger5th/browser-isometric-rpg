@@ -39,6 +39,9 @@ export interface GameSaveAutoSaverOptions {
   onError?(error: unknown): void;
 }
 
+/** 去重窗口大小：够滤掉一次读档带来的事件重放，又不会把隔一个状态的同型事件误判成重放。 */
+const RECENT_SIGNATURE_LIMIT = 32;
+
 /** 触发自动存档的事件类型。 */
 const TRIGGERING_EVENTS = new Set<GameSessionEvent["type"]>([
   // 任务状态变化：接取 / 达成 / 完成。
@@ -54,8 +57,8 @@ export class GameSaveAutoSaver {
   /** 上次写档时的区域 id；null = 还没写过。 */
   private lastSavedRegionId: string | null | undefined;
   private detachUnload: (() => void) | null = null;
-  /** 最近一次处理过的事件签名，用于去重。 */
-  private lastEventSignature: string | null = null;
+  /** 最近处理过的事件签名（去重窗口），用于滤掉同一条事件的重放。 */
+  private readonly seenEventSignatures = new Set<string>();
 
   constructor(options: GameSaveAutoSaverOptions) {
     this.options = options;
@@ -70,11 +73,22 @@ export class GameSaveAutoSaver {
       return null;
     }
     const signature = this.signatureOf(event);
-    if (signature === this.lastEventSignature) {
+    if (this.seenEventSignatures.has(signature)) {
       // 同一事件重放（读档后的事件重放、测试里重复投递）不重复写盘。
       return null;
     }
-    this.lastEventSignature = signature;
+    // 只记住最近若干条：quest:accepted → quest:completed → 再来一次
+    // quest:accepted 的正常推进不该被当成重放而丢掉存档，所以窗口有界
+    // （单存「最近一条」会把隔一个状态的同型事件误判成重放）。
+    this.seenEventSignatures.add(signature);
+    while (this.seenEventSignatures.size > RECENT_SIGNATURE_LIMIT) {
+      // Set 按插入顺序迭代，队首就是最老的一条。
+      const oldest = this.seenEventSignatures.values().next().value;
+      if (oldest === undefined) {
+        break;
+      }
+      this.seenEventSignatures.delete(oldest);
+    }
     return this.saveNow();
   }
 

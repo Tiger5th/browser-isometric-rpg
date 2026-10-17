@@ -414,3 +414,39 @@ describe("死亡轻惩罚：回村出生点 + 扣 10% 金币", () => {
     ).toBe(33);
   });
 });
+
+describe("扫掠判定的会话级后果（review #10/#39）", () => {
+  it("玩家站着不动也会被高速吐弹命中（一步位移 1.6m > 命中半径 1.1m）", () => {
+    const session = createSession({ chargerAt: { x: 40, z: 0 }, spitterAt: { x: 8, z: 0 } });
+    const events = recordEvents(session);
+
+    session.advance(1200);
+
+    expect(events.some((event) => event.type === "damage-dealt")).toBe(true);
+  });
+
+  it("玩家横向闪开后擦身而过的弹不再命中（扫掠不夸大命中圈）", () => {
+    const session = createSession({ chargerAt: { x: 40, z: 0 }, spitterAt: { x: 8, z: 0 } });
+    const events = recordEvents(session);
+
+    // 开火瞬间玩家已经横移到 2m 外（命中半径 0.35 + 0.75 = 1.1m）。
+    session.moveTo(PLAYER_ID, { x: 8, y: 0, z: 2 });
+    session.advance(200);
+
+    expect(events.some((event) => event.type === "damage-dealt")).toBe(false);
+  });
+
+  it("冲锋一帧位移 1.4m 大于 hitRadius 时仍能命中站定不动的玩家", () => {
+    const session = createSession({ chargerAt: { x: 12, z: 0 }, spitterAt: { x: 40, z: 0 } });
+    // 玩家先走到 6m 处**站定**（不再移动），冲锋怪会一路追过来起手冲锋。
+    session.moveTo(PLAYER_ID, { x: 6, y: 0, z: 0 });
+    session.advance(2000);
+    const events = recordEvents(session);
+
+    session.advance(4000);
+
+    expect(
+      events.some((event) => event.type === "damage-dealt" && event.attackerId === CHARGER_ID),
+    ).toBe(true);
+  });
+});

@@ -14,10 +14,6 @@
   "tags": ["npc", "smith"],
   "dialogueId": "smith_qi",
   "paletteId": "character_palette:smith_qi",
-  "portrait": {
-    "image": "assets/portraits/smith_qi.png",
-    "keywords": ["village blacksmith", "soot dark apron", "hammer", "quiet"]
-  },
   "patrol": {
     "waypoints": [
       { "x": 5, "y": 0, "z": -3 },

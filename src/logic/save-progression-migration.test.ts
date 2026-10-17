@@ -57,21 +57,38 @@ function v2Save(): SaveFile {
 }
 
 describe("迁移链 v2 → v3：成长字段与 worldState 默认值", () => {
-  it("老 v2 档升级后得到 1 级 / 0 经验 / 空世界状态", () => {
+  it("老 v2 档升级后得到 1 级 / 经验从实体属性迁上来 / 空世界状态", () => {
     const migrated = migrateSave(v2Save());
     expect(migrated.version).toBe(3);
 
     const snapshot = readSessionSnapshot(migrated);
     expect(snapshot.playerLevel).toBe(1);
-    expect(snapshot.cumulativeXp).toBe(0);
+    // 经验在老档里本来就存在（实体属性 xp=250），写成 0 会让玩家丢一半进度。
+    expect(snapshot.cumulativeXp).toBe(250);
     expect(snapshot.worldState).toEqual({});
   });
 
-  it("老 v2 档里的实体 xp 属性不被迁移成累计经验（字段分层明确）", () => {
+  it("迁移后的经验与实体属性一致（单一真相源，读档后不分叉）", () => {
     const snapshot = readSessionSnapshot(migrateSave(v2Save()));
-    const player = snapshot.entities[0];
-    expect(player.baseAttributes.xp).toBe(250);
+    expect(snapshot.entities[0].baseAttributes.xp).toBe(snapshot.cumulativeXp);
+  });
+
+  it("老 v2 档里没有 xp 属性时经验补 0", () => {
+    const save = v2Save();
+    const session = save.sections.session as Record<string, unknown>;
+    delete (session.entities as Array<Record<string, unknown>>)[0].baseAttributes;
+
+    const snapshot = readSessionSnapshot(migrateSave(save));
     expect(snapshot.cumulativeXp).toBe(0);
+  });
+
+  it("v2 档里已存在的 cumulativeXp 被实体属性覆盖（迁移是唯一写入口）", () => {
+    const save = v2Save();
+    const session = save.sections.session as Record<string, unknown>;
+    session.cumulativeXp = 9999;
+
+    const snapshot = readSessionSnapshot(migrateSave(save));
+    expect(snapshot.cumulativeXp).toBe(250);
   });
 
   it("v2 档里已存在的 worldState 结构原样保留", () => {

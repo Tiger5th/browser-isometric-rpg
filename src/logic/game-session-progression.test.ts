@@ -130,3 +130,51 @@ describe("快照 v3：worldState 通用容器只透传不解释", () => {
     expect(() => session.restoreSnapshot(savepoint)).toThrow(/worldState/);
   });
 });
+/**
+ * 经验的单一真相源（review A）：
+ * `baseAttributes.xp` 是真源，`cumulativeXp` 是它的快照投影；
+ * 早先一条路径写 cumulativeXp、另一条写 baseAttributes.xp，读档后两者分叉。
+ */
+describe("经验/等级单一真相源", () => {
+  function playerOf(session: GameSession) {
+    const entity = session.snapshot().entities.find((entry) => entry.id === "entity:player");
+    if (entity === undefined) {
+      throw new Error("快照缺少玩家");
+    }
+    return entity;
+  }
+
+  it("发经验后实体属性与快照字段一致（两条路径不写岔）", () => {
+    const session = createSession();
+    session.grantExperience("entity:player", 40);
+
+    expect(session.snapshot().cumulativeXp).toBe(40);
+    expect(playerOf(session).baseAttributes.xp).toBe(40);
+  });
+
+  it("读档把快照经验回写到实体属性上（不再分叉）", () => {
+    const session = createSession();
+    const savepoint = structuredClone(session.snapshot());
+    // 手搓一个分叉的档：快照字段说有 120 经验，实体属性还是 0。
+    savepoint.cumulativeXp = 120;
+
+    const loaded = createSession();
+    loaded.restoreSnapshot(savepoint);
+
+    expect(loaded.snapshot().cumulativeXp).toBe(120);
+    expect(playerOf(loaded).baseAttributes.xp).toBe(120);
+  });
+
+  it("读档后再发经验，实体属性与快照字段仍然同步（不回到旧分叉）", () => {
+    const session = createSession();
+    const savepoint = structuredClone(session.snapshot());
+    savepoint.cumulativeXp = 120;
+
+    const loaded = createSession();
+    loaded.restoreSnapshot(savepoint);
+    loaded.grantExperience("entity:player", 30);
+
+    expect(loaded.snapshot().cumulativeXp).toBe(150);
+    expect(playerOf(loaded).baseAttributes.xp).toBe(150);
+  });
+});

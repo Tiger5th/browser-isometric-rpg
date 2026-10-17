@@ -435,3 +435,65 @@ describe("自动存档器：卸载写入不吞异常也不外泄", () => {
     expect(written).toEqual(["auto"]);
   });
 });
+describe("事件去重是有界窗口而不是「最近一条」（review 修复）", () => {
+  /** 纯计数用的 saver（快照只要求 regionId 有效）。 */
+  function countingSaver() {
+    const session = createSession();
+    const writes: number[] = [];
+    const auto = new GameSaveAutoSaver({
+      getSnapshot: () => session.snapshot(),
+      writeAutoSlot: () => {
+        writes.push(1);
+        return Promise.resolve();
+      },
+    });
+    return { auto, writes };
+  }
+
+  it("连续三条不同签名的事件都写盘（只记「最近一条」会吃掉后两条）", () => {
+    const { auto, writes } = countingSaver();
+
+    // 旧实现只保留 lastEventSignature：第二条把它覆盖、第三条又跟它不同，
+    // 看起来没事；但「同一条重放 + 新事件」交替时会周期性丢写。
+    // 真实场景：一次任务推进同时发 quest:accepted 与 item-gained，
+    // 两条都必须落盘。
+    auto.handleEvent({ type: "quest-accepted", questId: "quest:a" } as never);
+    auto.handleEvent({ type: "item-gained", entityId: "entity:player", itemId: "item:x", quantity: 1 } as never);
+    auto.handleEvent({ type: "quest-ready", questId: "quest:a" } as never);
+
+    expect(writes).toHaveLength(3);
+  });
+
+  it("重放去重只挡相邻的同一条事件，不影响后续新事件", () => {
+    const { auto, writes } = countingSaver();
+
+    const replay = { type: "item-gained", entityId: "entity:player", itemId: "item:x", quantity: 1 } as never;
+    auto.handleEvent(replay);
+    expect(auto.handleEvent(replay)).toBeNull();
+    auto.handleEvent({ type: "item-gained", entityId: "entity:player", itemId: "item:y", quantity: 2 } as never);
+
+    expect(writes).toHaveLength(2);
+  });
+
+  it("紧邻重放同一条签名仍被去重", () => {
+    const { auto, writes } = countingSaver();
+
+    const event = { type: "item-gained", entityId: "entity:player", itemId: "item:x", quantity: 1 } as never;
+    auto.handleEvent(event);
+    expect(auto.handleEvent(event)).toBeNull();
+    expect(writes).toHaveLength(1);
+  });
+
+  it("去重窗口有界：远早于窗口的签名会被释放（不会永久记忆）", () => {
+    const { auto, writes } = countingSaver();
+
+    const first = { type: "quest-accepted", questId: "quest:a" } as never;
+    auto.handleEvent(first);
+    for (let index = 0; index < 64; index += 1) {
+      auto.handleEvent({ type: "quest-ready", questId: `quest:filler_${index}` } as never);
+    }
+    // 已滑出窗口 → 视为新事件，再写一次（而不是永久记住这条签名）。
+    expect(auto.handleEvent(first)).not.toBeNull();
+    expect(writes.length).toBeGreaterThan(1);
+  });
+});

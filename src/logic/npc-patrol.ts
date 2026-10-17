@@ -160,9 +160,15 @@ export function patrolSample(state: PatrolState, waypoints: readonly Vec3[]): {
 } {
   // 张望时朝向 = 从上一段走来的方向（回望自己来的路），由下一目标点反推；
   // 站桩（单点/暂停）时朝向保持为 0（面朝 +Z，与快照缺省一致）。
+  //
+  // index === 0 没有「上一段」：回绕到路线末尾会让刚换锚点落位的 NPC
+  // 背对整条路线（朝向最后一点）。它在 index 0 就是站在自己的出发点上，
+  // 所以按初始朝向（0）处理。
   const previous =
-    waypoints[(state.waypointIndex - 1 + waypoints.length) % waypoints.length] ??
-    state.position;
+    state.waypointIndex === 0
+      ? state.position
+      : (waypoints[(state.waypointIndex - 1 + waypoints.length) % waypoints.length] ??
+        state.position);
   const target =
     state.phase === "walk" ? (waypoints[state.waypointIndex] ?? state.position) : previous;
   const moving = state.phase === "walk" && !state.paused && waypoints.length > 1;

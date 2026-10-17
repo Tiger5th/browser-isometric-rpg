@@ -278,6 +278,42 @@ export interface ProjectileStep {
   expired: boolean;
 }
 
+/**
+ * 线段到点的最短距离（XZ 平面，二维）。
+ * 用于「扫掠」判定：一次步进位移可能远大于命中半径，只量落点会让
+ * 高速投射物/冲锋直接从玩家身上穿过去。
+ */
+export function segmentPointDistance(
+  from: { x: number; z: number },
+  to: { x: number; z: number },
+  point: { x: number; z: number },
+): number {
+  const dx = to.x - from.x;
+  const dz = to.z - from.z;
+  const lengthSquared = dx * dx + dz * dz;
+  if (lengthSquared <= 1e-12) {
+    return Math.hypot(point.x - from.x, point.z - from.z);
+  }
+  const t = Math.min(
+    1,
+    Math.max(0, ((point.x - from.x) * dx + (point.z - from.z) * dz) / lengthSquared),
+  );
+  return Math.hypot(point.x - (from.x + dx * t), point.z - (from.z + dz * t));
+}
+
+/**
+ * 一次步进是否扫掠命中目标。
+ * 半径 = 目标半径 + 投射物/冲锋自身半径。
+ */
+export function sweptHit(
+  from: { x: number; z: number },
+  to: { x: number; z: number },
+  target: { x: number; z: number },
+  radius: number,
+): boolean {
+  return segmentPointDistance(from, to, target) <= radius;
+}
+
 export function stepProjectile(
   projectile: ProjectileRuntime,
   stepMs: number,
@@ -296,8 +332,9 @@ export function stepProjectile(
     remainingMs,
   };
 
-  const hitDistance = Math.hypot(nextX - playerPosition.x, nextZ - playerPosition.z);
-  if (hitDistance <= projectile.radius + playerRadius) {
+  // 扫掠判定：整段位移 vs 玩家，而不是只看落点。16m/s × 100ms = 1.6m
+  // 的一步远大于 1.1m 的命中半径，只量落点会让弹从玩家身上穿过去。
+  if (sweptHit(projectile.position, moved.position, playerPosition, projectile.radius + playerRadius)) {
     return { projectile: moved, hit: true, blocked: false, expired: false };
   }
   const blocked = obstacles.some((obstacle) =>

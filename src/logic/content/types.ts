@@ -412,6 +412,8 @@ export type ContentIssueCode =
   | "range"
   | "level-curve"
   | "dialogue-reference"
+  /** 引用的资产文件不存在（仅当调用方注入 existingFiles 时才会产生）。 */
+  | "asset"
   | "json"
   | "ink";
 

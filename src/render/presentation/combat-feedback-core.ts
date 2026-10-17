@@ -207,3 +207,66 @@ export class CombatFeedbackCore {
     }
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* 震屏基准（review #6）                                               */
+/* ------------------------------------------------------------------ */
+
+/**
+ * 震屏状态：抖动是**基准 alpha + 每帧 jitter**，基准单独记着。
+ *
+ * 早先的写法是 `camera.alpha = camera.alpha + jitter`，等于把上一帧的抖动
+ * 当成新基准——几十帧下来相机角度被永久推歪，「复位回出厂等距」再也回不到
+ * 预设值。基准化之后每帧都从基准重算，抖动结束即回到基准。
+ */
+export interface CameraShakeState {
+  /** 震屏基准 alpha（null = 尚未取基准）。 */
+  baselineAlpha: number | null;
+  /** 上一帧写进相机的偏移；取新基准时要先减掉它。 */
+  lastJitter: number;
+  /** 抖动是否仍在进行。 */
+  active: boolean;
+}
+
+/** 相机会话内被换掉时（切场景/换相机）必须重置震屏状态。 */
+export function resetCameraShake(): CameraShakeState {
+  return { baselineAlpha: null, lastJitter: 0, active: false };
+}
+
+/** 判定 alpha 是否被外部改动（自由相机拖拽 / 复位插值）。 */
+function externallyMoved(state: CameraShakeState, currentAlpha: number): boolean {
+  if (state.baselineAlpha === null) {
+    return true;
+  }
+  return Math.abs(currentAlpha - (state.baselineAlpha + state.lastJitter)) > 1e-6;
+}
+
+/**
+ * 推进一帧震屏，返回该写入相机的新 alpha。
+ *
+ * @param state      上一帧的震屏状态（返回新状态，不改入参）
+ * @param currentAlpha 相机当前 alpha
+ * @param jitter     本帧随机抖动量
+ * @param active     本帧是否仍在抖动
+ */
+export function advanceCameraShake(
+  state: CameraShakeState,
+  currentAlpha: number,
+  jitter: number,
+  active: boolean,
+): { alpha: number; state: CameraShakeState } {
+  if (!active) {
+    // 抖动结束：alpha 精确回到基准（不留在上一帧的偏移上）。
+    return {
+      alpha: state.baselineAlpha ?? currentAlpha,
+      state: { ...state, lastJitter: 0, active: false },
+    };
+  }
+  const baseline = externallyMoved(state, currentAlpha)
+    ? currentAlpha - state.lastJitter
+    : (state.baselineAlpha as number);
+  return {
+    alpha: baseline + jitter,
+    state: { baselineAlpha: baseline, lastJitter: jitter, active: true },
+  };
+}

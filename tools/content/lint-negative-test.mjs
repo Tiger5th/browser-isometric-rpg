@@ -65,20 +65,53 @@ async function loadFiles() {
 
 const schemas = await loadSchemas();
 const baseFiles = await loadFiles();
-const dialogues = [
-  {
-    id: "elder_ma",
-    file: "content/dialogues/elder_ma.ink",
-    questTags: [
-      { kind: "offer", questId: "quest:cull_slimes" },
-      { kind: "turnin", questId: "quest:cull_slimes" },
-      { kind: "offer", questId: "quest:den_cull" },
-      { kind: "turnin", questId: "quest:den_cull" },
-    ],
-  },
-  { id: "merchant_bo", file: "content/dialogues/merchant_bo.ink", questTags: [] },
-  { id: "smith_qi", file: "content/dialogues/smith_qi.ink", questTags: [] },
-];
+/**
+ * 对话清单：**真扫 content/dialogues/*.ink**，与 lint.mjs 的加载口同源同规则
+ * （同一个 QUEST_TAG_PATTERN）。早先这里把三个对话（含 questTags）硬编码在脚本里，
+ * 新增对话时 lint.mjs 看得见、负向测试看不见，两条路径会漂移。
+ */
+const QUEST_TAG_PATTERN = /^[ \t]*#[ \t]*quest:(offer|turnin):([a-z0-9_]+:[a-z0-9_]+)[ \t]*$/gm;
+
+async function loadDialogues() {
+  const dir = join(ROOT, "content/dialogues");
+  const dialogues = [];
+  for (const name of (await readdir(dir)).filter((entry) => entry.endsWith(".ink")).sort()) {
+    const file = `content/dialogues/${name}`;
+    const source = await readFile(join(dir, name), "utf8");
+    const questTags = [];
+    for (const match of source.matchAll(QUEST_TAG_PATTERN)) {
+      questTags.push({ kind: match[1], questId: match[2] });
+    }
+    dialogues.push({ id: name.slice(0, -".ink".length), file, questTags });
+  }
+  return dialogues;
+}
+
+/** 资产存在性校验需要仓库内真实存在的文件集合（与 lint.mjs 同源）。 */
+async function loadExistingAssets() {
+  const paths = new Set();
+  const walk = async (relativeDir) => {
+    let entries;
+    try {
+      entries = await readdir(join(ROOT, relativeDir), { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+      const relative = `${relativeDir}/${entry.name}`;
+      if (entry.isDirectory()) {
+        await walk(relative);
+      } else {
+        paths.add(relative);
+      }
+    }
+  };
+  await walk("assets");
+  return paths;
+}
+
+const dialogues = await loadDialogues();
+const existingAssets = await loadExistingAssets();
 
 function clone(files) {
   return structuredClone(files);
@@ -98,12 +131,13 @@ const cases = [];
 {
   const files = clone(baseFiles);
   find(files, "content/character-palettes/elder_ma.json").data.primary = "red";
-  const result = validateContent(files, schemas, dialogues);
+  const result = validateContent(files, schemas, dialogues, { existingFiles: existingAssets });
   cases.push({
     id: "bad-palette-color",
     label: "色板卡 primary 不是 #rrggbb",
     expectation: "schema 错误指向 /primary",
-    status: result.valid ? "passed" : "failed",
+    // 负例的语义：注入的坏数据**必须被 lint 抓到**才算通过。
+    status: result.valid ? "failed" : "passed",
     issues: result.issues.filter((issue) => issue.file === "content/character-palettes/elder_ma.json"),
     caught: result.issues.some(
       (issue) => issue.file === "content/character-palettes/elder_ma.json" && issue.path === "/primary" && issue.code === "schema",
@@ -115,12 +149,13 @@ const cases = [];
 {
   const files = clone(baseFiles);
   delete find(files, "content/character-palettes/scout_lin.json").data.hairKeywords;
-  const result = validateContent(files, schemas, dialogues);
+  const result = validateContent(files, schemas, dialogues, { existingFiles: existingAssets });
   cases.push({
     id: "missing-palette-keywords",
     label: "色板卡缺少 hairKeywords",
     expectation: "schema 错误",
-    status: result.valid ? "passed" : "failed",
+    // 负例的语义：注入的坏数据**必须被 lint 抓到**才算通过。
+    status: result.valid ? "failed" : "passed",
     caught: result.issues.some(
       (issue) => issue.file === "content/character-palettes/scout_lin.json" && issue.code === "schema",
     ),
@@ -132,12 +167,13 @@ const cases = [];
 {
   const files = clone(baseFiles);
   find(files, "content/npcs/elder_ma.json").data.paletteId = "character_palette:missing";
-  const result = validateContent(files, schemas, dialogues);
+  const result = validateContent(files, schemas, dialogues, { existingFiles: existingAssets });
   cases.push({
     id: "npc-bad-palette-ref",
     label: "NPC paletteId 指向不存在的色板卡",
     expectation: "reference 错误指向 /paletteId",
-    status: result.valid ? "passed" : "failed",
+    // 负例的语义：注入的坏数据**必须被 lint 抓到**才算通过。
+    status: result.valid ? "failed" : "passed",
     caught: result.issues.some(
       (issue) =>
         issue.file === "content/npcs/elder_ma.json" &&
@@ -152,12 +188,13 @@ const cases = [];
 {
   const files = clone(baseFiles);
   find(files, "content/npcs/scout_lin.json").data.portrait = { keywords: ["scout"] };
-  const result = validateContent(files, schemas, dialogues);
+  const result = validateContent(files, schemas, dialogues, { existingFiles: existingAssets });
   cases.push({
     id: "portrait-missing-image",
     label: "portrait 缺少 image 字段",
     expectation: "schema 错误指向 /portrait",
-    status: result.valid ? "passed" : "failed",
+    // 负例的语义：注入的坏数据**必须被 lint 抓到**才算通过。
+    status: result.valid ? "failed" : "passed",
     caught: result.issues.some(
       (issue) =>
         issue.file === "content/npcs/scout_lin.json" &&
@@ -172,12 +209,13 @@ const cases = [];
 {
   const files = clone(baseFiles);
   find(files, "content/regions/slime_den.json").data.exits[0].targetRegionId = "region:nowhere";
-  const result = validateContent(files, schemas, dialogues);
+  const result = validateContent(files, schemas, dialogues, { existingFiles: existingAssets });
   cases.push({
     id: "region-exit-unknown-target",
     label: "区域出口指向未知区域",
     expectation: "reference 错误指向 /exits/0/targetRegionId",
-    status: result.valid ? "passed" : "failed",
+    // 负例的语义：注入的坏数据**必须被 lint 抓到**才算通过。
+    status: result.valid ? "failed" : "passed",
     caught: result.issues.some(
       (issue) =>
         issue.file === "content/regions/slime_den.json" &&
@@ -192,12 +230,13 @@ const cases = [];
 {
   const files = clone(baseFiles);
   find(files, "content/enemy-templates/slime_den.json").data.drops[1].itemId = "item:ghost_core";
-  const result = validateContent(files, schemas, dialogues);
+  const result = validateContent(files, schemas, dialogues, { existingFiles: existingAssets });
   cases.push({
     id: "enemy-drop-unknown-item",
     label: "敌人掉落引用不存在的物品",
     expectation: "reference 错误指向 /drops/1/itemId",
-    status: result.valid ? "passed" : "failed",
+    // 负例的语义：注入的坏数据**必须被 lint 抓到**才算通过。
+    status: result.valid ? "failed" : "passed",
     caught: result.issues.some(
       (issue) =>
         issue.file === "content/enemy-templates/slime_den.json" &&
@@ -213,12 +252,13 @@ const cases = [];
   const files = clone(baseFiles);
   const data = find(files, "content/level-curves/standard.json").data;
   data.levels[2].xpRequired = 10;
-  const result = validateContent(files, schemas, dialogues);
+  const result = validateContent(files, schemas, dialogues, { existingFiles: existingAssets });
   cases.push({
     id: "level-curve-non-monotonic",
     label: "等级曲线 xpRequired 倒退",
     expectation: "level-curve 错误指向 /levels",
-    status: result.valid ? "passed" : "failed",
+    // 负例的语义：注入的坏数据**必须被 lint 抓到**才算通过。
+    status: result.valid ? "failed" : "passed",
     caught: result.issues.some(
       (issue) => issue.file === "content/level-curves/standard.json" && issue.code === "level-curve",
     ),
@@ -230,12 +270,13 @@ const cases = [];
 {
   const files = clone(baseFiles);
   find(files, "content/level-curves/standard.json").data.defaultModifiers = [];
-  const result = validateContent(files, schemas, dialogues);
+  const result = validateContent(files, schemas, dialogues, { existingFiles: existingAssets });
   cases.push({
     id: "level-curve-empty-modifiers",
     label: "等级曲线 defaultModifiers 为空",
     expectation: "schema 或 level-curve 错误",
-    status: result.valid ? "passed" : "failed",
+    // 负例的语义：注入的坏数据**必须被 lint 抓到**才算通过。
+    status: result.valid ? "failed" : "passed",
     caught: result.issues.some((issue) => issue.file === "content/level-curves/standard.json"),
     issues: result.issues.filter((issue) => issue.file === "content/level-curves/standard.json"),
   });
@@ -245,12 +286,13 @@ const cases = [];
 {
   const files = clone(baseFiles);
   find(files, "content/chests/hollow_stone.json").data.loot[0].itemId = "item:missing";
-  const result = validateContent(files, schemas, dialogues);
+  const result = validateContent(files, schemas, dialogues, { existingFiles: existingAssets });
   cases.push({
     id: "chest-bad-loot-ref",
     label: "宝箱 loot 引用不存在的物品",
     expectation: "reference 错误指向 /loot/0/itemId",
-    status: result.valid ? "passed" : "failed",
+    // 负例的语义：注入的坏数据**必须被 lint 抓到**才算通过。
+    status: result.valid ? "failed" : "passed",
     caught: result.issues.some(
       (issue) =>
         issue.file === "content/chests/hollow_stone.json" &&
@@ -265,12 +307,13 @@ const cases = [];
 {
   const files = clone(baseFiles);
   find(files, "content/chests/market_crate.json").data.loot = [];
-  const result = validateContent(files, schemas, dialogues);
+  const result = validateContent(files, schemas, dialogues, { existingFiles: existingAssets });
   cases.push({
     id: "chest-empty-loot",
     label: "宝箱 loot 为空数组",
     expectation: "schema 错误指向 /loot",
-    status: result.valid ? "passed" : "failed",
+    // 负例的语义：注入的坏数据**必须被 lint 抓到**才算通过。
+    status: result.valid ? "failed" : "passed",
     caught: result.issues.some(
       (issue) =>
         issue.file === "content/chests/market_crate.json" &&
@@ -285,12 +328,13 @@ const cases = [];
 {
   const files = clone(baseFiles);
   find(files, "content/collectibles/glow_moss_a.json").data.setId = "collect_set:missing";
-  const result = validateContent(files, schemas, dialogues);
+  const result = validateContent(files, schemas, dialogues, { existingFiles: existingAssets });
   cases.push({
     id: "collectible-bad-set-ref",
     label: "收集品 setId 指向不存在的收集集",
     expectation: "reference 错误指向 /setId",
-    status: result.valid ? "passed" : "failed",
+    // 负例的语义：注入的坏数据**必须被 lint 抓到**才算通过。
+    status: result.valid ? "failed" : "passed",
     caught: result.issues.some(
       (issue) =>
         issue.file === "content/collectibles/glow_moss_a.json" &&
@@ -305,12 +349,13 @@ const cases = [];
 {
   const files = clone(baseFiles);
   find(files, "content/collect-sets/glow_moss.json").data.rewardItemId = "item:missing";
-  const result = validateContent(files, schemas, dialogues);
+  const result = validateContent(files, schemas, dialogues, { existingFiles: existingAssets });
   cases.push({
     id: "collect-set-bad-reward-ref",
     label: "收集集奖励物品不存在",
     expectation: "reference 错误指向 /rewardItemId",
-    status: result.valid ? "passed" : "failed",
+    // 负例的语义：注入的坏数据**必须被 lint 抓到**才算通过。
+    status: result.valid ? "failed" : "passed",
     caught: result.issues.some(
       (issue) =>
         issue.file === "content/collect-sets/glow_moss.json" &&
@@ -327,12 +372,13 @@ const cases = [];
   const files = clone(baseFiles);
   find(files, "content/npcs/merchant_bo.json").data.vendor.sell["item:mystery_gel"] = 5;
   delete find(files, "content/npcs/merchant_bo.json").data.vendor.sell["item:slime_gel"];
-  const result = validateContent(files, schemas, dialogues);
+  const result = validateContent(files, schemas, dialogues, { existingFiles: existingAssets });
   cases.push({
     id: "vendor-bad-item-ref",
     label: "vendor.sell 引用不存在的物品",
     expectation: "reference 错误指向 /vendor/sell/<itemId>",
-    status: result.valid ? "passed" : "failed",
+    // 负例的语义：注入的坏数据**必须被 lint 抓到**才算通过。
+    status: result.valid ? "failed" : "passed",
     caught: result.issues.some(
       (issue) =>
         issue.file === "content/npcs/merchant_bo.json" &&
@@ -347,12 +393,13 @@ const cases = [];
 {
   const files = clone(baseFiles);
   find(files, "content/npcs/merchant_bo.json").data.vendor.buy["item:healing_herb"] = 0;
-  const result = validateContent(files, schemas, dialogues);
+  const result = validateContent(files, schemas, dialogues, { existingFiles: existingAssets });
   cases.push({
     id: "vendor-zero-price",
     label: "vendor 价格为 0",
     expectation: "schema 错误指向 /vendor/buy",
-    status: result.valid ? "passed" : "failed",
+    // 负例的语义：注入的坏数据**必须被 lint 抓到**才算通过。
+    status: result.valid ? "failed" : "passed",
     caught: result.issues.some(
       (issue) =>
         issue.file === "content/npcs/merchant_bo.json" &&
@@ -367,12 +414,13 @@ const cases = [];
 {
   const files = clone(baseFiles);
   find(files, "content/npcs/merchant_bo.json").data.vendor.sell["item:healing_herb"] = 3;
-  const result = validateContent(files, schemas, dialogues);
+  const result = validateContent(files, schemas, dialogues, { existingFiles: existingAssets });
   cases.push({
     id: "vendor-no-spread",
     label: "同一物品同时 sell 与 buy",
     expectation: "range 错误指向 /vendor/buy",
-    status: result.valid ? "passed" : "failed",
+    // 负例的语义：注入的坏数据**必须被 lint 抓到**才算通过。
+    status: result.valid ? "failed" : "passed",
     caught: result.issues.some(
       (issue) =>
         issue.file === "content/npcs/merchant_bo.json" &&
@@ -389,12 +437,13 @@ const cases = [];
   find(files, "content/npcs/scout_lin.json").data.patrol.waypoints = [
     { x: -6, y: 0, z: 3 },
   ];
-  const result = validateContent(files, schemas, dialogues);
+  const result = validateContent(files, schemas, dialogues, { existingFiles: existingAssets });
   cases.push({
     id: "patrol-single-waypoint",
     label: "巡逻路线只有一个点位",
     expectation: "schema 错误指向 /patrol/waypoints",
-    status: result.valid ? "passed" : "failed",
+    // 负例的语义：注入的坏数据**必须被 lint 抓到**才算通过。
+    status: result.valid ? "failed" : "passed",
     caught: result.issues.some(
       (issue) =>
         issue.file === "content/npcs/scout_lin.json" &&
@@ -409,12 +458,13 @@ const cases = [];
 {
   const files = clone(baseFiles);
   find(files, "content/npcs/scout_lin.json").data.patrol.waypoints[0] = { x: 5, y: 0, z: 5 };
-  const result = validateContent(files, schemas, dialogues);
+  const result = validateContent(files, schemas, dialogues, { existingFiles: existingAssets });
   cases.push({
     id: "patrol-anchor-mismatch",
     label: "巡逻首点与 NPC 初始位置不一致",
     expectation: "range 错误指向 /patrol/waypoints/0",
-    status: result.valid ? "passed" : "failed",
+    // 负例的语义：注入的坏数据**必须被 lint 抓到**才算通过。
+    status: result.valid ? "failed" : "passed",
     caught: result.issues.some(
       (issue) =>
         issue.file === "content/npcs/scout_lin.json" &&
@@ -429,12 +479,13 @@ const cases = [];
 {
   const files = clone(baseFiles);
   find(files, "content/npcs/elder_ma.json").data.reanchors[0].questId = "quest:missing";
-  const result = validateContent(files, schemas, dialogues);
+  const result = validateContent(files, schemas, dialogues, { existingFiles: existingAssets });
   cases.push({
     id: "reanchor-bad-quest-ref",
     label: "reanchors 引用不存在的任务",
     expectation: "reference 错误指向 /reanchors/0/questId",
-    status: result.valid ? "passed" : "failed",
+    // 负例的语义：注入的坏数据**必须被 lint 抓到**才算通过。
+    status: result.valid ? "failed" : "passed",
     caught: result.issues.some(
       (issue) =>
         issue.file === "content/npcs/elder_ma.json" &&
@@ -449,12 +500,13 @@ const cases = [];
 {
   const files = clone(baseFiles);
   find(files, "content/regions/green_hollow.json").data.safeZones[0].halfExtents.x = 0;
-  const result = validateContent(files, schemas, dialogues);
+  const result = validateContent(files, schemas, dialogues, { existingFiles: existingAssets });
   cases.push({
     id: "safe-zone-zero-extent",
     label: "安全区 halfExtents 为 0",
     expectation: "schema 错误指向 /safeZones/0/halfExtents",
-    status: result.valid ? "passed" : "failed",
+    // 负例的语义：注入的坏数据**必须被 lint 抓到**才算通过。
+    status: result.valid ? "failed" : "passed",
     caught: result.issues.some(
       (issue) =>
         issue.file === "content/regions/green_hollow.json" &&
@@ -465,14 +517,36 @@ const cases = [];
   });
 }
 
-// 15) 对照组：原始内容集必须通过。
-const control = validateContent(clone(baseFiles), schemas, dialogues);
+// 14) NPC 引用的立绘文件不存在（资产存在性校验）。
+{
+  const files = clone(baseFiles);
+  const smith = find(files, "content/npcs/smith_qi.json");
+  smith.data.portrait = { image: "assets/portraits/does_not_exist.png" };
+  const result = validateContent(files, schemas, dialogues, { existingFiles: existingAssets });
+  cases.push({
+    id: "npc-missing-portrait-asset",
+    label: "NPC portrait.image 指向不存在的资产文件",
+    expectation: "asset 错误指向 /portrait/image",
+    // 负例语义：被 lint 抓到才算通过。
+    status: result.valid ? "failed" : "passed",
+    caught: result.issues.some(
+      (issue) =>
+        issue.file === "content/npcs/smith_qi.json" &&
+        issue.code === "asset" &&
+        issue.path === "/portrait/image",
+    ),
+    issues: result.issues.filter((issue) => issue.file === "content/npcs/smith_qi.json"),
+  });
+}
+
+// 15) 对照组：原始内容集必须通过（此时铁七仍引用不存在的立绘，故不适用）。
+const control = validateContent(clone(baseFiles), schemas, dialogues, { existingFiles: existingAssets });
 
 const allCaught = cases.every((entry) => entry.caught) && control.valid;
 const report = {
   schemaVersion: 1,
   purpose:
-    "L2 负向测试：确认色板卡/立绘引用（票 29）、等级曲线（票 34）、村庄经济（票 33：vendor/patrol/reanchors/safeZones）、区域出口/敌人掉落引用（票 35）与宝箱/收集品（票 37）的 schema、引用与结构规则会拦截坏数据",
+    "L2 负向测试：确认色板卡/立绘引用与资产文件存在性（票 29）、等级曲线（票 34）、村庄经济（票 33：vendor/patrol/reanchors/safeZones）、区域出口/敌人掉落引用（票 35）与宝箱/收集品（票 37）的 schema、引用与结构规则会拦截坏数据",
   exitExpectation: "failed",
   status: allCaught ? "passed" : "failed",
   control: { valid: control.valid, issues: control.issues },

@@ -103,16 +103,55 @@ function checkFileName(file: ContentFileInput, issues: ContentIssue[]): void {
 }
 
 /**
+ * 引用的资产文件必须真实存在。
+ *
+ * 只查内容 JSON 里**明确写了路径**的资产引用（目前是 npc.portrait.image），
+ * 不猜、不扫全仓库：内容作者写错了路径、或者资产还没生成（立绘是纯程序化
+ * 生成的，不入库），都应该在 L2 就被拦下，而不是等到玩家看见 404。
+ */
+function checkAssetReferences(
+  file: ContentFileInput,
+  issues: ContentIssue[],
+  existingFiles: ReadonlySet<string> | undefined,
+): void {
+  if (existingFiles === undefined || !isRecord(file.data)) {
+    return;
+  }
+  const requireAsset = (path: string, value: unknown): void => {
+    if (typeof value !== "string" || value.length === 0) {
+      return; // 类型错误交给 schema 报。
+    }
+    if (existingFiles.has(value)) {
+      return;
+    }
+    issues.push({
+      code: "asset",
+      file: file.file,
+      path,
+      message: `引用的资产文件不存在：${value}`,
+    });
+  };
+
+  if (file.kind === "npc" && isRecord(file.data.portrait)) {
+    requireAsset(pointer("portrait", "image"), file.data.portrait.image);
+  }
+}
+
+/**
  * 校验一组内容文件。
  *
  * @param files     内容 JSON（kind 由所在目录决定）
  * @param schemas   content/schema/*.schema.json 的解析结果
  * @param dialogues 工具链从 .ink 文件提取的对话元数据（用于对话引用校验）
+ * @param options.existingFiles 仓库内已存在的资产文件路径集合（相对仓库根）。
+ *   缺省时**不做**资产存在性校验——本模块是纯逻辑，不碰文件系统；
+ *   由 tools/content/lint.mjs 扫描后注入。
  */
 export function validateContent(
   files: readonly ContentFileInput[],
   schemas: ContentSchemas,
   dialogues: readonly DialogueInput[] = [],
+  options: { existingFiles?: ReadonlySet<string> } = {},
 ): ContentValidationResult {
   const issues: ContentIssue[] = [];
   const ajv = new Ajv2020({ allErrors: true, strict: false });
@@ -153,6 +192,7 @@ export function validateContent(
 
   for (const file of files) {
     checkFileName(file, issues);
+    checkAssetReferences(file, issues, options.existingFiles);
   }
 
   // 收集有效文件的 id：重复检测 + 各类引用的目标集合。

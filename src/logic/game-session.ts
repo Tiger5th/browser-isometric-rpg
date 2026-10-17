@@ -56,6 +56,7 @@ import {
   resolveEnemyAiProfile,
   stepCharge,
   stepProjectile,
+  sweptHit,
   type EnemyAiProfile,
   type ProjectileRuntime,
   type ProjectileSnapshot,
@@ -157,6 +158,9 @@ export const DEFAULT_IDLE_MS = 2000;
 export const DEFAULT_RESPAWN_DELAY_MS = 1000;
 /** 死亡惩罚：默认损失 10% 金币（向上取整）；内容可用 region.player.deathPenalty 覆盖。 */
 export const DEFAULT_DEATH_PENALTY_COIN_ID = "item:old_coin";
+
+/** 回村出生点所在区域的缺省 id（翠谷）。 */
+export const DEFAULT_HOME_REGION_ID = "region:green_hollow";
 export const DEFAULT_DEATH_PENALTY_RATE = 0.1;
 /** 逻辑层角色/投射物的碰撞半径（与表现层 CHARACTER_COLLIDER_RADIUS 对齐）。 */
 export const LOGIC_COLLIDER_RADIUS = 0.4;
@@ -263,6 +267,11 @@ export interface GameSessionOptions {
   random?: () => number;
   /** 玩家死亡到重生的延迟（毫秒）。 */
   respawnDelayMs?: number;
+  /**
+   * 回村出生点的区域 id（票 36 死亡轻惩罚）：死亡后在**村里**复活，
+   * 而不是死在巢穴口、复活又在巢穴口被重新包围。缺省 `region:green_hollow`。
+   */
+  homeRegionId?: string;
   /** 死亡惩罚的金币物品 id；缺省 item:old_coin（内容可覆盖）。 */
   deathPenaltyCoinItemId?: string;
   /** 死亡惩罚的金币扣除比例；缺省 0.1（向上取整）。 */
@@ -364,6 +373,11 @@ export type CombatEvent =
       at: number;
       entityId: EntityId;
       position: Vec3;
+      /**
+       * 玩家应当回村复活时的目标区域 id（票 36）；null = 原地复活。
+       * 逻辑层不跨区移动（内容包不在这一层），表现层消费它做切区。
+       */
+      respawnRegionId: string | null;
     };
 
 /** 可 JSON 序列化的任意值（世界状态容器的内容类型）。 */
@@ -631,6 +645,8 @@ export class GameSession implements GameSessionIntents {
   private readonly lastPublishedHp = new Map<EntityId, number>();
   private readonly random: () => number;
   private readonly respawnDelayMs: number;
+  /** 回村出生点所在区域（死亡重生用）。 */
+  private readonly homeRegionId: string;
   private elapsedMs = 0;
   private regionId: string | null = null;
   private playerId: EntityId | null = null;
@@ -688,6 +704,7 @@ export class GameSession implements GameSessionIntents {
       throw new Error("respawnDelayMs 必须是非负有限数值");
     }
     this.respawnDelayMs = delay;
+    this.homeRegionId = options.homeRegionId ?? DEFAULT_HOME_REGION_ID;
   }
 
   /** 注册编译后的 ink JSON（dialogueId = content/dialogues/<id>.ink 的文件名）。 */
@@ -853,6 +870,10 @@ export class GameSession implements GameSessionIntents {
 
     this.clearRegionEntities();
     this.installRegion(bundle, targetRegionId, { resetQuests: false });
+    // 空中残留的投射物属于旧区域：巢穴里被翠谷的吐弹追着打、切区后
+    // 还在飞，是纯粹的「状态残留」。玩家实体由 restoreCarriedPlayer
+    // 单独带过去，所以这里整体清空。
+    this.projectiles.clear();
 
     if (carriedPlayer !== null) {
       this.restoreCarriedPlayer(carriedPlayer, target, carriedHp);
@@ -883,6 +904,16 @@ export class GameSession implements GameSessionIntents {
       this.enemyProfiles.delete(id);
       this.lastPublishedHp.delete(id);
     }
+    // 以实体 id 为键的每张表都要清：只清 entities 会让上一区域的
+    // 巡逻进度 / 商人价目表 / 换锚点声明按 id 泄漏到新区域。
+    // （installRegion 也会写 patrols/patrolRoutes/patrolDwellMs/vendors/
+    // reanchors，这里先清空，装载时再填新区域的值——顺序上 installRegion
+    // 在其后，因此不会把新区域的数据抹掉。）
+    this.patrols.clear();
+    this.patrolRoutes.clear();
+    this.patrolDwellMs.clear();
+    this.vendors.clear();
+    this.reanchors.clear();
   }
 
   /**
@@ -1024,16 +1055,30 @@ export class GameSession implements GameSessionIntents {
     this.levelCurve = curves[0] === undefined ? null : { ...curves[0] };
 
     // 票 37：宝箱/收集品/收集集。内容包可缺省（没有探索内容的世界照常跑）。
+    // 探索内容同样按 regionId 过滤（与敌人/NPC 一致）：切区后上一区域的
+    // 宝箱/收集品不该还能被开、还能计入收集进度。
     this.chests.clear();
     for (const chest of bundle.chests ?? []) {
+      if (chest.regionId !== regionId) {
+        continue;
+      }
       this.chests.set(chest.id, structuredClone(chest));
     }
     this.collectibles.clear();
+    const regionSets = new Set<string>();
     for (const collectible of bundle.collectibles ?? []) {
+      if (collectible.regionId !== regionId) {
+        continue;
+      }
       this.collectibles.set(collectible.id, structuredClone(collectible));
+      // 收集品定义里没有 regionId，所属集由本区域的收集品反推。
+      regionSets.add(collectible.setId ?? collectible.id);
     }
     this.collectSets.clear();
     for (const set of bundle.collectSets ?? []) {
+      if (!regionSets.has(set.id)) {
+        continue;
+      }
       this.collectSets.set(set.id, structuredClone(set));
     }
 
@@ -1380,7 +1425,14 @@ export class GameSession implements GameSessionIntents {
         }
         const anchor = entry.waypoints[0];
         entity.state.position = cloneVec3(anchor);
-        this.patrols.set(npcId, reanchorPatrol(this.patrols.get(npcId) ?? createPatrolState(entry.waypoints, anchor), entry.waypoints, entry.dwellMs));
+        // 三样都要换：只换 patrols 的话 patrolSampleOf 仍按内容里的旧
+        // patrolRoutes 采样，NPC 会朝旧路线的点走回去（表现为换锚点后
+        // 「立刻拐回去」），dwellMs 也还是旧值。
+        const dwellMs =
+          entry.dwellMs ?? this.patrolDwellMs.get(npcId) ?? DEFAULT_PATROL_DWELL_MS;
+        this.patrolRoutes.set(npcId, entry.waypoints.map(cloneVec3));
+        this.patrolDwellMs.set(npcId, dwellMs);
+        this.patrols.set(npcId, reanchorPatrol(this.patrols.get(npcId) ?? createPatrolState(entry.waypoints, anchor), entry.waypoints, dwellMs));
         this.publish({ type: "npc-reanchored", npcId, questId, position: cloneVec3(anchor) });
       }
     }
@@ -1925,6 +1977,10 @@ export class GameSession implements GameSessionIntents {
       return;
     }
 
+    // 票 36 死亡轻惩罚：死在巢穴里也要回村复活。逻辑层不跨区移动
+    // （内容包不在这一层），respawn 事件带 respawnRegionId，
+    // 由表现层切到回村区域。
+
     runtime.hp = this.maxHpOf(player);
     runtime.alive = true;
     runtime.cooldownMs = 0;
@@ -1966,11 +2022,14 @@ export class GameSession implements GameSessionIntents {
       otherRuntime.cooldownMs = this.attackIntervalOf(other);
     }
 
+    const homeRegion =
+      this.regionId !== null && this.regionId !== this.homeRegionId ? this.homeRegionId : null;
     this.events.push({
       type: "respawn",
       at: this.elapsedMs,
       entityId: player.id,
       position: cloneVec3(player.state.position),
+      respawnRegionId: homeRegion,
     });
   }
 
@@ -2152,6 +2211,14 @@ export class GameSession implements GameSessionIntents {
     const attributes = this.attributesOf(entity);
     const aggroRadius = Math.max(0, attributes.aggroRadius ?? DEFAULT_AGGRO_RADIUS);
 
+    // 安全区拒止（与 melee_chaser 同一判定，票 33）：玩家在安全区内时，
+    // 冲锋型也必须收手——否则玩家站在村口能吃到一次满额冲锋，
+    // 「村庄是安全区」这条承诺只对近战成立。
+    if (this.playerIsSheltered()) {
+      this.abandonCharge(entity.id, runtime);
+      return;
+    }
+
     // 冲锋途中与硬直中脱战判定同样生效（玩家拉开太远就放弃这次冲锋）。
     if (distance > aggroRadius * 2) {
       runtime.targetId = null;
@@ -2180,6 +2247,7 @@ export class GameSession implements GameSessionIntents {
     // charge：沿锁定方向直线推进；被挡停或走完距离即进入 recovery。
     if (runtime.aiState === "charge") {
       const dir = runtime.chargeDir ?? { x: 0, z: 0 };
+      const sweepFrom = { x: entity.state.position.x, z: entity.state.position.z };
       const step = stepCharge(
         entity.state.position,
         dir,
@@ -2202,10 +2270,14 @@ export class GameSession implements GameSessionIntents {
         return;
       }
 
-      // 路径命中判定：整段冲锋只结算一次（用本步落点重新量距离）。
+      // 路径命中判定：整段冲锋只结算一次。**扫掠**本步位移而不是只看落点——
+      // 冲锋速度 14m/s、一步 100ms 就是 1.4m，远大于 hitRadius，只量落点
+      // 会让冲锋从玩家身边擦过去而不结算（review #39）。
       runtime.chargeRemaining = Math.max(0, runtime.chargeRemaining - step.travelled);
-      const gapAfterStep = horizontalDistance(entity.state.position, player.state.position);
-      if (!runtime.chargeHit && gapAfterStep <= profile.hitRadius) {
+      if (
+        !runtime.chargeHit &&
+        sweptHit(sweepFrom, entity.state.position, player.state.position, profile.hitRadius)
+      ) {
         runtime.chargeHit = true;
         this.resolveEnemyDamage(entity, player, this.chargeDamageOf(entity, player), false);
       }
@@ -2259,6 +2331,19 @@ export class GameSession implements GameSessionIntents {
     });
   }
 
+  /** 放弃当前冲锋：清掉方向/剩余距离/命中标记，回到 idle。 */
+  private abandonCharge(entityId: EntityId, runtime: CombatRuntime): void {
+    runtime.targetId = null;
+    runtime.chargeDir = null;
+    runtime.chargeWindupMs = 0;
+    runtime.chargeRemaining = 0;
+    runtime.chargeRemainingMs = 0;
+    runtime.chargeHit = false;
+    runtime.aiState = "idle";
+    runtime.idleMs = 0;
+    this.movements.delete(entityId);
+  }
+
   private enterChargeRecovery(runtime: CombatRuntime, profile: WindupChargeAiProfile): void {
     runtime.chargeRemaining = 0;
     runtime.chargeRemainingMs = profile.recoveryMs;
@@ -2308,6 +2393,17 @@ export class GameSession implements GameSessionIntents {
     const attributes = this.attributesOf(entity);
     const aggroRadius = Math.max(0, attributes.aggroRadius ?? DEFAULT_AGGRO_RADIUS);
     const distance = horizontalDistance(entity.state.position, player.state.position);
+
+    // 安全区拒止（与 melee_chaser 同一判定，票 33）：吐弹在安全区内不放，
+    // 否则玩家在村里站着也会被远程点掉。
+    if (this.playerIsSheltered()) {
+      runtime.targetId = null;
+      runtime.aiState = "idle";
+      runtime.idleMs = 0;
+      runtime.fireCooldownMs = 0;
+      this.movements.delete(entity.id);
+      return;
+    }
 
     if (distance > aggroRadius * 2) {
       runtime.targetId = null;
@@ -2850,14 +2946,14 @@ export class GameSession implements GameSessionIntents {
     if (xp === 0) {
       return;
     }
-    this.cumulativeXp += xp;
     this.creditExperience(entity, xp);
   }
 
   private creditExperience(player: Entity, xp: number): void {
+    // 经验只有一个真相源：玩家实体的 baseAttributes.xp。
+    // 快照字段 cumulativeXp / playerLevel 都由它派生，不再各写一份。
     const total = (player.baseAttributes.xp ?? 0) + xp;
     player.baseAttributes.xp = total;
-    // 累计经验以 this.cumulativeXp 为准（快照字段）；实体属性是同一事实的镜像。
     this.cumulativeXp = Math.max(0, Math.round(total));
     this.events.push({
       type: "xp",
@@ -3463,7 +3559,6 @@ export class GameSession implements GameSessionIntents {
     this.respawnAtMs = snapshot.respawnAtMs;
     this.nextItemInstanceId = snapshot.nextItemInstanceId;
     this.playerLevel = snapshot.playerLevel;
-    this.cumulativeXp = snapshot.cumulativeXp;
     this.worldState = cloneJsonValue(snapshot.worldState);
 
     for (const entitySnapshot of snapshot.entities) {
@@ -3541,7 +3636,42 @@ export class GameSession implements GameSessionIntents {
       }
     }
     this.questLog.restore(snapshot.quests);
+    // 经验/等级收敛到**玩家实体属性**这一个真相源：快照里的
+    // cumulativeXp 先落到 baseAttributes.xp，之后两者不会再分叉
+    // （早先一条路径写 cumulativeXp、另一条写 baseAttributes.xp）。
+    this.cumulativeXp = snapshot.cumulativeXp;
+    this.syncProgressionFromPlayer();
     this.events.length = 0;
+  }
+
+  /**
+   * 从玩家实体的 `level` / `xp` 属性同步快照侧的两个字段。
+   * grantExperience / settleLevelUps / restoreSnapshot 共用这一处写入。
+   */
+  private syncProgressionFromPlayer(): void {
+    if (this.playerId === null) {
+      this.playerLevel = 1;
+      this.cumulativeXp = 0;
+      return;
+    }
+    const player = this.entities.get(this.playerId);
+    if (player === undefined) {
+      return;
+    }
+    // 实体属性是真源：快照字段回写进去，之后派生值都从它算。
+    // 0 经验且实体上原本没有 xp 键时不凭空加键——读档不该让快照多出
+    // 一个内容里没定义过的属性（逐字段往返比对会因此漂移）。
+    if (this.cumulativeXp > 0 || "xp" in player.baseAttributes) {
+      player.baseAttributes.xp = this.cumulativeXp;
+    }
+    this.cumulativeXp = Math.max(0, Math.round(player.baseAttributes.xp ?? 0));
+    this.playerLevel =
+      this.levelCurve === null
+        ? Math.max(1, Math.round(this.playerLevel))
+        : levelForXp(this.levelCurve, this.cumulativeXp);
+    if (this.playerLevel > 1 || "level" in player.baseAttributes) {
+      player.baseAttributes.level = this.playerLevel;
+    }
   }
 
   // -------------------------------------------------------------------------

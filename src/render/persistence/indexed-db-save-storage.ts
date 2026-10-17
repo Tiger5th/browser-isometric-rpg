@@ -3,16 +3,22 @@
  *
  * 逻辑层只认识 SaveStorage / SaveSlotStorage 接口；本模块是唯一的浏览器
  * 持久化实现。单库单 object store，按槽位键存四份数据（`auto` / `slot-1..3`，
- * 票 31）。键名沿用旧的 `slot-1` 默认值时代不变，存量玩家数据原地可读。
+ * 票 31）。
+ *
+ * **默认槽是 `slot-1`（第一个手动槽），不是 `auto`**：单槽调用方
+ * （`GameSaveService` 的手动存档路径）写的就是手动存档，早先默认值取 `auto`
+ * 会让手动存档覆盖自动存档进度、两者互相抹掉。默认回 `slot-1` 之后，
+ * 自动存档必须**显式**传 `AUTO_SLOT_ID`（autosave 已经是这么做的），
+ * 旧的 `slot-1` 存量数据原地可读。
  */
 
 import type { SaveFile, SaveStorage } from "../../logic/save";
-import { AUTO_SLOT_ID, type SaveSlotId, type SaveSlotStorage } from "../../logic/save-slots";
+import { MANUAL_SLOT_IDS, type SaveSlotId, type SaveSlotStorage } from "../../logic/save-slots";
 
 export interface IndexedDbSaveStorageOptions {
   databaseName?: string;
   storeName?: string;
-  /** 存档槽位键（无参调用时的默认槽）。 */
+  /** 存档槽位键（无参调用时的默认槽）；缺省 `slot-1`，即第一个手动槽。 */
   key?: string;
   /** 测试/特殊环境可注入 IDBFactory。 */
   factory?: IDBFactory;
@@ -28,7 +34,7 @@ export class IndexedDbSaveStorage implements SaveStorage, SaveSlotStorage {
   constructor(options: IndexedDbSaveStorageOptions = {}) {
     this.databaseName = options.databaseName ?? "browser-isometric-rpg";
     this.storeName = options.storeName ?? "saves";
-    this.key = options.key ?? AUTO_SLOT_ID;
+    this.key = options.key ?? MANUAL_SLOT_IDS[0];
     this.factory = options.factory ?? globalThis.indexedDB;
   }
 

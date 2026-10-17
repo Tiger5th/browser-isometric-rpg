@@ -379,7 +379,8 @@ function migrateV1ToV2(save: SaveFile): SaveFile {
  * - 顶层新增 playerLevel / cumulativeXp（等级与经验入档）；
  * - 顶层新增 worldState 通用容器（`Record<string, JsonValue>`，只透传）。
  *
- * 旧存档没有这些字段 → 统一补默认值（等级 1 / 经验 0 / 空容器）；
+ * 旧存档没有这些字段 → 补默认值（等级 1 / 空容器）；经验是个例外：
+ * 老档的经验本来就记在玩家实体的 `baseAttributes.xp` 上，所以从这里迁移。
  * 这样以后新增的系统字段也能只改迁移函数，不动老档本身。
  * worldState 若已存在则原样保留（内容已写进去的世界事实不该被迁移抹掉）。
  */
@@ -401,8 +402,25 @@ function migrateV2ToV3(save: SaveFile): SaveFile {
     }
     combat.heavyCooldownMs = 0;
   }
+  // 经验从玩家实体的 xp 属性迁移过来：老档**有**累计经验（记在实体属性上），
+  // 写成 0 会让玩家在升版后凭空丢掉一半等级进度（票 34 的经验是单一真相源）。
+  let migratedXp = 0;
+  const entities = session.entities;
+  for (const entity of entities) {
+    if (!isRecord(entity)) {
+      continue;
+    }
+    const baseAttributes = entity.baseAttributes;
+    if (!isRecord(baseAttributes)) {
+      continue;
+    }
+    const xp = baseAttributes.xp;
+    if (typeof xp === "number" && Number.isFinite(xp) && xp > migratedXp) {
+      migratedXp = xp;
+    }
+  }
   session.playerLevel = 1;
-  session.cumulativeXp = 0;
+  session.cumulativeXp = migratedXp;
   if (session.worldState === undefined) {
     session.worldState = {};
   } else if (!isRecord(session.worldState) || Array.isArray(session.worldState)) {

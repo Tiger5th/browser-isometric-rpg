@@ -20,9 +20,11 @@ import type { Scene } from "@babylonjs/core/scene";
 import type { GameSession } from "../../logic/game-session";
 import type { GameSessionEvent } from "../../logic/game-events";
 import {
+  advanceCameraShake,
   CombatFeedbackCore,
   DAMAGE_FEED_RISE_MS,
   HIT_STOP_MS,
+  resetCameraShake,
   SHAKE_INTENSITY,
   type DamageFeedEntry,
 } from "./combat-feedback-core";
@@ -172,6 +174,14 @@ export function createCombatFeedbackLayer(
   let shakeRemainingMs = 0;
   let shakeIntensity = 0;
   let cameraShakeEnabled = true;
+  /**
+   * 震屏基准 alpha（review #6）：抖动是**基准 + jitter**，不是「往当前值上加」。
+   * 累加写法每帧都把上一次抖动当成新基准，几十帧下来相机角度被永久推歪，
+   * 「复位回出厂等距」再也回不到预设角。基准化逻辑在零引擎核心
+   * `advanceCameraShake` 里（camera-shake.test.ts 直接测它）。
+   */
+  let shake = resetCameraShake();
+  let shakeCamera: Camera | null = null;
   let flashRemainingMs = 0;
   let levelFlashRemainingMs = 0;
   const levelFlash = document.createElement("div");
@@ -495,15 +505,34 @@ export function createCombatFeedbackLayer(
         flash.style.opacity = "0";
       }
 
-      // 震屏：相机 alpha 微偏移（正交等距基准角度由调用方在帧末还原）。
-      const camera = scene.activeCamera as
-        | (Camera & { alpha?: number })
-        | null;
+      // 震屏：相机 alpha = **基准 + 本帧抖动**。基准单独记着，每帧重算，
+      // 所以抖动不会逐帧累积、也不会污染出厂等距角度。
+      const camera = scene.activeCamera as (Camera & { alpha?: number }) | null;
       if (cameraShakeEnabled && camera && shakeRemainingMs > 0) {
         shakeRemainingMs = Math.max(0, shakeRemainingMs - deltaMs);
-        const jitter = (Math.random() - 0.5) * 2 * shakeIntensity;
-        camera.alpha = (camera.alpha ?? 0) + jitter;
+        if (shakeCamera !== camera) {
+          // 换相机：旧相机上残留的抖动记不得，重置基准。
+          shakeCamera = camera;
+          shake = resetCameraShake();
+        }
+        const step = advanceCameraShake(
+          shake,
+          camera.alpha ?? 0,
+          (Math.random() - 0.5) * 2 * shakeIntensity,
+          true,
+        );
+        shake = step.state;
+        camera.alpha = step.alpha;
       } else {
+        if (shakeCamera !== null && shakeCamera !== camera) {
+          shakeCamera = null;
+        }
+        // 抖动结束：把基准写回去，保证 alpha 精确等于基准值（不留在偏移上）。
+        if (camera !== null) {
+          const step = advanceCameraShake(shake, camera.alpha ?? 0, 0, false);
+          camera.alpha = step.alpha;
+          shake = step.state;
+        }
         shakeIntensity = 0;
         shakeRemainingMs = 0;
       }
@@ -523,6 +552,20 @@ export function createCombatFeedbackLayer(
 
     setCameraShakeEnabled(enabled) {
       cameraShakeEnabled = enabled;
+      if (!enabled) {
+        // 复位插值期间震屏要让路：把基准写回相机并忘掉，
+        // 否则复位结束后第一帧会把复位结果当成抖动重新污染一遍。
+        const camera = shakeCamera as (Camera & { alpha?: number }) | null;
+        if (camera) {
+          const step = advanceCameraShake(shake, camera.alpha ?? 0, 0, false);
+          camera.alpha = step.alpha;
+          shake = step.state;
+        }
+        shake = resetCameraShake();
+        shakeCamera = null;
+        shakeIntensity = 0;
+        shakeRemainingMs = 0;
+      }
     },
 
     trackEntity(entityId, mesh, headHeight) {
@@ -560,6 +603,8 @@ export function createCombatFeedbackLayer(
       hitStopRemainingMs = 0;
       shakeRemainingMs = 0;
       shakeIntensity = 0;
+      shake = resetCameraShake();
+      shakeCamera = null;
       flashRemainingMs = 0;
       levelFlashRemainingMs = 0;
       flash.style.opacity = "0";
