@@ -4,9 +4,9 @@
 
 **Blocked by:** 10 (项目骨架), 15 (资产管线验证)
 
-**Status:** ready-for-agent
+**Status:** resolved (98d7866 合并至 p0-integration；VRoid 真人链路 blocked 待用户手做)
 
-- [ ] 一个 VRoid 角色在灰盒场景中播放 Mixamo 动画 —— **blocked**：本机无 VRoid Studio / Blender / Adobe 登录态；已用程序化二次元占位角色 + 内嵌 walk/run 骨骼动画完成渲染验证（详见下方 Comments）
+- [ ] 一个 VRoid 角色在灰盒场景中播放 Mixamo 动画——**blocked**：本机无 Blender/VRoid/Adobe 登录态；已交付程序化二次元占位角色（11k 三角/22 骨骼/walk+run）+ VRM→GLB 转换工具（自测通过），场景会自动优先加载真实 VRoid 资产 —— **blocked**：本机无 VRoid Studio / Blender / Adobe 登录态；已用程序化二次元占位角色 + 内嵌 walk/run 骨骼动画完成渲染验证（详见下方 Comments）
 - [x] toon 渲染开/关对比截图进 artifacts/
 - [x] 链路各环节的坑记录（骨骼导入/morph/贴图格式）
 - [x] 结论：二次元管线可行性；发现的问题写回 09 号 ticket
