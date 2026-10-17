@@ -74,6 +74,11 @@ export interface CombatFeedbackLayer {
   playUiSound(kind: "ui-click" | "attack-windup", rate?: number): void;
   /** 调试/冒烟读取。 */
   debugState(): CombatFeedbackDebugState;
+  /**
+   * 清掉全部瞬时演出（飘字/血条/前摇圈/顿帧/震屏/闪红）。
+   * 票 32「新游戏」用：上一局的残留演出不该飘到新一局上。
+   */
+  clearTransient(): void;
   dispose(): void;
 }
 
@@ -522,6 +527,31 @@ export function createCombatFeedbackLayer(
 
     playUiSound(kind, rate) {
       audio?.playUi(kind, rate);
+    },
+
+    clearTransient() {
+      for (const item of numbers) {
+        item.node.remove();
+      }
+      numbers.length = 0;
+      for (const item of texts) {
+        item.node.remove();
+      }
+      texts.length = 0;
+      for (const item of windups) {
+        item.node.remove();
+      }
+      windups.length = 0;
+      for (const entityId of [...bars.keys()]) {
+        releaseBar(entityId);
+      }
+      hitStopRemainingMs = 0;
+      shakeRemainingMs = 0;
+      shakeIntensity = 0;
+      flashRemainingMs = 0;
+      levelFlashRemainingMs = 0;
+      flash.style.opacity = "0";
+      levelFlash.style.opacity = "0";
     },
 
     debugState() {

@@ -45,6 +45,8 @@
 - **欣赏模式（Showcase Mode）**：相机自由缩放旋转的状态；一键复位回到出厂等距预设（alpha/beta/radius 常量）。
 - **等级曲线（Level Curve）**：累计经验 → 等级的阈值表 + 每级属性加成（票 34）。内容数据（`content/level-curves/*.json`），解释口 `src/logic/leveling.ts`。升级加成走修饰器系统的 `level` 源，按当前等级**整源重算**（不是逐次叠加），因此读档与跨级都不会重复入账。
 - **等级徽标（Level Badge）**：HUD 上的 `Lv.N` 与经验条。显示值由 `src/render/ui/level-hud.ts` 的纯函数 `levelHudView()` 换算，HUD 只搭 DOM。
+- **标题画面（Title Screen）**：打开游戏的正式入口。logo（生成图）+ 氛围背景（游戏画面派生）+ 版本号 + 「继续游戏」/「新游戏」；入场演出 2.4 秒（logo 淡入 + 雾气/粒子）可点击跳过。入口路由判定在 `src/logic/title-menu.ts`（纯函数），DOM 只负责演出与交互；进入游戏复用加载门黑场过场。
+- **入场意图（Entry Intent）**：标题画面选定的「读哪个槽 / 是不是新游戏」，一次性交给场景构建消费（`src/render/title-entry.ts`）。因此「经标题进入」与「harness 直入」走同一段场景代码。
 - **换锚点（Re-anchor）**：任务状态变化时 NPC 移动到新默认位置的机制——「世界因你而变」的最小实现。
 
 ## 测试与流程

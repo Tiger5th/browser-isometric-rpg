@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "ticket": "32-title-screen",
+  "layer": "L4-ego-browser",
+  "generatedAt": "2026-10-17T23:20:00.000Z",
+  "scenario": "title-screen",
+  "status": "passed",
+  "environment": {
+    "url": "http://localhost:5199/",
+    "viewport": { "width": 1440, "height": 810 },
+    "renderBackend": "webgl2",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/154.0.0.0"
+  },
+  "artifacts": [
+    "artifacts/title-screen/logo-c2.png",
+    "artifacts/ticket-32-title-screen/01-title-intro.png",
+    "artifacts/ticket-32-title-screen/02-title-ready.png",
+    "artifacts/ticket-32-title-screen/03-title-slot-picker.png",
+    "artifacts/ticket-32-title-screen/04-gameplay-after-continue.png",
+    "artifacts/ticket-32-title-screen/05-back-to-title.png",
+    "artifacts/ticket-32-title-screen/06-new-game-confirm.png",
+    "artifacts/ticket-32-title-screen/07-gameplay-after-new-game.png",
+    "artifacts/ticket-32-title-screen/08-first-launch-no-save.png",
+    "artifacts/ticket-32-title-screen/09-first-launch-gameplay.png",
+    "artifacts/ticket-32-title-screen/10-second-launch-with-save.png",
+    "artifacts/ticket-32-title-screen/11-direct-continue.png",
+    "artifacts/ticket-32-title-screen/12-loaded-manual-slot.png"
+  ],
+  "checks": [
+    {
+      "name": "打开游戏先见标题画面：logo 淡入 + 雾气/粒子演出，演出期间按钮禁用",
+      "passed": true,
+      "observed": "introState=playing → 2.4s 后 introState=ready；artifacts/01 vs 02"
+    },
+    {
+      "name": "版本号来自 package.json（vite define 注入 import.meta.env.APP_VERSION）",
+      "passed": true,
+      "observed": "右下角 v0.0.0"
+    },
+    {
+      "name": "多档时「继续游戏」先出选槽列表，四槽带等级/时长/时间",
+      "passed": true,
+      "observed": "自动存档 · Lv.1 / 存档 1 · Lv.2 / 存档 2 空 / 存档 3 空；03-title-slot-picker.png"
+    },
+    {
+      "name": "选 slot-1（Lv.2）读档，等级/经验真的灌回会话",
+      "passed": true,
+      "observed": "状态行「已读取 存档 1 · Lv.2 · 游玩 8s」；getLevelProgress {level:2, cumulativeXp:150}"
+    },
+    {
+      "name": "只有自动档时「继续游戏」直达读档，不出选槽层",
+      "passed": true,
+      "observed": "click continue → 12s 后 title.visible=false；状态行「已读取 自动存档」"
+    },
+    {
+      "name": "无档首启只显示「新游戏」，无确认层，不报错",
+      "passed": true,
+      "observed": "entries=[new-game] requireNewGameConfirm=false error=null；08/09 截图"
+    },
+    {
+      "name": "有档时「新游戏」出二次确认弹层，取消回到根菜单",
+      "passed": true,
+      "observed": "view=confirm-new-game → 取消 → view=root；06 截图"
+    },
+    {
+      "name": "确认新游戏后进度重置（Lv.2 → Lv.1），手动档仍保留",
+      "passed": true,
+      "observed": "状态行「新游戏：进度已重置」level 1；slots [auto:Lv.1, slot-1:Lv.2, slot-2:empty, slot-3:empty]"
+    },
+    {
+      "name": "游戏内「返回标题」可用，且不重播 2.4s 演出（按钮立即可点）",
+      "passed": true,
+      "observed": "回到标题后 continueDisabled=false，introState=ready"
+    },
+    {
+      "name": "进入游戏走黑场过场（loadingGate 基建），标题层在遮罩下退场",
+      "passed": true,
+      "observed": "gate data-gate-state=visible 收尾，title.visible=false，读档/新游戏状态行已更新"
+    }
+  ],
+  "defectsFoundAndFixed": [
+    {
+      "name": "根菜单按钮挂在无样式的容器里，居中与入场动画全失效（无档首启截图里按钮看起来像没渲染）",
+      "fix": "src/render/ui/title-screen.ts —— renderRoot 改挂到 .t-menu 容器",
+      "foundBy": "L4 冒烟（querySelector('#title-screen .t-menu button') 命中 0 个）"
+    },
+    {
+      "name": "logo/副标题/版本号/确认标题的 textContent 在一次批量编辑中丢失（版本号渲染成空 div）",
+      "fix": "src/render/ui/title-screen.ts —— 补回各元素文本",
+      "foundBy": "L4 冒烟（title-version textContent 为空串）"
+    },
+    {
+      "name": "游戏内「返回标题」会重播入场演出并把按钮再锁 2.4 秒",
+      "fix": "present() 首次之外直接标 skipped，不重播",
+      "foundBy": "L4 冒烟（back-to-title 后 introState=playing）"
+    },
+    {
+      "name": "新游戏确认文案与实现不符：实际是重置会话进度而非删档",
+      "fix": "确认文案改为「新游戏会丢弃当前进度，从头开始。旧存档不会立刻删除……」",
+      "foundBy": "L4 冒烟人工核对"
+    }
+  ],
+  "notes": [
+    "logo 用资产 agent 的候选 c2（Green Hollow 绿洼地），白底按亮度软阈值抠成透明 PNG，落 assets/title/logo.png；背景由 p1-world 截图模糊压暗生成 assets/title/title-background.png，风格锚定同源场景配色。",
+    "票 32 未改任何 content JSON，content:lint 与基线一致（16 个内容文件 + 1 个对话通过）。",
+    "静音/设置按钮按票 32 范围后置；音效基建沿用票 27 的 HUD。",
+    "切场景路径不变：?harness=1 / ?scenario=p1-world / ?title=0 仍直达，L4 脚本与 harness 不受标题层影响。",
+    "进入游戏的场景重建耗时约 10–12s（navmesh WASM + 资产加载），实测与改动前一致，不是本票引入的开销。"
+  ]
+}
