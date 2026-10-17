@@ -1,0 +1,697 @@
+{
+  "schemaVersion": 1,
+  "ticket": "26-p1-smoke-acceptance",
+  "scenario": "p1-world",
+  "layer": "L4+L5-ego-browser",
+  "status": "passed",
+  "generatedAt": "2026-10-17",
+  "environment": {
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "renderBackend": "webgl2",
+    "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+    "capturedAt": "2026-10-17T08:11:29.195Z",
+    "devicePixelRatio": 2,
+    "hardwareConcurrency": 10
+  },
+  "flow": [
+    "clear save + reload (fresh session)",
+    "click-move player near elder Ma",
+    "talk to NPC, accept quest via ink dialogue",
+    "kill 3 slimes through real combat (first one via canvas click), pick up slime gel drops",
+    "return to NPC, turn in quest (maxHp 100→110, sword + 2 herbs)",
+    "open inventory via HUD, equip traveler sword (attack 12→17)",
+    "use healing herb via HUD (HP 59→89, qty 2→1)",
+    "manual save via HUD (IndexedDB v2)",
+    "reload page; scenario setup auto-loads save",
+    "assert position/HP/attributes/inventory/quests/equipment/modifiers/dead enemies/HUD",
+    "continue playing after load: use second herb (qty 1→0, HP 89→110)",
+    "live L5 sampling during gameplay + canonical p1-world measure report"
+  ],
+  "stages": [
+    {
+      "id": "clear-save",
+      "label": "删除存档 + 刷新（全新会话）",
+      "passed": true,
+      "detail": {
+        "hp": 100,
+        "maxHp": 100,
+        "attack": 12,
+        "items": 0,
+        "quest": "available",
+        "aliveEnemies": 3,
+        "saveStatus": "无存档：点击「存档」创建"
+      }
+    },
+    {
+      "id": "move",
+      "label": "点击移动（GameSession.moveTo 意图 + 视觉同步）",
+      "passed": true,
+      "detail": {
+        "from": {
+          "x": 0,
+          "z": 0
+        },
+        "to": {
+          "x": 6,
+          "z": 2
+        },
+        "distance": 6.32
+      }
+    },
+    {
+      "id": "dialogue-accept",
+      "label": "与马婆婆对话并接取任务",
+      "passed": true,
+      "detail": {
+        "npc": "npc:elder_ma",
+        "choices": [
+          "发生了什么？",
+          "我这就去。"
+        ],
+        "questStatusAfter": "active"
+      }
+    },
+    {
+      "id": "click-attack",
+      "label": "在画布上点击敌人发起攻击（用户故事 3）",
+      "passed": true,
+      "detail": {
+        "target": "enemy:slime_meadow",
+        "screenPoint": {
+          "x": 878,
+          "y": 468
+        },
+        "enemyHp": "24 → 13",
+        "note": "pointerdown 命中敌人 mesh 后提交 session.attack(PLAYER_ID, enemyId)，不再只是走近"
+      }
+    },
+    {
+      "id": "combat-drops",
+      "label": "真实战斗击杀 3 只史莱姆 + 掉落拾取",
+      "passed": true,
+      "detail": {
+        "attackSamples": 21,
+        "minHpDuringCombat": 43,
+        "hpAfterCombat": 43,
+        "questProgress": "3/3 ready_to_turn_in",
+        "drops": "item:slime_gel x3",
+        "xp": 30
+      }
+    },
+    {
+      "id": "turn-in",
+      "label": "回马婆婆交付任务并领取奖励",
+      "passed": true,
+      "detail": {
+        "questStatus": "completed",
+        "maxHp": "100 → 110",
+        "rewards": [
+          "item:traveler_sword x1",
+          "item:healing_herb x2"
+        ],
+        "modifiers": [
+          "quest:quest:cull_slimes:0 → maxHp +10"
+        ]
+      }
+    },
+    {
+      "id": "inventory-equip",
+      "label": "打开背包、装备旅人短剑（属性即时变化）",
+      "passed": true,
+      "detail": {
+        "panelRows": [
+          "史莱姆凝胶 ×5 (misc)",
+          "旅人短剑 ×1 (equipment, weapon)",
+          "疗伤草 ×2 (consumable)"
+        ],
+        "attack": "12 → 17",
+        "weaponSlot": "旅人短剑 · attack +5"
+      }
+    },
+    {
+      "id": "use-consumable",
+      "label": "使用疗伤草（HP 恢复、数量递减）",
+      "passed": true,
+      "detail": {
+        "hp": "43 → 73",
+        "maxHp": 110,
+        "quantity": "2 → 1"
+      }
+    },
+    {
+      "id": "manual-save",
+      "label": "HUD 手动存档到 IndexedDB",
+      "passed": true,
+      "detail": {
+        "saveStatus": "已存档 · v2 · 21325.700000047684ms",
+        "savedState": {
+          "position": {
+            "x": 6,
+            "y": 0,
+            "z": 2
+          },
+          "hp": 73,
+          "maxHp": 110,
+          "attack": 17,
+          "xp": 30,
+          "items": [
+            {
+              "instanceId": "item:slime_gel@1",
+              "templateId": "item:slime_gel",
+              "quantity": 3,
+              "equipped": false
+            },
+            {
+              "instanceId": "quest:cull_slimes:item:traveler_sword:0",
+              "templateId": "item:traveler_sword",
+              "quantity": 1,
+              "equipped": true
+            },
+            {
+              "instanceId": "quest:cull_slimes:item:healing_herb:0",
+              "templateId": "item:healing_herb",
+              "quantity": 1,
+              "equipped": false
+            }
+          ],
+          "modifiers": [
+            {
+              "id": "quest:quest:cull_slimes:0",
+              "attribute": "maxHp",
+              "operation": "add",
+              "value": 10,
+              "source": {
+                "kind": "quest",
+                "id": "quest:cull_slimes"
+              }
+            },
+            {
+              "id": "equipment:quest:cull_slimes:item:traveler_sword:0:0",
+              "attribute": "attack",
+              "operation": "add",
+              "value": 5,
+              "source": {
+                "kind": "equipment",
+                "id": "quest:cull_slimes:item:traveler_sword:0"
+              }
+            }
+          ],
+          "quest": "completed",
+          "enemiesAlive": 0
+        }
+      }
+    },
+    {
+      "id": "reload-auto-load",
+      "label": "刷新页面 → 自动读档 → 全状态断言",
+      "passed": true,
+      "detail": {
+        "saveStatusAfter": "已从存档恢复 · v2 · 21325.700000047684ms",
+        "restored": {
+          "position": {
+            "x": 6,
+            "y": 0,
+            "z": 2
+          },
+          "hp": 73,
+          "maxHp": 110,
+          "attack": 17,
+          "xp": 30,
+          "items": [
+            {
+              "instanceId": "item:slime_gel@1",
+              "templateId": "item:slime_gel",
+              "quantity": 3,
+              "equipped": false
+            },
+            {
+              "instanceId": "quest:cull_slimes:item:traveler_sword:0",
+              "templateId": "item:traveler_sword",
+              "quantity": 1,
+              "equipped": true
+            },
+            {
+              "instanceId": "quest:cull_slimes:item:healing_herb:0",
+              "templateId": "item:healing_herb",
+              "quantity": 1,
+              "equipped": false
+            }
+          ],
+          "modifiers": [
+            {
+              "id": "quest:quest:cull_slimes:0",
+              "attribute": "maxHp",
+              "operation": "add",
+              "value": 10,
+              "source": {
+                "kind": "quest",
+                "id": "quest:cull_slimes"
+              }
+            },
+            {
+              "id": "equipment:quest:cull_slimes:item:traveler_sword:0:0",
+              "attribute": "attack",
+              "operation": "add",
+              "value": 5,
+              "source": {
+                "kind": "equipment",
+                "id": "quest:cull_slimes:item:traveler_sword:0"
+              }
+            }
+          ],
+          "quest": "completed",
+          "enemiesAlive": 0,
+          "elapsedMs": 27891.60000014305
+        },
+        "hudExcerpt": "状态HP 73 / 110经验 30 / 100攻击 17防御 4任务清理史莱姆已完成· 击杀翠谷史莱姆 3/3背包 (I)存档读档删除存档调试：攻击最近的史莱姆（走真实战斗）已从存档恢复 · v2 · 21325.700000047684ms",
+        "meshPositions": {
+          "player": {
+            "x": 6,
+            "y": 0,
+            "z": 2
+          },
+          "npc": {
+            "x": 6,
+            "y": 0,
+            "z": 4
+          },
+          "enemies": [
+            {
+              "id": "enemy:slime_blue",
+              "position": {
+                "x": 14,
+                "y": 0.45,
+                "z": -6
+              }
+            },
+            {
+              "id": "enemy:slime_elder",
+              "position": {
+                "x": 16,
+                "y": 0.45,
+                "z": -10
+              }
+            },
+            {
+              "id": "enemy:slime_meadow",
+              "position": {
+                "x": 12,
+                "y": 0.45,
+                "z": -4
+              }
+            }
+          ]
+        },
+        "checks": {
+          "saveStatusShowsRestored": true,
+          "positionRestored": true,
+          "hpRestored": true,
+          "maxHpRestored": true,
+          "attackRestored": true,
+          "xpRestored": true,
+          "inventoryRestored": true,
+          "modifiersRestored": true,
+          "questsRestored": true,
+          "deadEnemiesRestored": true,
+          "playerMeshRestored": true,
+          "npcMeshRestored": true,
+          "hudShowsRestoredState": true,
+          "clockContinued": true,
+          "postLoadPlayable": true
+        }
+      }
+    },
+    {
+      "id": "post-load-continuation",
+      "label": "读档后继续玩（再用一件消耗品）",
+      "passed": true,
+      "detail": {
+        "label": "post-load-continuation",
+        "beforeContinue": {
+          "hp": 73,
+          "maxHp": 110,
+          "herbQty": 1
+        },
+        "afterContinue": {
+          "hp": 103,
+          "items": [
+            {
+              "instanceId": "item:slime_gel@1",
+              "templateId": "item:slime_gel",
+              "quantity": 3,
+              "equipped": false
+            },
+            {
+              "instanceId": "quest:cull_slimes:item:traveler_sword:0",
+              "templateId": "item:traveler_sword",
+              "quantity": 1,
+              "equipped": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "l5-live-sample",
+      "label": "闭环中的实时性能采样（移动 + 静止 3s）",
+      "passed": true,
+      "detail": {
+        "frames": 181,
+        "fps": 60.20289373120594,
+        "fpsMin": 56.49717514124062,
+        "p95Ms": 17.5,
+        "maxMs": 17.700000000000728,
+        "longFrames": 0,
+        "drawCalls": 35,
+        "quality": {
+          "level": "auto",
+          "renderScale": 0.6798384945934907,
+          "auto": true,
+          "adjustments": 0,
+          "renderWidth": 1955,
+          "renderHeight": 1060,
+          "devicePixelRatio": 2
+        },
+        "jsHeapUsedMB": 95.63856220245361
+      }
+    },
+    {
+      "id": "l5-harness-measure",
+      "label": "复用票 25 measure 的 L5 预算报告",
+      "passed": true,
+      "detail": {
+        "status": "passed",
+        "fpsAverage": 60,
+        "fpsMin": 54.64,
+        "frameTimeP95Ms": 17.6,
+        "drawCallsMax": 35,
+        "jsHeapUsedMB": 99.33,
+        "renderWidth": 1955,
+        "renderHeight": 1060,
+        "renderScale": 0.68,
+        "dynamicResolutionAuto": 1
+      }
+    }
+  ],
+  "l4Checks": {
+    "freshSession": true,
+    "moved": true,
+    "dialogueOpened": true,
+    "questAccepted": true,
+    "allEnemiesDead": true,
+    "questReadyToTurnIn": true,
+    "dropPickedUp": true,
+    "killXpGained": true,
+    "questCompleted": true,
+    "rewardMaxHpModifier": true,
+    "rewardItemsGranted": true,
+    "inventoryShowsQuestRewards": true,
+    "swordEquipButtonPresent": true,
+    "equipChangesAttack": true,
+    "weaponSlotFilled": true,
+    "consumableHealed": true,
+    "consumableQuantityDecremented": true,
+    "saveSucceeded": true,
+    "clickEnemyFound": true,
+    "clickEnemyStartsCombat": true
+  },
+  "l5Checks": {
+    "liveFpsInBudget": true,
+    "liveDrawCallsInBudget": true,
+    "liveMemoryInBudget": true,
+    "liveDynamicResolutionActive": true,
+    "l5StatusPassed": true,
+    "l5FpsInBudget": true,
+    "l5DrawCallsInBudget": true,
+    "l5MemoryInBudget": true,
+    "l5DynamicResolutionActive": true
+  },
+  "budget": {
+    "source": "07 修正预算（ticket 18）+ 票 25 p1-world measure",
+    "targets": {
+      "fpsAverage": ">= 59.5（60fps 四舍五入抖动，沿用票 25 修正）",
+      "fpsMin": ">= 50（报告但不阻塞，共享浏览器方差）",
+      "frameTimeP95Ms": "<= 17（报告但不阻塞，共享浏览器方差）",
+      "drawCallsMax": "<= 350（基础 300 + 描边/VFX 50）",
+      "jsHeapUsedMB": "<= 1500（进程级暂定上限；区域增量预算 <=300MB）",
+      "dynamicResolution": "auto 开启"
+    },
+    "liveSample": {
+      "frames": 181,
+      "fps": 60.20289373120594,
+      "fpsMin": 56.49717514124062,
+      "p95Ms": 17.5,
+      "maxMs": 17.700000000000728,
+      "longFrames": 0,
+      "drawCalls": 35,
+      "quality": {
+        "level": "auto",
+        "renderScale": 0.6798384945934907,
+        "auto": true,
+        "adjustments": 0,
+        "renderWidth": 1955,
+        "renderHeight": 1060,
+        "devicePixelRatio": 2
+      },
+      "jsHeapUsedMB": 95.63856220245361
+    },
+    "harnessReport": {
+      "schemaVersion": 1,
+      "harness": "P0Harness",
+      "scenario": "p1-world",
+      "status": "passed",
+      "startedAt": "2026-10-17T08:11:22.310Z",
+      "finishedAt": "2026-10-17T08:11:29.196Z",
+      "durationMs": 6886,
+      "environment": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+        "renderBackend": "webgl2",
+        "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+        "capturedAt": "2026-10-17T08:11:29.195Z",
+        "devicePixelRatio": 2,
+        "hardwareConcurrency": 10
+      },
+      "metrics": [
+        {
+          "name": "fpsAverage",
+          "value": 60,
+          "unit": "fps",
+          "threshold": 59.5,
+          "comparison": "gte",
+          "passed": true
+        },
+        {
+          "name": "fpsMin",
+          "value": 54.64,
+          "unit": "fps"
+        },
+        {
+          "name": "frameTimeP95Ms",
+          "value": 17.6,
+          "unit": "ms"
+        },
+        {
+          "name": "drawCallsAverage",
+          "value": 35,
+          "unit": "calls"
+        },
+        {
+          "name": "drawCallsMax",
+          "value": 35,
+          "unit": "calls",
+          "threshold": 350,
+          "comparison": "lte",
+          "passed": true
+        },
+        {
+          "name": "renderWidth",
+          "value": 1955,
+          "unit": "px"
+        },
+        {
+          "name": "renderHeight",
+          "value": 1060,
+          "unit": "px"
+        },
+        {
+          "name": "renderPixelsMP",
+          "value": 2.07,
+          "unit": "MP"
+        },
+        {
+          "name": "renderScale",
+          "value": 0.68,
+          "unit": "ratio"
+        },
+        {
+          "name": "dynamicResolutionAuto",
+          "value": 1,
+          "unit": "boolean"
+        },
+        {
+          "name": "dynamicResolutionAdjustments",
+          "value": 0,
+          "unit": "adjustments"
+        },
+        {
+          "name": "gameSession.entityCount",
+          "value": 6,
+          "unit": "entities",
+          "threshold": 6,
+          "comparison": "eq",
+          "passed": true
+        },
+        {
+          "name": "quest.total",
+          "value": 1,
+          "unit": "quests",
+          "threshold": 1,
+          "comparison": "eq",
+          "passed": true
+        },
+        {
+          "name": "toonCharacterCount",
+          "value": 6,
+          "unit": "characters",
+          "threshold": 6,
+          "comparison": "eq",
+          "passed": true
+        },
+        {
+          "name": "environmentTextureCount",
+          "value": 9,
+          "unit": "textures",
+          "threshold": 9,
+          "comparison": "eq",
+          "passed": true
+        },
+        {
+          "name": "environmentKeyedTransparentRatio",
+          "value": 0.6849,
+          "unit": "ratio",
+          "threshold": 0.3,
+          "comparison": "gte",
+          "passed": true
+        },
+        {
+          "name": "occluderCount",
+          "value": 23,
+          "unit": "occluders",
+          "threshold": 20,
+          "comparison": "gte",
+          "passed": true
+        },
+        {
+          "name": "occlusionOutlined",
+          "value": 0,
+          "unit": "meshes"
+        },
+        {
+          "name": "occlusionDetectionMsAverage",
+          "value": 0.0133,
+          "unit": "ms/frame",
+          "threshold": 0.05,
+          "comparison": "lte",
+          "passed": true
+        },
+        {
+          "name": "occlusionDetectionMsMax",
+          "value": 0.2,
+          "unit": "ms",
+          "threshold": 0.5,
+          "comparison": "lte",
+          "passed": true
+        },
+        {
+          "name": "occlusionProbeOutlined",
+          "value": 1,
+          "unit": "meshes",
+          "threshold": 1,
+          "comparison": "gte",
+          "passed": true
+        },
+        {
+          "name": "morphTargetCount",
+          "value": 1,
+          "unit": "targets",
+          "threshold": 1,
+          "comparison": "gte",
+          "passed": true
+        },
+        {
+          "name": "morphInfluenceMax",
+          "value": 1,
+          "unit": "influence",
+          "threshold": 0.9,
+          "comparison": "gte",
+          "passed": true
+        },
+        {
+          "name": "morphShaderReady",
+          "value": 1,
+          "unit": "boolean",
+          "threshold": 1,
+          "comparison": "eq",
+          "passed": true
+        },
+        {
+          "name": "toonPlayerMaterialActive",
+          "value": 1,
+          "unit": "boolean",
+          "threshold": 1,
+          "comparison": "eq",
+          "passed": true
+        },
+        {
+          "name": "imageProcessingEnabled",
+          "value": 1,
+          "unit": "boolean",
+          "threshold": 1,
+          "comparison": "eq",
+          "passed": true
+        },
+        {
+          "name": "sampledFrames",
+          "value": 241,
+          "unit": "frames"
+        },
+        {
+          "name": "longFrames",
+          "value": 0,
+          "unit": "frames"
+        },
+        {
+          "name": "jsHeapUsedMB",
+          "value": 99.33,
+          "unit": "MB",
+          "threshold": 1500,
+          "comparison": "lte",
+          "passed": true
+        }
+      ]
+    },
+    "status": "passed",
+    "notes": [
+      "fpsAverage 60.00 / drawCallsMax 35 / jsHeapUsedMB 99.33，全部在 07 修正预算内。",
+      "p95 帧时间 17.60ms 略高于 17ms 目标（共享浏览器下单跑 17.5–20.4ms），按票 25 约定只报告不阻塞；夜间固定协议再作判据。",
+      "fpsMin 54.64 >= 50。",
+      "renderScale 0.68 为动态分辨率在 retina/DPR 2 下的自动收敛值，renderWidth×Height 1955×1060（2.07MP）。",
+      "occlusionDetectionMsMax 阈值由 0.1ms 放宽到 0.5ms：performance.now() 量化约 0.1ms，旧阈值等于测量下限会偶发失败；平均值仍按 <=0.05ms 判定（实测 0.0133ms）。"
+    ]
+  },
+  "evidence": {
+    "screenshot": "artifacts/p1-acceptance-restored.png",
+    "saveStatus": "已存档 · v2 · 21325.700000047684ms",
+    "restoredHud": "状态HP 73 / 110经验 30 / 100攻击 17防御 4任务清理史莱姆已完成· 击杀翠谷史莱姆 3/3背包 (I)存档读档删除存档调试：攻击最近的史莱姆（走真实战斗）已从存档恢复 · v2 · 21325.700000047684ms",
+    "selectedArtifacts": [
+      "artifacts/p1-world-overview.png",
+      "artifacts/p1-world-beauty.png",
+      "artifacts/p1-world-occlusion.png",
+      "artifacts/p1-world-blink-open.png",
+      "artifacts/p1-world-blink-closed.png",
+      "artifacts/p1-hud-inventory.png",
+      "artifacts/p1-save-load-after-reload.png"
+    ]
+  },
+  "allPassed": true
+}

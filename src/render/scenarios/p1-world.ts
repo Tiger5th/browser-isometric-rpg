@@ -133,6 +133,8 @@ interface P1WorldState {
   saveService: GameSaveService;
   saveAvailable: boolean;
   observer: Observer<Scene> | null;
+  /** draw call 计数在帧结束后才有效，单独用 after-render 观察者采集。 */
+  afterRenderObserver: Observer<Scene> | null;
   detachPointer: () => void;
   quality: {
     level: QualityLevel;
@@ -775,6 +777,7 @@ export const p1WorldScenario: ScenarioDefinition = {
       saveService: new GameSaveService(new IndexedDbSaveStorage()),
       saveAvailable: false,
       observer: null,
+      afterRenderObserver: null,
       detachPointer: () => undefined,
       quality: {
         level: "auto",
@@ -837,7 +840,8 @@ export const p1WorldScenario: ScenarioDefinition = {
     );
     configureQuality(scene, state, requestedQuality);
 
-    // 点击 NPC = 对话；点击其他实体 = 走近；点击地面 = 移动。
+    // 点击 NPC = 对话；点击敌人 = 发起攻击（GameSession 自动接近）；
+    // 点击其他实体/地面 = 走过去。
     const pointerObserver = scene.onPointerObservable.add((pointerInfo) => {
       if (pointerInfo.type !== PointerEventTypes.POINTERDOWN) {
         return;
@@ -855,6 +859,12 @@ export const p1WorldScenario: ScenarioDefinition = {
           .entities.find((entity) => entity.id === pickedId);
         if (picked?.identity.type === "npc") {
           session.talkTo(pickedId);
+          return;
+        }
+        if (picked?.identity.type === "enemy") {
+          if (picked.combat.alive) {
+            session.attack(PLAYER_ID, pickedId);
+          }
           return;
         }
         if (picked !== undefined) {
@@ -908,7 +918,6 @@ export const p1WorldScenario: ScenarioDefinition = {
       player.update(deltaMs);
 
       state.occlusion.update(targets);
-      state.lastDrawCalls = state.instrumentation.drawCallsCounter.current;
 
       const controller = state.quality.controller;
       if (controller) {
@@ -928,6 +937,9 @@ export const p1WorldScenario: ScenarioDefinition = {
       }
     });
     state.observer = observer;
+    state.afterRenderObserver = scene.onAfterRenderObservable.add(() => {
+      state.lastDrawCalls = state.instrumentation.drawCallsCounter.current;
+    });
 
     context.registerRegion(GREEN_HOLLOW_REGION_ID);
     for (const entity of snapshotEntities(session)) {
@@ -1122,10 +1134,13 @@ export const p1WorldScenario: ScenarioDefinition = {
         comparison: "lte",
       },
       {
+        // 平均仍是主判据（≤0.05ms）。performance.now() 在 Chrome 量化约 0.1ms，
+        // 单帧 max 会随机测到 0.1/0.2ms；旧阈值 0.1ms 等于测量下限，验收时会偶发失败。
+        // max 放宽到 0.5ms，只拦截数量级回归。
         name: "occlusionDetectionMsMax",
         value: round(detectionMax, 4),
         unit: "ms",
-        threshold: 0.1,
+        threshold: 0.5,
         comparison: "lte",
       },
       {
@@ -1211,6 +1226,9 @@ export const p1WorldScenario: ScenarioDefinition = {
     state.detachPointer();
     if (state.observer) {
       context.scene.onBeforeRenderObservable.remove(state.observer);
+    }
+    if (state.afterRenderObserver) {
+      context.scene.onAfterRenderObservable.remove(state.afterRenderObserver);
     }
     state.ui.dispose();
 

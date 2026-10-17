@@ -62,3 +62,5 @@
 - P0 原型验证有 9 项待实测假设，建议下一步用 /to-spec 规格化 P0 任务。
 - **P0 遗留项处理方案已定（2026-10-17）**：用户走票 17 完整版手做（VRoid + Blender + Mixamo，覆盖票 15 的 Blender 补测），与 19 号票开工并行；toon shader morph 挂票 25 验收（票面已有该条）。19 号票开工。
 - **美术方向二次修订（2026-10-17，用户确认）**：环境贴图化（Gemini 生图为主，ego-browser 驱动）+ 角色保持 3D（占位角色顶 P1）；VRoid/Mixamo 手做作废、Blender 暂缓（票 15/17 遗留关闭）；风格锚定图先行，锚定后批量生成环境贴图集。
+- **26 号票决策记录（2026-10-17）**：正式场景的 **点击敌人 = 提交攻击意图**（GameSession 自动接近），不是「走近」；遮挡检测单帧 max 阈值放宽到 0.5ms（`performance.now()` 量化下限导致 0.1ms 偶发误报），均值仍按 ≤0.05ms 判定；调试 API drawCalls 改在 after-render 采集。
+- **P1 正式收尾（2026-10-17）——P1 全部 8 张票（19–26）完成。** 最终报告：`artifacts/p1-final-report.md`；人工验收清单：`artifacts/p1-manual-checklist.md`；闭环与 L5 报告：`reports/p1-acceptance-smoke.json`。L4 完整闭环 13/13 通过；L5 `fpsAverage 60.00 / fpsMin 54.64 / drawCallsMax 35 / jsHeapUsedMB 99.33`，动态分辨率 auto 生效。遗留：VRoid 真人资产（用户手做约 15 分钟）、Blender 安装、生产构建首屏/Lighthouse、移动端与 Safari/KTX2 复测、p95 帧时间夜间固定协议；区域布局仍在渲染层常量（P2 再进 content/）。下一步：项目所有者按清单人工试玩，然后进入 P2 规格。
