@@ -17,7 +17,8 @@
       "hp": 100,
       "attack": 12,
       "defense": 4,
-      "moveSpeed": 5.5
+      "moveSpeed": 5.5,
+      "xpToNext": 100
     }
   }
 }

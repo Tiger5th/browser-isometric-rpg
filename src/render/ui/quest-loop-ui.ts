@@ -1,11 +1,12 @@
 /**
- * 对话 + 任务 HUD（纯 DOM，挂在 Harness 页面上）。
+ * 游戏 HUD + 背包/装备面板（纯 DOM，挂在 Harness 页面上）。
  *
- * 只消费 GameSession.snapshot()：任务目标/进度、背包摘要、当前对话文本与选项。
- * 选择按钮把意图回调给场景，由场景提交 chooseDialogueOption。
+ * 只消费 GameSession.snapshot()：HP/经验/攻击/防御、任务进度、背包物品与装备栏。
+ * 使用/装备/对话选择都通过回调提交意图，UI 不持有也不修改任何游戏逻辑状态。
+ * 唯一由 UI 自己保存的是面板开关（inventoryOpen）这类纯展示状态。
  */
 
-import type { ContentBundle } from "../../logic/content/types";
+import type { ContentBundle, ItemDefinition } from "../../logic/content/types";
 import type { GameSessionSnapshot } from "../../logic/game-session";
 import type { QuestStatus } from "../../logic/quest";
 
@@ -14,6 +15,12 @@ export interface QuestLoopUiOptions {
   bundle: ContentBundle;
   /** 玩家点击对话选项。 */
   onChoose(choiceIndex: number): void;
+  /** 使用消耗品（提交 useItem 意图）。 */
+  onUseItem?(instanceId: string): void;
+  /** 装备物品（提交 equip 意图）。 */
+  onEquipItem?(instanceId: string): void;
+  /** 卸下装备（提交 unequip 意图）。 */
+  onUnequipItem?(instanceId: string): void;
   /** 调试战斗入口：用真实战斗攻击最近的敌人（方便手动验证任务进度）。 */
   onDebugKill?(): void;
   /** 手动存档。 */
@@ -53,6 +60,24 @@ const STATUS_COLOR: Record<QuestStatus, string> = {
   completed: "#4ade80",
 };
 
+const KIND_LABEL: Record<ItemDefinition["kind"], string> = {
+  equipment: "装备",
+  consumable: "消耗品",
+  misc: "杂项",
+};
+
+const SLOT_LABEL: Record<"weapon" | "armor" | "accessory", string> = {
+  weapon: "武器",
+  armor: "护甲",
+  accessory: "饰品",
+};
+
+const BUTTON_STYLE = [
+  "cursor:pointer;font:inherit;font-size:11px",
+  "color:#e6e9ef;border:1px solid rgba(148,163,184,0.35);border-radius:8px",
+  "background:#1a2230;padding:6px 8px;",
+].join(";");
+
 function element<K extends keyof HTMLElementTagNameMap>(
   tag: K,
   style: string,
@@ -66,12 +91,34 @@ function element<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
+function button(label: string, action: string, handler: () => void): HTMLButtonElement {
+  const node = element("button", BUTTON_STYLE, label);
+  node.type = "button";
+  node.dataset.action = action;
+  node.addEventListener("click", handler);
+  return node;
+}
+
+function modifierSummary(definition: ItemDefinition): string {
+  if (definition.kind !== "equipment") {
+    return "";
+  }
+  return definition.equipment.modifiers
+    .map((modifier) => {
+      if (modifier.operation === "add") {
+        return `${modifier.attribute} +${modifier.value}`;
+      }
+      return `${modifier.attribute} +${Math.round(modifier.value * 100)}%`;
+    })
+    .join("，");
+}
+
 export function createQuestLoopUi(options: QuestLoopUiOptions): QuestLoopUi {
   const { mount, bundle } = options;
   const enemyNames = new Map(
     bundle.enemyTemplates.map((template) => [template.id, template.displayName]),
   );
-  const itemNames = new Map(bundle.items.map((item) => [item.id, item.displayName]));
+  const itemDefinitions = new Map(bundle.items.map((item) => [item.id, item]));
 
   const root = element(
     "div",
@@ -88,6 +135,20 @@ export function createQuestLoopUi(options: QuestLoopUiOptions): QuestLoopUi {
       "box-shadow:0 18px 48px rgba(0,0,0,0.45);font-size:12px;line-height:1.55",
     ].join(";"),
   );
+  hud.dataset.testid = "quest-hud";
+
+  const inventory = element(
+    "section",
+    [
+      "position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)",
+      "width:min(480px,calc(100vw - 32px));max-height:min(72vh,640px);overflow:auto",
+      "pointer-events:auto;display:none",
+      "padding:16px 18px;border:1px solid rgba(251,191,36,0.4);border-radius:14px",
+      "background:rgba(12,18,26,0.96);backdrop-filter:blur(12px);color:#e6e9ef",
+      "box-shadow:0 24px 64px rgba(0,0,0,0.6);font-size:13px;line-height:1.55",
+    ].join(";"),
+  );
+  inventory.dataset.testid = "inventory-panel";
 
   const dialogue = element(
     "section",
@@ -99,10 +160,9 @@ export function createQuestLoopUi(options: QuestLoopUiOptions): QuestLoopUi {
       "box-shadow:0 22px 60px rgba(0,0,0,0.55);font-size:14px;line-height:1.6",
     ].join(";"),
   );
-  hud.dataset.testid = "quest-hud";
   dialogue.dataset.testid = "dialogue-panel";
 
-  root.append(hud, dialogue);
+  root.append(hud, inventory, dialogue);
   mount.append(root);
 
   const saveStatus = element(
@@ -114,6 +174,172 @@ export function createQuestLoopUi(options: QuestLoopUiOptions): QuestLoopUi {
   saveStatus.dataset.state = "idle";
 
   let lastKey = "";
+  let inventoryOpen = false;
+  let currentSnapshot: GameSessionSnapshot | null = null;
+
+  const renderInventory = (snapshot: GameSessionSnapshot): void => {
+    inventory.style.display = inventoryOpen ? "block" : "none";
+    if (!inventoryOpen) {
+      return;
+    }
+    inventory.replaceChildren();
+
+    const header = element(
+      "div",
+      "display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;",
+    );
+    header.append(
+      element("strong", "font-size:14px;color:#fbbf24;letter-spacing:0.04em;", "背包"),
+      element("span", "font-size:11px;color:#94a3b8;", "按 I 或 Esc 关闭"),
+    );
+    const closeButton = button("关闭", "close-inventory", () => toggleInventory());
+    closeButton.dataset.testid = "inventory-close";
+    header.append(closeButton);
+    inventory.append(header);
+
+    const player = snapshot.entities.find(
+      (entity) => entity.identity.type === "player",
+    );
+    if (player === undefined) {
+      inventory.append(element("div", "color:#94a3b8;", "没有玩家实体。"));
+      return;
+    }
+
+    // 装备栏：三个槽位常驻，已装备的显示名称与修饰器摘要。
+    const slots = element("div", "display:flex;gap:6px;margin-bottom:12px;");
+    slots.dataset.testid = "equipment-slots";
+    for (const slot of ["weapon", "armor", "accessory"] as const) {
+      const equipped = player.container.items.find((item) => {
+        if (!item.equipped) {
+          return false;
+        }
+        const definition = itemDefinitions.get(item.templateId);
+        return definition?.kind === "equipment" && definition.equipment.slot === slot;
+      });
+      const definition =
+        equipped === undefined ? undefined : itemDefinitions.get(equipped.templateId);
+      const cell = element(
+        "div",
+        [
+          "flex:1;min-width:0;padding:7px 8px;border-radius:8px",
+          "border:1px solid rgba(148,163,184,0.22);background:#141c28;",
+        ].join(";"),
+      );
+      cell.dataset.testid = "equipment-slot";
+      cell.dataset.slot = slot;
+      cell.dataset.itemId = equipped?.templateId ?? "";
+      cell.append(
+        element("div", "font-size:10px;color:#94a3b8;", SLOT_LABEL[slot]),
+        element(
+          "div",
+          "white-space:nowrap;overflow:hidden;text-overflow:ellipsis;",
+          definition?.displayName ?? "—",
+        ),
+      );
+      if (definition !== undefined) {
+        cell.title = modifierSummary(definition);
+        cell.append(
+          element("div", "font-size:10px;color:#7dd3fc;", modifierSummary(definition)),
+        );
+      }
+      slots.append(cell);
+    }
+    inventory.append(slots);
+
+    const count = element(
+      "div",
+      "font-size:11px;color:#94a3b8;margin-bottom:6px;",
+      `物品 ${player.container.items.length} 组`,
+    );
+    count.dataset.testid = "inventory-count";
+    count.dataset.count = String(player.container.items.length);
+    inventory.append(count);
+
+    if (player.container.items.length === 0) {
+      const empty = element(
+        "div",
+        "padding:16px 0;color:#94a3b8;text-align:center;",
+        "背包是空的。",
+      );
+      empty.dataset.testid = "inventory-empty";
+      inventory.append(empty);
+      return;
+    }
+
+    const list = element("div", "display:flex;flex-direction:column;gap:6px;");
+    list.dataset.testid = "inventory-list";
+    for (const item of player.container.items) {
+      const definition = itemDefinitions.get(item.templateId);
+      const row = element(
+        "div",
+        [
+          "display:flex;align-items:center;gap:10px;padding:7px 9px;border-radius:9px",
+          "border:1px solid rgba(148,163,184,0.2);background:#141c28;",
+        ].join(";"),
+      );
+      row.dataset.testid = "inventory-item";
+      row.dataset.instanceId = item.instanceId;
+      row.dataset.templateId = item.templateId;
+      row.dataset.kind = definition?.kind ?? "unknown";
+      row.dataset.equipped = item.equipped ? "true" : "false";
+
+      const info = element("div", "flex:1;min-width:0;");
+      const title = element(
+        "div",
+        "display:flex;align-items:center;gap:6px;font-weight:600;",
+      );
+      title.append(
+        element("span", "", definition?.displayName ?? item.templateId),
+        element("span", "color:#94a3b8;font-weight:400;", `×${item.quantity}`),
+      );
+      if (item.equipped) {
+        title.append(
+          element(
+            "span",
+            "font-size:10px;color:#4ade80;border:1px solid rgba(74,222,128,0.4);border-radius:6px;padding:0 4px;",
+            "已装备",
+          ),
+        );
+      }
+      const meta =
+        definition === undefined
+          ? "未知物品定义"
+          : [
+              KIND_LABEL[definition.kind],
+              definition.kind === "equipment"
+                ? `${SLOT_LABEL[definition.equipment.slot]} · ${modifierSummary(definition)}`
+                : definition.description,
+            ].join(" · ");
+      info.append(title, element("div", "font-size:11px;color:#94a3b8;", meta));
+      row.append(info);
+
+      if (definition?.kind === "consumable" && options.onUseItem !== undefined) {
+        const useButton = button("使用", "use", () => options.onUseItem?.(item.instanceId));
+        useButton.dataset.instanceId = item.instanceId;
+        useButton.dataset.testid = "inventory-use";
+        row.append(useButton);
+      }
+      if (definition?.kind === "equipment") {
+        if (item.equipped && options.onUnequipItem !== undefined) {
+          const unequipButton = button("卸下", "unequip", () =>
+            options.onUnequipItem?.(item.instanceId),
+          );
+          unequipButton.dataset.instanceId = item.instanceId;
+          unequipButton.dataset.testid = "inventory-unequip";
+          row.append(unequipButton);
+        } else if (!item.equipped && options.onEquipItem !== undefined) {
+          const equipButton = button("装备", "equip", () =>
+            options.onEquipItem?.(item.instanceId),
+          );
+          equipButton.dataset.instanceId = item.instanceId;
+          equipButton.dataset.testid = "inventory-equip";
+          row.append(equipButton);
+        }
+      }
+      list.append(row);
+    }
+    inventory.append(list);
+  };
 
   const renderHud = (snapshot: GameSessionSnapshot): void => {
     hud.replaceChildren();
@@ -121,6 +347,93 @@ export function createQuestLoopUi(options: QuestLoopUiOptions): QuestLoopUi {
       element(
         "div",
         "font-size:13px;font-weight:700;letter-spacing:0.04em;color:#7dd3fc;margin-bottom:8px;",
+        "状态",
+      ),
+    );
+
+    const player = snapshot.entities.find(
+      (entity) => entity.identity.type === "player",
+    );
+
+    if (player !== undefined) {
+      const hp = Math.round(player.combat.hp);
+      const maxHp = Math.round(player.combat.maxHp);
+      const hpRatio = maxHp > 0 ? Math.min(1, Math.max(0, hp / maxHp)) : 0;
+      const xp = Math.round(player.attributes.xp ?? player.baseAttributes.xp ?? 0);
+      // xpToNext 由内容属性提供；缺失时退化为只显示经验数值、经验条为空。
+      const xpToNextRaw = player.attributes.xpToNext ?? player.baseAttributes.xpToNext;
+      const xpToNext =
+        typeof xpToNextRaw === "number" && xpToNextRaw > 0
+          ? Math.round(xpToNextRaw)
+          : null;
+      const xpRatio =
+        xpToNext === null ? 0 : Math.min(1, Math.max(0, xp / xpToNext));
+
+      const stats = element("div", "");
+      stats.dataset.testid = "hud-attributes";
+
+      const hpRow = element(
+        "div",
+        "display:flex;justify-content:space-between;font-weight:600;",
+      );
+      const hpText = element("span", "", `HP ${hp} / ${maxHp}`);
+      hpText.dataset.testid = "hud-hp";
+      hpText.dataset.hp = String(hp);
+      hpText.dataset.maxHp = String(maxHp);
+      const xpText = element(
+        "span",
+        "color:#fbbf24;",
+        xpToNext === null ? `经验 ${xp}` : `经验 ${xp} / ${xpToNext}`,
+      );
+      xpText.dataset.testid = "hud-xp";
+      xpText.dataset.xp = String(xp);
+      if (xpToNext !== null) {
+        xpText.dataset.xpToNext = String(xpToNext);
+      }
+      hpRow.append(hpText, xpText);
+
+      const bar = element(
+        "div",
+        "height:7px;margin:5px 0 8px;border-radius:999px;background:rgba(148,163,184,0.22);overflow:hidden;",
+      );
+      const fill = element(
+        "div",
+        `height:100%;width:${(hpRatio * 100).toFixed(1)}%;border-radius:999px;background:linear-gradient(90deg,#ef4444,#f59e0b);transition:width 120ms linear;`,
+      );
+      fill.dataset.testid = "hud-hp-fill";
+      bar.append(fill);
+
+      const xpBar = element(
+        "div",
+        "height:5px;margin-bottom:8px;border-radius:999px;background:rgba(148,163,184,0.22);overflow:hidden;",
+      );
+      xpBar.dataset.testid = "hud-xp-bar";
+      const xpFill = element(
+        "div",
+        `height:100%;width:${(xpRatio * 100).toFixed(1)}%;border-radius:999px;background:linear-gradient(90deg,#38bdf8,#a78bfa);transition:width 120ms linear;`,
+      );
+      xpFill.dataset.testid = "hud-xp-fill";
+      xpBar.append(xpFill);
+
+      const attack = Math.round(player.attributes.attack ?? 0);
+      const defense = Math.round(player.attributes.defense ?? 0);
+      const combatRow = element("div", "display:flex;gap:12px;color:#cbd5e1;");
+      const attackText = element("span", "", `攻击 ${attack}`);
+      attackText.dataset.testid = "hud-attack";
+      attackText.dataset.attack = String(attack);
+      const defenseText = element("span", "", `防御 ${defense}`);
+      defenseText.dataset.testid = "hud-defense";
+      defenseText.dataset.defense = String(defense);
+      combatRow.append(attackText, defenseText);
+
+      stats.append(hpRow, bar, xpBar, combatRow);
+      hud.append(stats);
+    }
+
+    hud.append(
+      element(
+        "div",
+        "font-size:13px;font-weight:700;letter-spacing:0.04em;color:#7dd3fc;margin:12px 0 8px;",
         "任务",
       ),
     );
@@ -158,34 +471,17 @@ export function createQuestLoopUi(options: QuestLoopUiOptions): QuestLoopUi {
       }
     }
 
-    const player = snapshot.entities.find(
-      (entity) => entity.identity.type === "player",
-    );
-    if (player !== undefined) {
-      const counts = new Map<string, number>();
-      for (const item of player.container.items) {
-        counts.set(item.templateId, (counts.get(item.templateId) ?? 0) + item.quantity);
-      }
-      const inventory =
-        counts.size === 0
-          ? "空"
-          : [...counts.entries()]
-              .map(([templateId, quantity]) => {
-                const name = itemNames.get(templateId) ?? templateId;
-                return `${name} ×${quantity}`;
-              })
-              .join("，");
-      hud.append(
-        element(
-          "div",
-          "margin-top:10px;padding-top:8px;border-top:1px solid rgba(148,163,184,0.18);color:#94a3b8;",
-          `背包：${inventory}`,
-        ),
-      );
-    }
+    const toggleRow = element("div", "display:flex;margin-top:10px;");
+    const toggle = button("背包 (I)", "toggle-inventory", () => toggleInventory());
+    toggle.dataset.testid = "inventory-toggle";
+    toggle.style.width = "100%";
+    toggle.style.background = "#233044";
+    toggle.style.borderColor = "rgba(251,191,36,0.45)";
+    toggleRow.append(toggle);
+    hud.append(toggleRow);
 
     if (options.onSave !== undefined || options.onLoad !== undefined) {
-      const row = element("div", "display:flex;gap:6px;margin-top:10px;");
+      const row = element("div", "display:flex;gap:6px;margin-top:8px;");
       const addSaveButton = (
         label: string,
         action: string,
@@ -194,19 +490,9 @@ export function createQuestLoopUi(options: QuestLoopUiOptions): QuestLoopUi {
         if (handler === undefined) {
           return;
         }
-        const button = element(
-          "button",
-          [
-            "flex:1;cursor:pointer;font:inherit;font-size:11px",
-            "color:#e6e9ef;border:1px solid rgba(148,163,184,0.35);border-radius:8px",
-            "background:#1a2230;padding:6px 8px;",
-          ].join(";"),
-          label,
-        );
-        button.type = "button";
-        button.dataset.action = action;
-        button.addEventListener("click", handler);
-        row.append(button);
+        const node = button(label, action, handler);
+        node.style.flex = "1";
+        row.append(node);
       };
       addSaveButton("存档", "save", options.onSave);
       addSaveButton("读档", "load", options.onLoad);
@@ -215,18 +501,14 @@ export function createQuestLoopUi(options: QuestLoopUiOptions): QuestLoopUi {
     }
 
     if (options.onDebugKill !== undefined) {
-      const button = element(
-        "button",
-        [
-          "margin-top:10px;width:100%;cursor:pointer;font:inherit;font-size:11px",
-          "color:#e6e9ef;border:1px solid rgba(148,163,184,0.35);border-radius:8px",
-          "background:#1a2230;padding:6px 8px;",
-        ].join(";"),
+      const debugButton = button(
         "调试：攻击最近的史莱姆（走真实战斗）",
+        "debug-kill",
+        () => options.onDebugKill?.(),
       );
-      button.type = "button";
-      button.addEventListener("click", () => options.onDebugKill?.());
-      hud.append(button);
+      debugButton.style.marginTop = "10px";
+      debugButton.style.width = "100%";
+      hud.append(debugButton);
     }
 
     hud.append(saveStatus);
@@ -252,7 +534,7 @@ export function createQuestLoopUi(options: QuestLoopUiOptions): QuestLoopUi {
     if (active.choices.length > 0) {
       const list = element("div", "display:flex;flex-direction:column;gap:6px;");
       active.choices.forEach((choice, index) => {
-        const button = element(
+        const choiceButton = element(
           "button",
           [
             "text-align:left;cursor:pointer;font:inherit;font-size:13px",
@@ -261,14 +543,45 @@ export function createQuestLoopUi(options: QuestLoopUiOptions): QuestLoopUi {
           ].join(";"),
           choice,
         );
-        button.type = "button";
-        button.dataset.choiceIndex = String(index);
-        button.addEventListener("click", () => options.onChoose(index));
-        list.append(button);
+        choiceButton.type = "button";
+        choiceButton.dataset.choiceIndex = String(index);
+        choiceButton.addEventListener("click", () => options.onChoose(index));
+        list.append(choiceButton);
       });
       dialogue.append(list);
     }
   };
+
+  const renderAll = (snapshot: GameSessionSnapshot): void => {
+    currentSnapshot = snapshot;
+    renderHud(snapshot);
+    renderInventory(snapshot);
+    renderDialogue(snapshot);
+  };
+
+  const toggleInventory = (): void => {
+    inventoryOpen = !inventoryOpen;
+    lastKey = "";
+    if (currentSnapshot !== null) {
+      renderAll(currentSnapshot);
+    }
+  };
+
+  const onKeyDown = (event: KeyboardEvent): void => {
+    if (event.metaKey || event.ctrlKey || event.altKey) {
+      return;
+    }
+    if (event.key === "i" || event.key === "I") {
+      event.preventDefault();
+      toggleInventory();
+      return;
+    }
+    if (event.key === "Escape" && inventoryOpen) {
+      event.preventDefault();
+      toggleInventory();
+    }
+  };
+  window.addEventListener("keydown", onKeyDown);
 
   return {
     update(snapshot) {
@@ -280,14 +593,19 @@ export function createQuestLoopUi(options: QuestLoopUiOptions): QuestLoopUi {
         choices: snapshot.dialogue?.choices ?? null,
         npcId: snapshot.dialogue?.npcId ?? null,
         quests: snapshot.quests,
+        hp: player?.combat.hp ?? null,
+        maxHp: player?.combat.maxHp ?? null,
+        attack: player?.attributes.attack ?? null,
+        defense: player?.attributes.defense ?? null,
+        xp: player?.attributes.xp ?? null,
         items: player?.container.items ?? [],
+        inventoryOpen,
       });
       if (key === lastKey) {
         return;
       }
       lastKey = key;
-      renderHud(snapshot);
-      renderDialogue(snapshot);
+      renderAll(snapshot);
     },
 
     setSaveStatus(text, kind = "idle") {
@@ -297,6 +615,7 @@ export function createQuestLoopUi(options: QuestLoopUiOptions): QuestLoopUi {
     },
 
     dispose() {
+      window.removeEventListener("keydown", onKeyDown);
       root.remove();
     },
   };

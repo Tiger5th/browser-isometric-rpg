@@ -42,8 +42,14 @@ import type {
   GameSessionEventListener,
 } from "./game-events";
 import { createContentIndex, instantiateRegionEntities } from "./content/region-loader";
-import type { ContentBundle, DropDefinition, QuestDefinition } from "./content/types";
+import type {
+  ContentBundle,
+  DropDefinition,
+  ItemDefinition,
+  QuestDefinition,
+} from "./content/types";
 import {
+  createModifiers,
   effectiveAttributes,
   grantQuestReward,
   type Modifier,
@@ -88,6 +94,15 @@ export interface GameSessionIntents {
   attack(attackerId: EntityId | string, targetId: EntityId | string): void;
   /** 取消自动攻击；不会取消已经发生的伤害。 */
   stopAttack(entityId: EntityId | string): void;
+  /**
+   * 使用背包中的消耗品。按内容定义结算 effects（当前支持恢复 hp），
+   * 数量减一，归零后实例移除。
+   */
+  useItem(entityId: EntityId | string, instanceId: string): void;
+  /** 装备背包中的装备；同槽位已有的装备会被自动卸下。 */
+  equip(entityId: EntityId | string, instanceId: string): void;
+  /** 卸下已装备的物品并移除其修饰器。 */
+  unequip(entityId: EntityId | string, instanceId: string): void;
 }
 
 export interface GameSessionOptions {
@@ -296,7 +311,7 @@ export class GameSession implements GameSessionIntents {
   private readonly combat = new Map<EntityId, CombatRuntime>();
   private readonly spawns = new Map<EntityId, SpawnRecord>();
   private readonly enemyProfiles = new Map<EntityId, EnemyProfile>();
-  private readonly itemDefinitions = new Map<string, { id: string; maxStack: number }>();
+  private readonly itemDefinitions = new Map<string, ItemDefinition>();
   private readonly events: CombatEvent[] = [];
   private readonly random: () => number;
   private readonly respawnDelayMs: number;
@@ -389,10 +404,7 @@ export class GameSession implements GameSessionIntents {
     this.questLog = new QuestLog(bundle.quests);
 
     for (const item of index.items.values()) {
-      this.itemDefinitions.set(item.id, {
-        id: item.id,
-        maxStack: Math.max(1, Math.floor(item.maxStack ?? 1)),
-      });
+      this.itemDefinitions.set(item.id, structuredClone(item));
     }
 
     for (const enemy of index.enemies.values()) {
@@ -558,6 +570,137 @@ export class GameSession implements GameSessionIntents {
     if (runtime.aiState === "chase" || runtime.aiState === "attack") {
       runtime.aiState = "idle";
       runtime.idleMs = 0;
+    }
+  }
+
+  /**
+   * 使用消耗品意图。效果按内容定义结算：
+   * - `restore:hp` 恢复当前生命，不超过修饰器后的 maxHp；
+   * - 其他属性暂没有「当前值」概念，显式报错避免静默无效。
+   * 无论治疗是否溢出，物品都会被消耗（与常见 RPG 一致）。
+   */
+  useItem(entityId: EntityId | string, instanceId: string): void {
+    const entity = this.requireEntity(entityId);
+    const item = this.requireItem(entity, instanceId);
+    const definition = this.itemDefinitions.get(item.templateId);
+    if (definition === undefined) {
+      throw new Error(`物品缺少内容定义：${item.templateId}`);
+    }
+    if (definition.kind !== "consumable") {
+      throw new Error(`物品不可使用：${definition.displayName}`);
+    }
+    const runtime = this.combat.get(entity.id);
+    if (runtime === undefined) {
+      throw new Error(`实体缺少战斗状态：${entity.id}`);
+    }
+    if (!runtime.alive) {
+      throw new Error(`已倒下的实体不能使用物品：${entity.id}`);
+    }
+
+    for (const effect of definition.consumable.effects) {
+      if (effect.type !== "restore") {
+        throw new Error(`未知消耗品效果：${String((effect as { type?: unknown }).type)}`);
+      }
+      if (effect.attribute !== "hp") {
+        throw new Error(`暂不支持恢复属性：${effect.attribute}`);
+      }
+      runtime.hp = Math.min(
+        this.maxHpOf(entity),
+        runtime.hp + Math.max(0, effect.amount),
+      );
+    }
+
+    item.quantity -= 1;
+    if (item.quantity <= 0) {
+      entity.container.items = entity.container.items.filter(
+        (candidate) => candidate.instanceId !== instanceId,
+      );
+    }
+  }
+
+  /**
+   * 装备意图：标记 equipped、挂上修饰器（source = equipment:<instanceId>）。
+   * 同一槽位同时只能装备一件，已有装备先卸下。
+   */
+  equip(entityId: EntityId | string, instanceId: string): void {
+    const entity = this.requireEntity(entityId);
+    const item = this.requireItem(entity, instanceId);
+    const definition = this.requireEquipmentDefinition(item);
+    if (item.equipped) {
+      return;
+    }
+
+    const slot = definition.equipment.slot;
+    for (const other of [...entity.container.items]) {
+      if (!other.equipped || other.instanceId === instanceId) {
+        continue;
+      }
+      const otherDefinition = this.itemDefinitions.get(other.templateId);
+      if (
+        otherDefinition?.kind === "equipment" &&
+        otherDefinition.equipment.slot === slot
+      ) {
+        this.unequipItem(entity, other);
+      }
+    }
+
+    item.equipped = true;
+    entity.modifiers = [
+      ...entity.modifiers,
+      ...createModifiers(definition.equipment.modifiers, {
+        kind: "equipment",
+        id: instanceId,
+      }),
+    ];
+    this.clampHp(entity);
+  }
+
+  /** 卸下装备意图：清标记并移除该实例贡献的全部修饰器。 */
+  unequip(entityId: EntityId | string, instanceId: string): void {
+    const entity = this.requireEntity(entityId);
+    const item = this.requireItem(entity, instanceId);
+    this.requireEquipmentDefinition(item);
+    if (!item.equipped) {
+      return;
+    }
+    this.unequipItem(entity, item);
+    this.clampHp(entity);
+  }
+
+  private requireItem(entity: Entity, instanceId: string) {
+    const item = entity.container.items.find(
+      (candidate) => candidate.instanceId === instanceId,
+    );
+    if (item === undefined) {
+      throw new Error(`未知物品实例：${instanceId}`);
+    }
+    return item;
+  }
+
+  private requireEquipmentDefinition(item: ItemInstance) {
+    const definition = this.itemDefinitions.get(item.templateId);
+    if (definition === undefined) {
+      throw new Error(`物品缺少内容定义：${item.templateId}`);
+    }
+    if (definition.kind !== "equipment") {
+      throw new Error(`物品不可装备：${definition.displayName}`);
+    }
+    return definition;
+  }
+
+  private unequipItem(entity: Entity, item: ItemInstance): void {
+    item.equipped = false;
+    entity.modifiers = entity.modifiers.filter(
+      (modifier) =>
+        modifier.source.kind !== "equipment" || modifier.source.id !== item.instanceId,
+    );
+  }
+
+  /** 修饰器变化后把当前生命夹回新的上限。 */
+  private clampHp(entity: Entity): void {
+    const runtime = this.combat.get(entity.id);
+    if (runtime !== undefined) {
+      runtime.hp = Math.min(runtime.hp, this.maxHpOf(entity));
     }
   }
 

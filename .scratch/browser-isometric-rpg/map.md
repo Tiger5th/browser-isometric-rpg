@@ -50,6 +50,8 @@
 - **22 号票已完成**（4ba7d2d：GameSession 内置对话状态（inkjs 复用、ink 状态可序列化进快照）、任务状态机（可接→进行中→可交→完成）、offer/turnin 标签驱动接取与交付、enemy-killed 事件推进击杀目标、奖励物品入背包 + 修饰器生效；对话经 `EXTERNAL questStatus` 只读查询按任务状态分支；新增 dialogue-quest HUD 场景（HUD 显示目标/进度/背包，ego-browser 冒烟走通全闭环）；与票 21 合流后，会话内击杀经 `onEnemyKilled` 直接推进任务，外部战斗可用 `GameSession.emitCombatEvent({ type: "enemy-killed", enemyId, enemyTemplateId })`；分支 worktree-agent-aa910623c14a0d8dc，合并 781a8c8 已含 p1-integration）。
 - **23 号票已完成**（872e7a3：存读档闭环——`GameSession.restoreSnapshot()` 完整恢复实体/属性/战斗/任务/背包/奖励账本/对话 ink 状态/时钟/重生计时；存档 `{version:2, sections:{session:GameSessionSnapshot}}` 持久化到 IndexedDB，逻辑层经 `SaveStorage` 适配器注入、IndexedDB 实现留在 render 层；P0 迁移链接入正式版本号并演练 v1→v2（含负向测试）；dialogue-quest HUD 增加存档/读档/删除存档按钮，刷新后自动读档并重建网格与 HUD；L1 116/116、build 与 content:lint 通过；L4 ego-browser 刷新读档 17/17 断言通过（reports/p1-save-load-smoke.json、artifacts/p1-save-load-after-reload.png）；分支 worktree-agent-a84034340c700e539）。
 
+- **24 号票已完成**（HUD/背包/装备 UI：`useItem`/`equip`/`unequip` 意图 + 修饰器即时生效；HUD 显示 HP/经验条（`xpToNext` 内容属性）/攻击/防御/任务；背包面板支持使用消耗品、装备/卸下、装备栏三槽位与 I 键开关；UI 只读快照、只提交意图；L1 126/126、build 与 content:lint 通过；L4 ego-browser HP 51→81、攻击 12→17→12 断言通过（reports/p1-hud-inventory-smoke.json、artifacts/p1-hud-inventory.png））。
+
 ## Fog
 
 **八大主题全部解决（2026-10-17）。** 路线图与风险清单见 issues/08-scaling-roadmap.md。

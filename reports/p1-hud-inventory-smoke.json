@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "ticket": "24-hud-inventory-ui",
+  "scenario": "dialogue-quest",
+  "layer": "L4-ego-browser",
+  "status": "passed",
+  "generatedAt": "2026-10-17",
+  "flow": [
+    "clear save + reload (fresh session)",
+    "accept quest via dialogue",
+    "kill two slimes through real combat (HUD tracks 2/3)",
+    "stand next to elder slime and take damage (100 → 71)",
+    "kill third slime through real combat",
+    "turn in quest (maxHp 100 → 110, sword + 2 herbs in inventory)",
+    "click HUD 背包 button; inventory panel opens",
+    "click 使用 on healing herb (HP 51 → 81, quantity 2 → 1)",
+    "click 装备 on traveler sword (attack 12 → 17, weapon slot filled)",
+    "click 卸下 (attack back to 12), re-equip (17)",
+    "press I twice (panel closes then reopens)"
+  ],
+  "checks": {
+    "freshSessionQuestAvailable": true,
+    "questProgressHudLive": true,
+    "hudHpBarMatchesSnapshot": true,
+    "hudXpBarMatchesSnapshot": true,
+    "hudAttackDefenseShowEffectiveAttributes": true,
+    "inventoryOpenedByHudButton": true,
+    "inventoryListsItemsWithKindAndQuantity": true,
+    "consumableHealsHp": true,
+    "consumableQuantityDecremented": true,
+    "equipChangesAttackImmediately": true,
+    "equipmentSlotShowsSword": true,
+    "unequipRestoresAttack": true,
+    "reEquipWorks": true,
+    "keyboardITogglesInventory": true,
+    "questCompletedInHud": true,
+    "uiStateOnlyFromSnapshot": true
+  },
+  "evidence": {
+    "hudAfterOpen": {
+      "hp": "HP 51 / 110",
+      "hpFill": "46.4%",
+      "xp": "经验 30 / 100",
+      "xpFill": "30%",
+      "attack": "攻击 12",
+      "defense": "防御 4",
+      "quest": "清理史莱姆 已完成 · 击杀翠谷史莱姆 3/3"
+    },
+    "inventoryRows": [
+      "史莱姆凝胶 ×5 (misc)",
+      "旅人短剑 ×1 (equipment, weapon)",
+      "疗伤草 ×2 (consumable)"
+    ],
+    "useHerb": {
+      "hpBefore": 51,
+      "hpAfter": 81,
+      "maxHp": 110,
+      "quantityBefore": 2,
+      "quantityAfter": 1
+    },
+    "equipSword": {
+      "attackBefore": 12,
+      "attackAfter": 17,
+      "modifier": "equipment:quest:cull_slimes:item:traveler_sword:0 → attack +5",
+      "weaponSlot": "旅人短剑 · attack +5",
+      "hudHpSettled": "HP 81 / 110",
+      "hudHpFill": "73.6%"
+    },
+    "unequipSword": {
+      "attackAfter": 12,
+      "weaponSlot": "—"
+    },
+    "keyboard": {
+      "inventoryVisibleAfterI": false,
+      "inventoryVisibleAfterSecondI": true
+    },
+    "screenshot": "artifacts/p1-hud-inventory.png"
+  },
+  "allPassed": true
+}

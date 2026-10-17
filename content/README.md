@@ -44,7 +44,7 @@ content/
   | 玩家实体 | `entity:` | `entity:player` |
 
 - 坐标：世界坐标，单位米，Y 轴向上；`position`/`rotation` 均为 `{x,y,z}`，旋转单位为弧度（`Entity.state.rotation` 同一约定）。
-- `attributes` 是**开放数值表**：`maxHp`/`hp`/`attack`/`defense`/`moveSpeed`/`xp` 是 P1 识别的一组键，其余键原样保留。新增键不需要改 schema。
+- `attributes` 是**开放数值表**：`maxHp`/`hp`/`attack`/`defense`/`moveSpeed`/`xp`/`xpToNext` 是 P1 识别的一组键（`xpToNext` 供 HUD 经验条计算比例），其余键原样保留。新增键不需要改 schema。
 - 修饰器（装备/任务奖励共用）字段与 `src/logic/modifier.ts` 完全一致：
   `{ attribute, operation: "add" | "multiply", value }`；
   最终属性 = `(base + Σadd) × (1 + Σmultiply)`。

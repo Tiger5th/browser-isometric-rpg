@@ -91,6 +91,12 @@ export interface DialogueQuestDebugApi {
   chooseDialogueOption(index: number): void;
   /** 发起攻击；伤害/死亡结算仍由票 21 的战斗逻辑完成。 */
   attackEnemy(enemyId: string): void;
+  /** 使用消耗品（等价于背包面板里的「使用」按钮）。 */
+  useItem(instanceId: string): void;
+  /** 装备物品（等价于背包面板里的「装备」按钮）。 */
+  equipItem(instanceId: string): void;
+  /** 卸下装备（等价于背包面板里的「卸下」按钮）。 */
+  unequipItem(instanceId: string): void;
   getPlayer(): EntitySnapshot | null;
   /** 手动存档到 IndexedDB。 */
   save(): Promise<{ version: number; elapsedMs: number } | null>;
@@ -296,6 +302,9 @@ function installDebugApi(state: DialogueQuestState): void {
     talkTo: (npcId) => state.session.talkTo(npcId),
     chooseDialogueOption: (index) => state.session.chooseDialogueOption(index),
     attackEnemy,
+    useItem: (instanceId) => state.session.useItem(PLAYER_ID, instanceId),
+    equipItem: (instanceId) => state.session.equip(PLAYER_ID, instanceId),
+    unequipItem: (instanceId) => state.session.unequip(PLAYER_ID, instanceId),
     getPlayer: () => playerSnapshot(state.session),
     save: () => saveToStorage(state),
     load: () => loadFromStorage(state),
@@ -386,6 +395,9 @@ export const dialogueQuestScenario: ScenarioDefinition = {
       mount: document.body,
       bundle: CONTENT_BUNDLE,
       onChoose: (index) => session.chooseDialogueOption(index),
+      onUseItem: (instanceId) => session.useItem(PLAYER_ID, instanceId),
+      onEquipItem: (instanceId) => session.equip(PLAYER_ID, instanceId),
+      onUnequipItem: (instanceId) => session.unequip(PLAYER_ID, instanceId),
       onDebugKill: killNextEnemy,
       onSave: () => {
         void saveToStorage(state);
