@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 1,
+  "ticket": "29-dialogue-npc-experience",
+  "scenario": "p1-world",
+  "layer": "L4+L2-ego-browser",
+  "status": "passed",
+  "generatedAt": "2026-10-17",
+  "environment": {
+    "userAgent": "ego-browser (Chromium, logged-in profile)",
+    "renderBackend": "webgl2",
+    "capturedAt": "2026-10-17T12:30:00.000Z",
+    "devicePixelRatio": 2
+  },
+  "flow": [
+    "clear save + reload (fresh session)",
+    "two-stage dialogue stage 1: click distant NPC -> approach only (no bubble, no dialogue)",
+    "two-stage dialogue stage 2: arrive at dialogue range -> bubble appears (quest '!' because quest available)",
+    "two-stage dialogue stage 3: click bubble -> face each other -> dialogue opens -> portraits + camera zoom + dim",
+    "choose dialogue option -> quest accepted -> dialogue ends naturally -> interaction phase resets",
+    "re-enter dialogue then real canvas click on ground -> move intent interrupts dialogue, camera restores",
+    "save during dialogue -> reload -> auto-load: dialogue ink state, portraits, camera zoom all restored",
+    "real pointer click on '!' bubble DOM node (not just debug API)",
+    "real pointer click on canvas ground interrupts dialogue"
+  ],
+  "stages": [
+    {
+      "id": "stage1-approach",
+      "label": "远处点击 NPC：只寻路靠近，不出气泡不开对话",
+      "passed": true,
+      "detail": { "phase": "approaching", "bubble": null, "dialogueOpen": false }
+    },
+    {
+      "id": "stage2-bubble",
+      "label": "到达对话距离：头顶气泡出现（可接任务 = 感叹号）",
+      "passed": true,
+      "detail": { "phase": "ready", "bubble": "quest", "distanceToNpc": 1.46 }
+    },
+    {
+      "id": "stage3-dialogue",
+      "label": "点击气泡：双方面对面 + galgame 立绘 + 镜头推近压暗",
+      "passed": true,
+      "detail": {
+        "phase": "talking",
+        "dialogueText": "马婆婆：旅人，你来得正好。翠谷的史莱姆最近躁动得厉害。",
+        "choices": ["发生了什么？", "我这就去。"],
+        "portraits": [
+          { "entityId": "npc:elder_ma", "side": "left", "speaking": true, "brightness": 1 },
+          { "entityId": "entity:player", "side": "right", "speaking": false, "brightness": 0.55 }
+        ],
+        "playerYaw": 1.5708,
+        "npcYaw": -1.5708,
+        "cameraSpan": 22.02,
+        "dimStrength": 0.349,
+        "realPortraitImages": 2,
+        "namePlateColor": "rgb(240, 171, 252)"
+      }
+    },
+    {
+      "id": "stage4-quest-accept",
+      "label": "选择选项接取任务，对话自然结束，交互阶段复位",
+      "passed": true,
+      "detail": { "quest": "active", "dialogueOpen": false, "phase": "idle" }
+    },
+    {
+      "id": "stage5-move-interrupt",
+      "label": "对话中移动意图（真实画布点击）打断对话，镜头恢复",
+      "passed": true,
+      "detail": {
+        "phase": "idle",
+        "dialogueOpen": false,
+        "cameraSpan": 29.74,
+        "dimStrength": 0.011,
+        "portraits": 0,
+        "playerMoving": true
+      }
+    },
+    {
+      "id": "stage6-save-during-dialogue",
+      "label": "对话进行中存档（v2）",
+      "passed": true,
+      "detail": { "version": 2 }
+    },
+    {
+      "id": "stage7-restore",
+      "label": "刷新后自动读档：对话 ink 状态 / 立绘 / 推近压暗全部恢复",
+      "passed": true,
+      "detail": {
+        "dialogueText": "马婆婆：旅人，你来得正好。翠谷的史莱姆最近躁动得厉害。",
+        "choices": ["我还在清理史莱姆。"],
+        "quest": "active",
+        "realPortraitImages": 2,
+        "cameraSpan": 22.015,
+        "dimStrength": 0.349,
+        "portraits": [
+          { "entityId": "npc:elder_ma", "speaking": true, "brightness": 1 },
+          { "entityId": "entity:player", "speaking": false, "brightness": 0.55 }
+        ]
+      }
+    },
+    {
+      "id": "real-click-bubble",
+      "label": "真实指针点击 DOM 气泡按钮（「！」）",
+      "passed": true,
+      "detail": { "bubbleText": "！", "result": "dialogue opened, 2 portraits, cameraSpan 22.4, dim 0.33" }
+    },
+    {
+      "id": "real-click-canvas",
+      "label": "真实指针点击画布地面（CANVAS 命中）打断对话",
+      "passed": true,
+      "detail": { "hitTag": "CANVAS", "result": "dialogue ended, camera restored, player moving" }
+    },
+    {
+      "id": "l2-negative",
+      "label": "L2 负向测试：坏色板卡/坏立绘引用全部被拦截",
+      "passed": true,
+      "detail": {
+        "cases": [
+          { "id": "bad-palette-color", "caught": true },
+          { "id": "missing-palette-keywords", "caught": true },
+          { "id": "npc-bad-palette-ref", "caught": true },
+          { "id": "portrait-missing-image", "caught": true }
+        ],
+        "controlValid": true,
+        "report": "reports/content-lint-negative-test.json"
+      }
+    }
+  ],
+  "artifacts": [
+    "artifacts/p29-dialogue-portraits.png",
+    "artifacts/p29-dialogue-restored.png",
+    "artifacts/p29-dialogue-real-click.png",
+    "artifacts/p29-portrait-elder-ma.png",
+    "artifacts/p29-portrait-scout-lin.png",
+    "artifacts/p29-portrait-player-hero.png"
+  ],
+  "notes": [
+    "立绘由 agent 经 ego-browser 走 Gemini 生图产出，严格按 content/character-palettes/*.json 的色板卡关键词（主色/辅色/点缀色 + 发色服装）生成，落 assets/portraits/。",
+    "3D tint（createProceduralNpc）与立绘、对话框名牌、描边同源取色板卡 primary。",
+    "Harness 面板默认显示是规格 36 的遗留项（应随票 27 落地但未实现），不属于票 29 范围，已在汇报中记录。"
+  ]
+}

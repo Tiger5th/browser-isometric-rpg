@@ -28,6 +28,7 @@ const KIND_SCHEMA_KEY: Record<ContentKind, Exclude<keyof ContentSchemas, "common
   enemy: "enemy",
   item: "item",
   quest: "quest",
+  "character-palette": "characterPalette",
 };
 
 /** id 前缀必须与文件所在目录对应（enemy-template 目录对应 enemy_template: 前缀）。 */
@@ -38,6 +39,7 @@ const KIND_ID_PREFIX: Record<ContentKind, string> = {
   enemy: "enemy:",
   item: "item:",
   quest: "quest:",
+  "character-palette": "character_palette:",
 };
 
 type JsonRecord = Record<string, unknown>;
@@ -62,6 +64,7 @@ function emptySets(): Record<ContentKind, Set<string>> {
     enemy: new Set(),
     item: new Set(),
     quest: new Set(),
+    "character-palette": new Set(),
   };
 }
 
@@ -208,6 +211,13 @@ export function validateContent(
       }
       case "npc": {
         requireReference(file, "/regionId", data.regionId, idSets.region, "区域");
+        requireReference(
+          file,
+          "/paletteId",
+          data.paletteId,
+          idSets["character-palette"],
+          "色板卡",
+        );
         if (typeof data.dialogueId === "string" && !dialogueIds.has(data.dialogueId)) {
           issues.push({
             code: "reference",

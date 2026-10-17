@@ -1,0 +1,11 @@
+{
+  "id": "character_palette:player_hero",
+  "displayName": "旅人",
+  "role": "玩家主角；外来旅人，轻甲短剑，干净利落的少年身形",
+  "primary": "#7dd3fc",
+  "secondary": "#1e3a5f",
+  "accent": "#fbbf24",
+  "hairKeywords": "ash brown short hair, messy fringe",
+  "costumeKeywords": "light blue travel tunic, brown leather belt, cloth wraps, short sword",
+  "status": "generated"
+}
