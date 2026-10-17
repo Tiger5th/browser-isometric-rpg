@@ -33,7 +33,8 @@
 - **P0 已规格化并拆票**：specs/p0-prototype-validation.md（18 条 user story，ready-for-agent）→ 拆为 tickets 10–18。10 无阻塞；10→{11,12,14,15,16} 并行；13←11；17←10,15；18←11..17 汇总。
 - **09 美术已修订**：二次元风格 + 自用不商用 → 免费方案（VRoid + Mixamo + AI 免费档 + toon 渲染）；链路验证在 17 号票。
 - **10 号票已完成并合并**（714b3bb：Babylon 9.31.0 / recast-navigation 0.43.1 锁版本，P0Harness + hello 场景 + JSON 报告，vitest 5/5）。备注：recast 包名实为 `recast-navigation`。
-- **当前 frontier：11/12/14/15/16 并行可开工。**
+- **16 号票已完成合并**（0b16d8a：修饰器 schema 可冻结、inkjs 2.4.0 可用无需自研 DSL、存档迁移链雏形 35/35 绿）。
+- **当前 frontier：11/12/14/15 运行中；13 待 11；17 待 15；18 待全部。**
 
 ## Fog
 
