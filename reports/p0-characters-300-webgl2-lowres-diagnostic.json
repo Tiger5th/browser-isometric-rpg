@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 1,
+  "harness": "P0Harness",
+  "scenario": "characters-300",
+  "status": "failed",
+  "startedAt": "2026-10-17T04:50:48.248Z",
+  "finishedAt": "2026-10-17T04:51:01.632Z",
+  "durationMs": 13384,
+  "environment": {
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "renderBackend": "webgl2",
+    "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+    "capturedAt": "2026-10-17T04:51:01.632Z",
+    "devicePixelRatio": 2,
+    "hardwareConcurrency": 10
+  },
+  "metrics": [
+    {
+      "name": "activeMeshesAverage",
+      "value": 300,
+      "unit": "meshes"
+    },
+    {
+      "name": "animationUpdateMsAverage",
+      "value": 0.22,
+      "unit": "ms/frame"
+    },
+    {
+      "name": "boneCount",
+      "value": 900,
+      "unit": "bones"
+    },
+    {
+      "name": "characterCount",
+      "value": 300,
+      "unit": "characters",
+      "threshold": 300,
+      "comparison": "eq",
+      "passed": true
+    },
+    {
+      "name": "drawCallsAverage",
+      "value": 300,
+      "unit": "calls",
+      "threshold": 300,
+      "comparison": "lte",
+      "passed": true
+    },
+    {
+      "name": "drawCallsMax",
+      "value": 300,
+      "unit": "calls"
+    },
+    {
+      "name": "fpsAverage",
+      "value": 60.1,
+      "unit": "fps",
+      "threshold": 60,
+      "comparison": "gte",
+      "passed": true
+    },
+    {
+      "name": "fpsMin",
+      "value": 47.6,
+      "unit": "fps"
+    },
+    {
+      "name": "frameTimeMsAverage",
+      "value": 16.7,
+      "unit": "ms",
+      "threshold": 16.666666666666668,
+      "comparison": "lte",
+      "passed": false
+    },
+    {
+      "name": "jsHeapTotalMB",
+      "value": 77.6,
+      "unit": "MB"
+    },
+    {
+      "name": "jsHeapUsedMB",
+      "value": 72.9,
+      "unit": "MB",
+      "threshold": 1536,
+      "comparison": "lte",
+      "passed": true
+    },
+    {
+      "name": "renderHeight",
+      "value": 407,
+      "unit": "px"
+    },
+    {
+      "name": "renderPixelsMP",
+      "value": 0.29,
+      "unit": "MP"
+    },
+    {
+      "name": "renderSubmitMsAverage",
+      "value": 0.74,
+      "unit": "ms/frame"
+    },
+    {
+      "name": "renderWidth",
+      "value": 719,
+      "unit": "px"
+    },
+    {
+      "name": "sceneRenderMsAverage",
+      "value": 2.03,
+      "unit": "ms/frame"
+    },
+    {
+      "name": "skeletonCount",
+      "value": 300,
+      "unit": "skeletons"
+    },
+    {
+      "name": "spineRotationRangeRad",
+      "value": 0.319,
+      "unit": "rad",
+      "threshold": 0.1,
+      "comparison": "gte",
+      "passed": true
+    }
+  ]
+}

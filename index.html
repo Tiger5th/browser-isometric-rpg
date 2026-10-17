@@ -135,6 +135,13 @@
         正交等距相机 + 程序化灰盒几何体。具名 scenario 输出统一 JSON 测量报告。
       </p>
       <div class="row">
+        <label for="backend-select">渲染路径</label>
+        <select id="backend-select">
+          <option value="webgl2">WebGL2</option>
+          <option value="webgpu">WebGPU</option>
+        </select>
+      </div>
+      <div class="row">
         <label for="scenario-select">Scenario</label>
         <select id="scenario-select"></select>
       </div>
