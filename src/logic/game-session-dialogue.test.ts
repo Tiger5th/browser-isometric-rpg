@@ -189,6 +189,22 @@ function acceptQuestThroughDialogue(session: GameSession): void {
   session.chooseDialogueOption(0);
 }
 
+describe("GameSession 对话可用性查询", () => {
+  it("tryTalkTo 对无对话 NPC 返回友好失败而不抛异常", () => {
+    const session = createSession({ ink: dialogueSource() });
+    const result = session.tryTalkTo("npc:scout_lin");
+    expect(result.ok).toBe(false);
+    expect(result.message).toMatch(/没有对话/);
+  });
+
+  it("canTalkTo 只对已注册对话的 NPC 返回 true", () => {
+    const session = createSession({ ink: dialogueSource() });
+    expect(session.canTalkTo(NPC_ID)).toBe(true);
+    expect(session.canTalkTo("npc:scout_lin")).toBe(false);
+    expect(session.canTalkTo("entity:missing")).toBe(false);
+  });
+});
+
 describe("GameSession 对话与任务闭环", () => {
   it("talkTo 打开 NPC 对话并停在选项点，对话状态进入快照", () => {
     const session = createSession();

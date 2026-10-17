@@ -299,7 +299,12 @@ function installDebugApi(state: DialogueQuestState): void {
     scenario: SCENARIO_NAME,
     getSnapshot: () => state.session.snapshot(),
     moveTo: (x, z) => state.session.moveTo(PLAYER_ID, { x, y: 0, z }),
-    talkTo: (npcId) => state.session.talkTo(npcId),
+    talkTo: (npcId) => {
+      const result = state.session.tryTalkTo(npcId);
+      if (!result.ok) {
+        state.ui.setSaveStatus(`无法对话：${result.message ?? "未知原因"}`, "idle");
+      }
+    },
     chooseDialogueOption: (index) => state.session.chooseDialogueOption(index),
     attackEnemy,
     useItem: (instanceId) => state.session.useItem(PLAYER_ID, instanceId),
@@ -395,9 +400,9 @@ export const dialogueQuestScenario: ScenarioDefinition = {
       mount: document.body,
       bundle: CONTENT_BUNDLE,
       onChoose: (index) => session.chooseDialogueOption(index),
-      onUseItem: (instanceId) => session.useItem(PLAYER_ID, instanceId),
-      onEquipItem: (instanceId) => session.equip(PLAYER_ID, instanceId),
-      onUnequipItem: (instanceId) => session.unequip(PLAYER_ID, instanceId),
+      onUseItem: (instanceId) => session.tryUseItem(PLAYER_ID, instanceId),
+      onEquipItem: (instanceId) => session.tryEquip(PLAYER_ID, instanceId),
+      onUnequipItem: (instanceId) => session.tryUnequip(PLAYER_ID, instanceId),
       onDebugKill: killNextEnemy,
       onSave: () => {
         void saveToStorage(state);
@@ -428,7 +433,17 @@ export const dialogueQuestScenario: ScenarioDefinition = {
           .snapshot()
           .entities.find((entity) => entity.id === pickedId);
         if (picked?.identity.type === "npc") {
-          session.talkTo(pickedId);
+          if (!session.canTalkTo(pickedId)) {
+            state.ui.setSaveStatus(
+              `${picked.identity.displayName} 现在没有可进行的对话`,
+              "idle",
+            );
+            return;
+          }
+          const result = session.tryTalkTo(pickedId);
+          if (!result.ok) {
+            state.ui.setSaveStatus(`无法对话：${result.message ?? "未知原因"}`, "idle");
+          }
           return;
         }
         if (picked !== undefined) {

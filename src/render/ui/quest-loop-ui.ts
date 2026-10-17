@@ -7,22 +7,25 @@
  */
 
 import type { ContentBundle, ItemDefinition } from "../../logic/content/types";
-import type { GameSessionSnapshot } from "../../logic/game-session";
+import type {
+  GameSessionSnapshot,
+  IntentResult,
+} from "../../logic/game-session";
 import type { QuestStatus } from "../../logic/quest";
 
 export interface QuestLoopUiOptions {
   mount: HTMLElement;
   bundle: ContentBundle;
   /** 玩家点击对话选项。 */
-  onChoose(choiceIndex: number): void;
+  onChoose(choiceIndex: number): IntentResult | void;
   /** 使用消耗品（提交 useItem 意图）。 */
-  onUseItem?(instanceId: string): void;
+  onUseItem?(instanceId: string): IntentResult | void;
   /** 装备物品（提交 equip 意图）。 */
-  onEquipItem?(instanceId: string): void;
+  onEquipItem?(instanceId: string): IntentResult | void;
   /** 卸下装备（提交 unequip 意图）。 */
-  onUnequipItem?(instanceId: string): void;
+  onUnequipItem?(instanceId: string): IntentResult | void;
   /** 调试战斗入口：用真实战斗攻击最近的敌人（方便手动验证任务进度）。 */
-  onDebugKill?(): void;
+  onDebugKill?(): IntentResult | void;
   /** 手动存档。 */
   onSave?(): void;
   /** 手动读档。 */
@@ -177,6 +180,32 @@ export function createQuestLoopUi(options: QuestLoopUiOptions): QuestLoopUi {
   let inventoryOpen = false;
   let currentSnapshot: GameSessionSnapshot | null = null;
 
+  const setSaveStatus = (text: string, kind: SaveStatusKind = "idle"): void => {
+    saveStatus.textContent = text;
+    saveStatus.dataset.state = kind;
+    saveStatus.style.color = SAVE_STATUS_COLOR[kind];
+  };
+
+  /**
+   * 统一包装 UI 意图提交：
+   * - DOM 事件处理器里绝不让异常逃逸成 uncaught error；
+   * - 意图层返回 IntentResult 时，把友好拒绝显示到状态行；
+   * - 10Hz 快照过期导致的「物品已用完 / 对话已结束」也走同一条提示路径。
+   */
+  const submit = (action: () => IntentResult | void): void => {
+    try {
+      const result = action();
+      if (result !== undefined && !result.ok) {
+        setSaveStatus(`操作未生效：${result.message ?? "未知原因"}`, "error");
+      }
+    } catch (error) {
+      setSaveStatus(
+        `操作失败：${error instanceof Error ? error.message : String(error)}`,
+        "error",
+      );
+    }
+  };
+
   const renderInventory = (snapshot: GameSessionSnapshot): void => {
     inventory.style.display = inventoryOpen ? "block" : "none";
     if (!inventoryOpen) {
@@ -314,7 +343,9 @@ export function createQuestLoopUi(options: QuestLoopUiOptions): QuestLoopUi {
       row.append(info);
 
       if (definition?.kind === "consumable" && options.onUseItem !== undefined) {
-        const useButton = button("使用", "use", () => options.onUseItem?.(item.instanceId));
+        const useButton = button("使用", "use", () =>
+          submit(() => options.onUseItem?.(item.instanceId)),
+        );
         useButton.dataset.instanceId = item.instanceId;
         useButton.dataset.testid = "inventory-use";
         row.append(useButton);
@@ -322,14 +353,14 @@ export function createQuestLoopUi(options: QuestLoopUiOptions): QuestLoopUi {
       if (definition?.kind === "equipment") {
         if (item.equipped && options.onUnequipItem !== undefined) {
           const unequipButton = button("卸下", "unequip", () =>
-            options.onUnequipItem?.(item.instanceId),
+            submit(() => options.onUnequipItem?.(item.instanceId)),
           );
           unequipButton.dataset.instanceId = item.instanceId;
           unequipButton.dataset.testid = "inventory-unequip";
           row.append(unequipButton);
         } else if (!item.equipped && options.onEquipItem !== undefined) {
           const equipButton = button("装备", "equip", () =>
-            options.onEquipItem?.(item.instanceId),
+            submit(() => options.onEquipItem?.(item.instanceId)),
           );
           equipButton.dataset.instanceId = item.instanceId;
           equipButton.dataset.testid = "inventory-equip";
@@ -490,7 +521,7 @@ export function createQuestLoopUi(options: QuestLoopUiOptions): QuestLoopUi {
         if (handler === undefined) {
           return;
         }
-        const node = button(label, action, handler);
+        const node = button(label, action, () => submit(handler));
         node.style.flex = "1";
         row.append(node);
       };
@@ -504,7 +535,7 @@ export function createQuestLoopUi(options: QuestLoopUiOptions): QuestLoopUi {
       const debugButton = button(
         "调试：攻击最近的史莱姆（走真实战斗）",
         "debug-kill",
-        () => options.onDebugKill?.(),
+        () => submit(() => options.onDebugKill?.()),
       );
       debugButton.style.marginTop = "10px";
       debugButton.style.width = "100%";
@@ -545,7 +576,9 @@ export function createQuestLoopUi(options: QuestLoopUiOptions): QuestLoopUi {
         );
         choiceButton.type = "button";
         choiceButton.dataset.choiceIndex = String(index);
-        choiceButton.addEventListener("click", () => options.onChoose(index));
+        choiceButton.addEventListener("click", () =>
+          submit(() => options.onChoose(index)),
+        );
         list.append(choiceButton);
       });
       dialogue.append(list);
@@ -608,11 +641,7 @@ export function createQuestLoopUi(options: QuestLoopUiOptions): QuestLoopUi {
       renderAll(snapshot);
     },
 
-    setSaveStatus(text, kind = "idle") {
-      saveStatus.textContent = text;
-      saveStatus.dataset.state = kind;
-      saveStatus.style.color = SAVE_STATUS_COLOR[kind];
-    },
+    setSaveStatus,
 
     dispose() {
       window.removeEventListener("keydown", onKeyDown);

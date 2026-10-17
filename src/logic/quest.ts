@@ -138,13 +138,44 @@ export class QuestLog {
   }
 
   /**
+   * 校验快照但不修改任何状态（供 GameSession 的两阶段读档预检使用）。
+   * 非法输入直接抛错；合法输入只做纯计算。
+   */
+  validate(snapshots: readonly QuestSnapshot[]): void {
+    this.buildRestoredState(snapshots);
+  }
+
+  /**
    * 从快照恢复任务进度（读档）。
    * 快照中未出现的任务重置为 available/0；未知任务、重复任务或进度越界显式报错。
+   *
+   * 两阶段：先在本地构建完整的新状态（buildRestoredState），全部校验通过后
+   * 才一次性写回。这样非法快照不会留下「任务已被清零」的半恢复状态。
+   *
+   * 恢复时重新判定完成度：active 且目标已满的任务直接归一为
+   * ready_to_turn_in，避免旧存档/旧版本留下的满进度任务永远无法交付。
    */
   restore(snapshots: readonly QuestSnapshot[]): void {
+    const restored = this.buildRestoredState(snapshots);
+    for (const [questId, state] of restored) {
+      const progress = this.quests.get(questId);
+      if (progress === undefined) {
+        continue;
+      }
+      progress.status = state.status;
+      progress.current = state.current;
+    }
+  }
+
+  private buildRestoredState(
+    snapshots: readonly QuestSnapshot[],
+  ): Map<string, { status: QuestStatus; current: number[] }> {
+    const restored = new Map<string, { status: QuestStatus; current: number[] }>();
     for (const progress of this.quests.values()) {
-      progress.status = "available";
-      progress.current = progress.definition.objectives.map(() => 0);
+      restored.set(progress.definition.id, {
+        status: "available",
+        current: progress.definition.objectives.map(() => 0),
+      });
     }
 
     const seen = new Set<string>();
@@ -167,8 +198,7 @@ export class QuestLog {
         );
       }
 
-      progress.status = snapshot.status;
-      progress.current = snapshot.objectives.map((objective, index) => {
+      const current = snapshot.objectives.map((objective, index) => {
         const required = objectiveRequired(progress.definition.objectives[index]);
         if (
           !Number.isInteger(objective.current) ||
@@ -181,7 +211,20 @@ export class QuestLog {
         }
         return objective.current;
       });
+
+      const allObjectivesMet = progress.definition.objectives.every(
+        (objective, index) => current[index] >= objectiveRequired(objective),
+      );
+      restored.set(snapshot.id, {
+        status:
+          snapshot.status === "active" && allObjectivesMet
+            ? "ready_to_turn_in"
+            : snapshot.status,
+        current,
+      });
     }
+
+    return restored;
   }
 
   /** 全量任务快照；每次返回新对象，调用方无法修改内部进度。 */

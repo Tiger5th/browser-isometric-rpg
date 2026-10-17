@@ -10,6 +10,7 @@ import { Scene } from "@babylonjs/core/scene";
 import { serializeMeasurementReport, type MeasurementReport } from "../logic/report";
 import {
   DEFAULT_CAMERA_VERTICAL_SPAN,
+  cameraVerticalSpan,
   createIsometricCamera,
   updateOrthographicFrustum,
 } from "./camera";
@@ -129,7 +130,8 @@ async function bootstrap(): Promise<void> {
     updateOrthographicFrustum(
       camera,
       height > 0 ? engine.getRenderWidth() / height : 1,
-      CAMERA_VERTICAL_SPAN,
+      // 场景可能通过 setCameraSpan 改了可视高度；resize 必须沿用当前值。
+      cameraVerticalSpan(camera, CAMERA_VERTICAL_SPAN),
     );
   };
   window.addEventListener("resize", resize);

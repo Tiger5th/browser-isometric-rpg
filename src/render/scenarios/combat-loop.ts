@@ -349,6 +349,9 @@ export const combatLoopScenario: ScenarioDefinition = {
         color,
         isPlayer ? "player" : entity.id.replace(/[^a-z0-9]+/gi, "-"),
       );
+      // 挂到场景根节点：teardown 的 root.dispose(false, true) 才能级联
+      // 释放 actor 网格/材质，否则每次运行都会泄漏一批 mesh。
+      actor.mesh.parent = root;
       actors.set(entity.id, actor);
     }
 

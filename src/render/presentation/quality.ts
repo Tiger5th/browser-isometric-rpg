@@ -28,7 +28,11 @@ export const QUALITY_PRESETS: Record<Exclude<QualityLevel, "auto">, QualityPrese
 /** 1080p 目标；动态分辨率不会超过这个像素量（高 DPR 屏会主动降采样）。 */
 export const TARGET_RENDER_PIXELS = 1920 * 1080;
 
-export const MIN_RENDER_SCALE = 0.5;
+/**
+ * 渲染倍率下限。0.25 允许 4K/高 DPR 大屏把像素量压回预算内；
+ * 0.5 会在 2560×1440@2x 上产生 ~4.1MP（超出 1080p 预算 2 倍）。
+ */
+export const MIN_RENDER_SCALE = 0.25;
 export const MAX_RENDER_SCALE = 1;
 
 /** URL ?quality=... 解析；未知值回落到 auto（默认开启动态分辨率）。 */

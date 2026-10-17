@@ -82,7 +82,7 @@ export class IndexedDbSaveStorage implements SaveStorage {
       return Promise.reject(new Error("当前环境不支持 IndexedDB"));
     }
 
-    this.database = new Promise<IDBDatabase>((resolve, reject) => {
+    const pending = new Promise<IDBDatabase>((resolve, reject) => {
       const request = this.factory.open(this.databaseName, 1);
       request.onupgradeneeded = () => {
         const db = request.result;
@@ -96,6 +96,11 @@ export class IndexedDbSaveStorage implements SaveStorage {
           db.close();
           this.database = null;
         };
+        // 连接被浏览器关闭（磁盘/隐私模式/连接回收）后必须复位，
+        // 否则后续读写会一直复用已关闭的 db。
+        db.onclose = () => {
+          this.database = null;
+        };
         resolve(db);
       };
       request.onerror = () => {
@@ -105,6 +110,13 @@ export class IndexedDbSaveStorage implements SaveStorage {
         reject(new Error("IndexedDB 升级被其他页面阻塞"));
       };
     });
-    return this.database;
+    this.database = pending;
+    // 失败的 Promise 不能永久缓存：复位后下一次操作会重新打开。
+    pending.catch(() => {
+      if (this.database === pending) {
+        this.database = null;
+      }
+    });
+    return pending;
   }
 }

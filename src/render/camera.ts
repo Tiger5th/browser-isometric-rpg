@@ -23,6 +23,24 @@ export function updateOrthographicFrustum(
   camera.orthoBottom = -halfHeight;
   camera.orthoLeft = -halfWidth;
   camera.orthoRight = halfWidth;
+
+  // 场景可临时改 span（如 p1-world 用 30）。把当前值记在相机上，
+  // 让全局 resize 处理器重建视锥时沿用场景值，而不是写死默认 20。
+  const metadata = (camera.metadata ?? {}) as Record<string, unknown>;
+  metadata.verticalSpan = verticalSpan;
+  camera.metadata = metadata;
+}
+
+/** 读取相机当前的正交可视高度；未记录时回落到默认值。 */
+export function cameraVerticalSpan(
+  camera: Camera,
+  fallback = DEFAULT_CAMERA_VERTICAL_SPAN,
+): number {
+  const metadata = camera.metadata as { verticalSpan?: unknown } | null;
+  const value = metadata?.verticalSpan;
+  return typeof value === "number" && Number.isFinite(value) && value > 0
+    ? value
+    : fallback;
 }
 
 /** 创建锁死的正交等距相机（P0 灰盒场景基准视角）。 */

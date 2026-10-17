@@ -405,6 +405,46 @@ describe("GameSession 敌人 AI 状态机", () => {
   });
 });
 
+describe("GameSession 友好意图：死亡窗口", () => {
+  it("玩家死亡等待重生时 tryAttack 返回失败而不是抛裸异常", () => {
+    const session = new GameSession({ random: () => 0, respawnDelayMs: 10_000 });
+    session.addEntity(
+      createEntity({
+        id: PLAYER_ID,
+        type: "player",
+        templateId: "player_template:hero",
+        displayName: "旅人",
+        baseAttributes: { maxHp: 1, hp: 1, attack: 1, defense: 0, moveSpeed: 0 },
+      }),
+    );
+    session.addEntity(
+      createEntity({
+        id: "enemy:brute",
+        type: "enemy",
+        templateId: "enemy_template:brute",
+        displayName: "蛮兵",
+        baseAttributes: {
+          maxHp: 50,
+          hp: 50,
+          attack: 10,
+          defense: 0,
+          moveSpeed: 0,
+          attackRange: 2,
+          aggroRadius: 100,
+        },
+      }),
+    );
+
+    session.attack("enemy:brute", PLAYER_ID);
+    const player = entityOf(session, PLAYER_ID);
+    expect(player.combat.alive).toBe(false);
+
+    const result = session.tryAttack(PLAYER_ID, "enemy:brute");
+    expect(result.ok).toBe(false);
+    expect(result.message).toMatch(/死亡|不能攻击/);
+  });
+});
+
 describe("GameSession 玩家死亡与重生", () => {
   it("玩家死亡后延迟重生回出生点，生命回满，活着的敌人重置到出生点", () => {
     const bundle = combatBundle();

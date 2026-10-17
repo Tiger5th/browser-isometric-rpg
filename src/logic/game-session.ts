@@ -105,6 +105,17 @@ export interface GameSessionIntents {
   unequip(entityId: EntityId | string, instanceId: string): void;
 }
 
+/**
+ * 意图执行结果：UI 面向的友好拒绝。
+ * 逻辑层原有方法仍然抛错（供测试/调用方发现编程错误）；`try*` 系列
+ * 把「过期实例、无对话、目标已死亡」等可预期失败转成结构化结果，
+ * 避免 DOM 事件处理器里冒出未捕获异常。
+ */
+export interface IntentResult {
+  ok: boolean;
+  message?: string;
+}
+
 export interface GameSessionOptions {
   /** [0,1) 随机源；默认确定性序列，测试可注入固定值。 */
   random?: () => number;
@@ -279,6 +290,59 @@ function assertAttributesRecord(
   }
 }
 
+/**
+ * 读档前的修饰器结构校验。
+ * 损坏存档若把 value 注入成字符串，会在 effectiveAttributes 里产生
+ * NaN 或字符串拼接（如 '1205'），因此必须在写入前整体拒绝。
+ */
+function assertModifierShape(value: unknown, label: string): asserts value is Modifier {
+  if (typeof value !== "object" || value === null) {
+    throw new Error(`${label} 必须是对象`);
+  }
+  const modifier = value as Partial<Modifier>;
+  if (typeof modifier.id !== "string" || modifier.id.trim() === "") {
+    throw new Error(`${label} 的 id 必须是非空字符串`);
+  }
+  if (
+    typeof modifier.attribute !== "string" ||
+    modifier.attribute.trim() === ""
+  ) {
+    throw new Error(`${label} 的 attribute 必须是非空字符串`);
+  }
+  if (modifier.operation !== "add" && modifier.operation !== "multiply") {
+    throw new Error(`${label} 的 operation 非法：${String(modifier.operation)}`);
+  }
+  if (typeof modifier.value !== "number" || !Number.isFinite(modifier.value)) {
+    throw new Error(`${label} 的 value 必须是有限数值`);
+  }
+  const source = modifier.source;
+  if (typeof source !== "object" || source === null) {
+    throw new Error(`${label} 的 source 必须是对象`);
+  }
+  if (
+    source.kind !== "equipment" &&
+    source.kind !== "buff" &&
+    source.kind !== "quest"
+  ) {
+    throw new Error(`${label} 的 source.kind 非法：${String(source.kind)}`);
+  }
+  if (typeof source.id !== "string" || source.id.trim() === "") {
+    throw new Error(`${label} 的 source.id 必须是非空字符串`);
+  }
+  if (
+    modifier.expiresAt !== undefined &&
+    (typeof modifier.expiresAt !== "number" || !Number.isFinite(modifier.expiresAt))
+  ) {
+    throw new Error(`${label} 的 expiresAt 必须是有限数值`);
+  }
+}
+
+function assertStringArray(value: unknown, label: string): asserts value is string[] {
+  if (!Array.isArray(value) || value.some((entry) => typeof entry !== "string")) {
+    throw new Error(`${label} 必须是字符串数组`);
+  }
+}
+
 function clamp(value: number, minimum: number, maximum: number): number {
   return Math.min(maximum, Math.max(minimum, value));
 }
@@ -445,7 +509,11 @@ export class GameSession implements GameSessionIntents {
         runtime.idleMs = 0;
       }
     }
-    this.movements.set(id, { target: cloneVec3(target), speed: DEFAULT_MOVE_SPEED });
+    // 与攻击自动接近一致：点击移动也使用修饰器后的有效移动速度。
+    this.movements.set(id, {
+      target: cloneVec3(target),
+      speed: this.moveSpeedOf(entity),
+    });
   }
 
   /** 与 NPC 开始对话；ink 停在首个选择点或 END。 */
@@ -479,6 +547,53 @@ export class GameSession implements GameSessionIntents {
     };
     this.publish({ type: "dialogue-started", npcId: id, dialogueId });
     this.continueDialogueState();
+  }
+
+  /** 实体是否有可用对话（有 dialogueId 且已注册编译结果）。 */
+  canTalkTo(entityId: EntityId | string): boolean {
+    const entity = this.entities.get(entityId as EntityId);
+    if (entity === undefined) {
+      return false;
+    }
+    const dialogueId = entity.references.dialogueId;
+    return dialogueId !== undefined && this.dialogues.has(dialogueId);
+  }
+
+  /** 无异常版本的 talkTo；无对话/未知实体返回 ok=false。 */
+  tryTalkTo(entityId: EntityId | string): IntentResult {
+    return this.runIntent(() => this.talkTo(entityId));
+  }
+
+  /** 无异常版本的 useItem；过期实例等可预期失败返回 ok=false。 */
+  tryUseItem(entityId: EntityId | string, instanceId: string): IntentResult {
+    return this.runIntent(() => this.useItem(entityId, instanceId));
+  }
+
+  /** 无异常版本的 equip。 */
+  tryEquip(entityId: EntityId | string, instanceId: string): IntentResult {
+    return this.runIntent(() => this.equip(entityId, instanceId));
+  }
+
+  /** 无异常版本的 unequip。 */
+  tryUnequip(entityId: EntityId | string, instanceId: string): IntentResult {
+    return this.runIntent(() => this.unequip(entityId, instanceId));
+  }
+
+  /** 无异常版本的 attack；玩家死亡/目标死亡等返回 ok=false。 */
+  tryAttack(attackerId: EntityId | string, targetId: EntityId | string): IntentResult {
+    return this.runIntent(() => this.attack(attackerId, targetId));
+  }
+
+  private runIntent(action: () => void): IntentResult {
+    try {
+      action();
+      return { ok: true };
+    } catch (error) {
+      return {
+        ok: false,
+        message: error instanceof Error ? error.message : String(error),
+      };
+    }
   }
 
   /** 选择当前对话选项；推进后若故事结束则自动关闭对话。 */
@@ -597,6 +712,8 @@ export class GameSession implements GameSessionIntents {
       throw new Error(`已倒下的实体不能使用物品：${entity.id}`);
     }
 
+    // 先全量校验再应用：任一效果不支持时整体拒绝，避免出现
+    // 「第一条 restore 已生效、第二条才抛错」的半生效状态。
     for (const effect of definition.consumable.effects) {
       if (effect.type !== "restore") {
         throw new Error(`未知消耗品效果：${String((effect as { type?: unknown }).type)}`);
@@ -604,6 +721,11 @@ export class GameSession implements GameSessionIntents {
       if (effect.attribute !== "hp") {
         throw new Error(`暂不支持恢复属性：${effect.attribute}`);
       }
+      if (typeof effect.amount !== "number" || !Number.isFinite(effect.amount)) {
+        throw new Error(`消耗品恢复量必须是有限数值：${String(effect.amount)}`);
+      }
+    }
+    for (const effect of definition.consumable.effects) {
       runtime.hp = Math.min(
         this.maxHpOf(entity),
         runtime.hp + Math.max(0, effect.amount),
@@ -1313,6 +1435,13 @@ export class GameSession implements GameSessionIntents {
       throw new Error("快照 nextItemInstanceId 必须是正整数");
     }
 
+    if (!Array.isArray(snapshot.entities)) {
+      throw new Error("快照 entities 必须是数组");
+    }
+    if (!Array.isArray(snapshot.quests)) {
+      throw new Error("快照 quests 必须是数组");
+    }
+
     // 先确定实体集合，再写入：失败时不会留下半恢复状态。
     const seen = new Set<EntityId>();
     for (const entitySnapshot of snapshot.entities) {
@@ -1323,12 +1452,36 @@ export class GameSession implements GameSessionIntents {
         throw new Error(`快照包含未知实体：${entitySnapshot.id}`);
       }
       seen.add(entitySnapshot.id);
+      if (!this.combat.has(entitySnapshot.id)) {
+        throw new Error(`实体缺少运行时状态：${entitySnapshot.id}`);
+      }
       assertFiniteVec3(entitySnapshot.position, `快照实体 ${entitySnapshot.id} 的位置`);
       assertFiniteVec3(entitySnapshot.rotation, `快照实体 ${entitySnapshot.id} 的朝向`);
       assertAttributesRecord(
         entitySnapshot.baseAttributes,
         `快照实体 ${entitySnapshot.id}`,
       );
+      assertStringArray(entitySnapshot.tags, `快照实体 ${entitySnapshot.id} 的 tags`);
+      assertStringArray(
+        entitySnapshot.claimedRewardIds,
+        `快照实体 ${entitySnapshot.id} 的 claimedRewardIds`,
+      );
+      if (!Array.isArray(entitySnapshot.modifiers)) {
+        throw new Error(`快照实体 ${entitySnapshot.id} 的 modifiers 必须是数组`);
+      }
+      entitySnapshot.modifiers.forEach((modifier, index) => {
+        assertModifierShape(
+          modifier,
+          `快照实体 ${entitySnapshot.id} 的修饰器[${index}]`,
+        );
+      });
+      if (
+        typeof entitySnapshot.container !== "object" ||
+        entitySnapshot.container === null ||
+        !Array.isArray(entitySnapshot.container.items)
+      ) {
+        throw new Error(`快照实体 ${entitySnapshot.id} 的背包结构非法`);
+      }
       if (entitySnapshot.movement !== null) {
         assertFiniteVec3(
           entitySnapshot.movement.target,
@@ -1395,6 +1548,10 @@ export class GameSession implements GameSessionIntents {
         choices: [...dialogueSnapshot.choices],
       };
     }
+
+    // 任务也先干跑校验；QuestLog.restore 本身是原子的，但这里提前暴露错误，
+    // 保证写入阶段不会因为任务数据非法而中断。
+    this.questLog.validate(snapshot.quests);
 
     // ---- 写入阶段（到此不再有可预期的验证失败）----
     this.elapsedMs = snapshot.elapsedMs;

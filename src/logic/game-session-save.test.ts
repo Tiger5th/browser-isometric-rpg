@@ -233,6 +233,67 @@ describe("GameSession.restoreSnapshot：存档往返", () => {
     expect(session.snapshot().quests[0].status).toBe("ready_to_turn_in");
   });
 
+  it("损坏的修饰器/标签/奖励账本整体拒绝读档，且不留下半恢复状态", () => {
+    const session = createSession();
+    acceptQuest(session);
+    killSlime(session, "enemy:slime_meadow");
+    session.moveTo(PLAYER_ID, { x: 3, y: 0, z: 0 });
+    session.advance(200);
+    const before = session.snapshot();
+    const playerIndex = before.entities.findIndex(
+      (entity) => entity.identity.type === "player",
+    );
+    expect(playerIndex).toBeGreaterThanOrEqual(0);
+
+    const badValue = structuredClone(before);
+    badValue.entities[playerIndex].modifiers = [
+      {
+        id: "equipment:bad:0",
+        attribute: "moveSpeed",
+        operation: "add",
+        value: "1205",
+        source: { kind: "equipment", id: "item:bad@1" },
+      } as unknown as (typeof badValue.entities)[number]["modifiers"][number],
+    ];
+    expect(() => session.restoreSnapshot(badValue)).toThrow(/value/);
+
+    const badOperation = structuredClone(before);
+    badOperation.entities[playerIndex].modifiers = [
+      {
+        id: "equipment:bad:0",
+        attribute: "moveSpeed",
+        operation: "inject",
+        value: 1,
+        source: { kind: "equipment", id: "item:bad@1" },
+      } as unknown as (typeof badOperation.entities)[number]["modifiers"][number],
+    ];
+    expect(() => session.restoreSnapshot(badOperation)).toThrow(/operation/);
+
+    const badTags = structuredClone(before);
+    badTags.entities[playerIndex].tags = [123 as unknown as string];
+    expect(() => session.restoreSnapshot(badTags)).toThrow(/tags/);
+
+    const badLedger = structuredClone(before);
+    badLedger.entities[playerIndex].claimedRewardIds = [
+      42 as unknown as string,
+    ];
+    expect(() => session.restoreSnapshot(badLedger)).toThrow(/claimedRewardIds/);
+
+    expect(session.snapshot()).toEqual(before);
+  });
+
+  it("任务快照非法时整体拒绝，已有实体/任务状态保持不变（两阶段恢复）", () => {
+    const session = createSession();
+    acceptQuest(session);
+    killSlime(session, "enemy:slime_meadow");
+    const before = session.snapshot();
+
+    const corrupted = structuredClone(before);
+    corrupted.quests[0].objectives[0].current = 99;
+    expect(() => session.restoreSnapshot(corrupted)).toThrow(/进度非法/);
+    expect(session.snapshot()).toEqual(before);
+  });
+
   it("拒绝版本不符、未知实体与区域不符的快照", () => {
     const session = createSession();
     const savepoint = session.snapshot();

@@ -166,4 +166,61 @@ describe("QuestLog 任务状态机", () => {
     expect(() => log.offer("quest:missing")).toThrow(/未知任务/);
     expect(() => log.turnIn("quest:missing")).toThrow(/未知任务/);
   });
+
+  it("restore：active 且目标已满的旧存档归一为可交付", () => {
+    const log = new QuestLog([killQuest()]);
+
+    log.restore([
+      {
+        id: "quest:cull_slimes",
+        title: "清理史莱姆",
+        giverNpcId: "npc:elder_ma",
+        turnInNpcId: "npc:elder_ma",
+        status: "active",
+        objectives: [
+          {
+            id: "objective:kill_slimes",
+            type: "kill",
+            enemyTemplateId: "enemy_template:slime",
+            current: 3,
+            required: 3,
+          },
+        ],
+      },
+    ]);
+
+    expect(log.get("quest:cull_slimes")?.status).toBe("ready_to_turn_in");
+    expect(log.get("quest:cull_slimes")?.objectives[0].current).toBe(3);
+  });
+
+  it("restore：非法快照失败时不会清空已有进度（两阶段恢复）", () => {
+    const log = new QuestLog([killQuest()]);
+    log.offer("quest:cull_slimes");
+    log.recordEnemyKill("enemy_template:slime");
+    expect(log.get("quest:cull_slimes")?.objectives[0].current).toBe(1);
+
+    expect(() =>
+      log.restore([
+        {
+          id: "quest:cull_slimes",
+          title: "清理史莱姆",
+          giverNpcId: "npc:elder_ma",
+          turnInNpcId: "npc:elder_ma",
+          status: "active",
+          objectives: [
+            {
+              id: "objective:kill_slimes",
+              type: "kill",
+              enemyTemplateId: "enemy_template:slime",
+              current: 99,
+              required: 3,
+            },
+          ],
+        },
+      ]),
+    ).toThrow(/进度非法/);
+
+    expect(log.get("quest:cull_slimes")?.status).toBe("active");
+    expect(log.get("quest:cull_slimes")?.objectives[0].current).toBe(1);
+  });
 });

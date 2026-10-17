@@ -52,6 +52,7 @@ import type { Metric } from "../../logic/report";
 import { GameSaveService } from "../../logic/save";
 import {
   DEFAULT_CAMERA_VERTICAL_SPAN,
+  cameraVerticalSpan,
   updateOrthographicFrustum,
 } from "../camera";
 import type { ScenarioContext, ScenarioDefinition } from "../harness";
@@ -74,6 +75,10 @@ import {
   PROPS,
   validateLayout,
 } from "../presentation/green-hollow-layout";
+import {
+  createGreenHollowNavigation,
+  type GreenHollowNavigation,
+} from "../presentation/green-hollow-navigation";
 import { OcclusionOutlineController } from "../presentation/occlusion-controller";
 import {
   DynamicResolutionController,
@@ -88,6 +93,11 @@ import { createWhiteTexture } from "../presentation/textures";
 
 const SCENARIO_NAME = "p1-world";
 const PLAYER_ID = "entity:player";
+/**
+ * 占位 glb 的模型朝向偏移。逻辑层约定 rotation.y=0 朝 +Z（atan2(dx, dz)）；
+ * 资产本身也朝 +Z，因此偏移为 0。若换资产后角色倒着走，只改这个常量。
+ */
+const PLAYER_MODEL_YAW_OFFSET = 0;
 const CAMERA_VERTICAL_SPAN = 30;
 const SAMPLE_DURATION_MS = 4_000;
 /** 07 修正预算：基础 ≤300 + 描边/VFX ≤50。 */
@@ -132,6 +142,9 @@ interface P1WorldState {
   ui: QuestLoopUi;
   saveService: GameSaveService;
   saveAvailable: boolean;
+  navigation: GreenHollowNavigation;
+  /** 点击移动经 navmesh 拆出的剩余路点；空表示没有排队中的路径。 */
+  waypoints: Array<{ x: number; z: number }>;
   observer: Observer<Scene> | null;
   /** draw call 计数在帧结束后才有效，单独用 after-render 观察者采集。 */
   afterRenderObserver: Observer<Scene> | null;
@@ -270,7 +283,7 @@ function applyRenderScale(
     updateOrthographicFrustum(
       camera,
       height > 0 ? engine.getRenderWidth() / height : 1,
-      CAMERA_VERTICAL_SPAN,
+      cameraVerticalSpan(camera, CAMERA_VERTICAL_SPAN),
     );
   }
 }
@@ -435,12 +448,64 @@ function syncVisualToSnapshot(
         entity.position.y,
         entity.position.z,
       );
-      // 程序化角色没有旋转四元数；玩家 glb 由 loader 写入四元数，保持不动。
-      if (entity.identity.type !== "player") {
-        visual.node.rotation.y = entity.rotation.y;
+      // 玩家 glb 与程序化角色都要面向移动方向。glb 根节点可能带
+      // rotationQuaternion（此时 rotation 不生效），先清掉再写 yaw。
+      if (visual.node.rotationQuaternion !== null) {
+        visual.node.rotationQuaternion = null;
       }
+      visual.node.rotation.y =
+        entity.rotation.y +
+        (entity.identity.type === "player" ? PLAYER_MODEL_YAW_OFFSET : 0);
     }
   }
+}
+
+function clearWaypoints(state: P1WorldState): void {
+  state.waypoints.length = 0;
+}
+
+/** 把下一个路点提交给逻辑层；到达后由 beforeRender 继续推进。 */
+function advanceWaypoint(state: P1WorldState): void {
+  const player = playerSnapshot(state.session);
+  if (player === null || !player.combat.alive) {
+    clearWaypoints(state);
+    return;
+  }
+  while (state.waypoints.length > 0) {
+    const next = state.waypoints.shift();
+    if (next === undefined) {
+      return;
+    }
+    if (Math.hypot(next.x - player.position.x, next.z - player.position.z) < 0.15) {
+      continue;
+    }
+    state.session.moveTo(PLAYER_ID, { x: next.x, y: 0, z: next.z });
+    return;
+  }
+}
+
+/**
+ * 点击移动入口：先用 navmesh 求路点，再逐个提交 moveTo。
+ * 逻辑层快照仍是直线推进，但路点足够密/贴边，实际轨迹沿可行走面绕开障碍。
+ */
+function moveAlongNavMesh(
+  state: P1WorldState,
+  target: { x: number; z: number },
+): void {
+  const player = playerSnapshot(state.session);
+  if (player === null || !player.combat.alive) {
+    state.ui.setSaveStatus("角色倒下中，等待重生", "idle");
+    return;
+  }
+  // 新点击总是取消旧路线；即使新目标不可达，也不继续沿旧路径走。
+  clearWaypoints(state);
+  const path = state.navigation.findPath(player.position, target);
+  if (path === null || path.length === 0) {
+    state.ui.setSaveStatus("无法到达该位置", "idle");
+    return;
+  }
+  state.waypoints.push(...path);
+  advanceWaypoint(state);
 }
 
 async function saveToStorage(
@@ -467,6 +532,7 @@ async function loadFromStorage(state: P1WorldState): Promise<boolean> {
       return false;
     }
     state.session.restoreSnapshot(snapshot);
+    clearWaypoints(state);
     const restored = state.session.snapshot();
     state.deadEnemies.clear();
     for (const entity of restored.entities) {
@@ -578,13 +644,23 @@ function installDebugApi(scene: Scene, state: P1WorldState): void {
   window.P1WorldDebug = {
     scenario: SCENARIO_NAME,
     getSnapshot: () => state.session.snapshot(),
-    moveTo: (x, z) => state.session.moveTo(PLAYER_ID, { x, y: 0, z }),
-    talkTo: (npcId) => state.session.talkTo(npcId),
+    moveTo: (x, z) => moveAlongNavMesh(state, { x, z }),
+    talkTo: (npcId) => {
+      const result = state.session.tryTalkTo(npcId);
+      if (!result.ok) {
+        state.ui.setSaveStatus(`无法对话：${result.message ?? "未知原因"}`, "idle");
+      }
+    },
     chooseDialogueOption: (index) => state.session.chooseDialogueOption(index),
-    attackEnemy: (enemyId) => state.session.attack(PLAYER_ID, enemyId),
-    useItem: (instanceId) => state.session.useItem(PLAYER_ID, instanceId),
-    equipItem: (instanceId) => state.session.equip(PLAYER_ID, instanceId),
-    unequipItem: (instanceId) => state.session.unequip(PLAYER_ID, instanceId),
+    attackEnemy: (enemyId) => {
+      const result = state.session.tryAttack(PLAYER_ID, enemyId);
+      if (!result.ok) {
+        state.ui.setSaveStatus(`无法攻击：${result.message ?? "未知原因"}`, "idle");
+      }
+    },
+    useItem: (instanceId) => state.session.tryUseItem(PLAYER_ID, instanceId),
+    equipItem: (instanceId) => state.session.tryEquip(PLAYER_ID, instanceId),
+    unequipItem: (instanceId) => state.session.tryUnequip(PLAYER_ID, instanceId),
     getPlayer: () => playerSnapshot(state.session),
     save: () => saveToStorage(state),
     load: () => loadFromStorage(state),
@@ -710,6 +786,7 @@ export const p1WorldScenario: ScenarioDefinition = {
     const session = new GameSession();
     session.registerDialogue("elder_ma", elderMaCompiled);
     session.loadRegion(CONTENT_BUNDLE, GREEN_HOLLOW_REGION_ID);
+    const navigation = await createGreenHollowNavigation();
 
     const player = await loadPlayerCharacter(
       scene,
@@ -776,6 +853,8 @@ export const p1WorldScenario: ScenarioDefinition = {
       },
       saveService: new GameSaveService(new IndexedDbSaveStorage()),
       saveAvailable: false,
+      navigation,
+      waypoints: [],
       observer: null,
       afterRenderObserver: null,
       detachPointer: () => undefined,
@@ -819,9 +898,9 @@ export const p1WorldScenario: ScenarioDefinition = {
       mount: document.body,
       bundle: CONTENT_BUNDLE,
       onChoose: (index) => session.chooseDialogueOption(index),
-      onUseItem: (instanceId) => session.useItem(PLAYER_ID, instanceId),
-      onEquipItem: (instanceId) => session.equip(PLAYER_ID, instanceId),
-      onUnequipItem: (instanceId) => session.unequip(PLAYER_ID, instanceId),
+      onUseItem: (instanceId) => session.tryUseItem(PLAYER_ID, instanceId),
+      onEquipItem: (instanceId) => session.tryEquip(PLAYER_ID, instanceId),
+      onUnequipItem: (instanceId) => session.tryUnequip(PLAYER_ID, instanceId),
       onDebugKill: killNextEnemy,
       onSave: () => {
         void saveToStorage(state);
@@ -858,19 +937,37 @@ export const p1WorldScenario: ScenarioDefinition = {
           .snapshot()
           .entities.find((entity) => entity.id === pickedId);
         if (picked?.identity.type === "npc") {
-          session.talkTo(pickedId);
+          if (!session.canTalkTo(pickedId)) {
+            state.ui.setSaveStatus(
+              `${picked.identity.displayName} 现在没有可进行的对话`,
+              "idle",
+            );
+            return;
+          }
+          const result = session.tryTalkTo(pickedId);
+          if (!result.ok) {
+            state.ui.setSaveStatus(`无法对话：${result.message ?? "未知原因"}`, "idle");
+          }
           return;
         }
         if (picked?.identity.type === "enemy") {
-          if (picked.combat.alive) {
-            session.attack(PLAYER_ID, pickedId);
+          if (!picked.combat.alive) {
+            return;
+          }
+          const player = playerSnapshot(session);
+          if (player === null || !player.combat.alive) {
+            state.ui.setSaveStatus("角色倒下中，等待重生", "idle");
+            return;
+          }
+          const result = session.tryAttack(PLAYER_ID, pickedId);
+          if (!result.ok) {
+            state.ui.setSaveStatus(`无法攻击：${result.message ?? "未知原因"}`, "idle");
           }
           return;
         }
         if (picked !== undefined) {
-          session.moveTo(PLAYER_ID, {
+          moveAlongNavMesh(state, {
             x: picked.position.x,
-            y: 0,
             z: picked.position.z + 1.5,
           });
         }
@@ -878,7 +975,7 @@ export const p1WorldScenario: ScenarioDefinition = {
       }
       const point = groundPoint(scene);
       if (point !== null) {
-        session.moveTo(PLAYER_ID, { x: point.x, y: 0, z: point.z });
+        moveAlongNavMesh(state, { x: point.x, z: point.z });
       }
     });
     state.detachPointer = () => {
@@ -904,6 +1001,19 @@ export const p1WorldScenario: ScenarioDefinition = {
 
       session.advance(deltaMs);
       const snapshot = session.snapshot();
+      // 路点队列：上一个 moveTo 到达（movement=null）后继续下一个。
+      if (state.waypoints.length > 0) {
+        const playerState = snapshot.entities.find(
+          (entity) => entity.id === PLAYER_ID,
+        );
+        if (
+          playerState === undefined ||
+          !playerState.combat.alive ||
+          playerState.movement === null
+        ) {
+          advanceWaypoint(state);
+        }
+      }
       syncVisualToSnapshot(
         state,
         snapshot,
@@ -973,8 +1083,17 @@ export const p1WorldScenario: ScenarioDefinition = {
     }
     const scene = context.scene;
 
+    // 画质档位决定描边/分级是否开启；measure 的断言必须跟随当前档位，
+    // 否则 ?quality=low 会把「功能按预期关闭」误判成 failed。
+    const preset =
+      state.quality.level === "auto" ? null : QUALITY_PRESETS[state.quality.level];
+    const outlineExpected = preset === null || preset.outline;
+    const gradingExpected = preset === null || preset.grading;
+
     // 1) 遮挡探针：把玩家视觉移到树后一帧，确认新区域的射线-OBB → HighlightLayer 通路。
-    const probe = window.P1WorldDebug?.probeOcclusion(0) ?? null;
+    const probe = outlineExpected
+      ? (window.P1WorldDebug?.probeOcclusion(0) ?? null)
+      : null;
 
     // 2) 预热让动态分辨率收敛（不把首帧 shader 编译/降档过程算进 fpsAverage）。
     await settleFrames(scene, 2_500);
@@ -1147,8 +1266,10 @@ export const p1WorldScenario: ScenarioDefinition = {
         name: "occlusionProbeOutlined",
         value: probe?.outlined ?? 0,
         unit: "meshes",
-        threshold: 1,
-        comparison: "gte",
+        // low 档按设计关闭描边：只报告，不断言。
+        ...(outlineExpected
+          ? { threshold: 1, comparison: "gte" as const }
+          : {}),
       },
       {
         name: "morphTargetCount",
@@ -1188,8 +1309,10 @@ export const p1WorldScenario: ScenarioDefinition = {
         name: "imageProcessingEnabled",
         value: state.pipeline.imageProcessingEnabled ? 1 : 0,
         unit: "boolean",
-        threshold: 1,
-        comparison: "eq",
+        // low 档关闭色彩分级：只报告，不断言。
+        ...(gradingExpected
+          ? { threshold: 1, comparison: "eq" as const }
+          : {}),
       },
       {
         name: "sampledFrames",
@@ -1242,6 +1365,7 @@ export const p1WorldScenario: ScenarioDefinition = {
       material.dispose();
     }
     state.player.dispose();
+    state.navigation.dispose();
     state.environment.dispose();
     state.whiteTexture.dispose();
     state.pipeline.dispose();

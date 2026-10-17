@@ -40,6 +40,13 @@ describe("画质档位", () => {
     expect(pixels).toBeLessThanOrEqual(TARGET_RENDER_PIXELS + 1);
   });
 
+  it("2560×1440@2x 大屏不会因 0.5 下限突破像素预算", () => {
+    const scale = maxScaleForPixels(2560, 1440, 2);
+    expect(scale).toBeCloseTo(0.375, 5);
+    const pixels = 2560 * 2 * scale * 1440 * 2 * scale;
+    expect(pixels).toBeLessThanOrEqual(TARGET_RENDER_PIXELS + 1);
+  });
+
   it("renderScale 换算成 Babylon hardwareScalingLevel", () => {
     expect(renderScaleToHardwareScaling(1, 1)).toBe(1);
     expect(renderScaleToHardwareScaling(1, 2)).toBe(0.5);

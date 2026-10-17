@@ -11,6 +11,8 @@ const TANK_ID = "enemy:tank";
 const SWORD_ID = "item:traveler_sword";
 const HERB_ID = "item:healing_herb";
 const ARMOR_ID = "item:iron_armor";
+const MIXED_ID = "item:mixed_elixir";
+const BOOTS_ID = "item:swift_boots";
 
 /**
  * 最小内容集：一只一击必杀的掉落怪，一只耐打的高攻怪（用来让玩家掉血）。
@@ -56,6 +58,8 @@ function itemsBundle(): ContentBundle {
           { itemId: SWORD_ID, chance: 1, min: 2, max: 2 },
           { itemId: HERB_ID, chance: 1, min: 2, max: 2 },
           { itemId: ARMOR_ID, chance: 1, min: 1, max: 1 },
+          { itemId: MIXED_ID, chance: 1, min: 1, max: 1 },
+          { itemId: BOOTS_ID, chance: 1, min: 1, max: 1 },
         ],
       },
       {
@@ -108,6 +112,30 @@ function itemsBundle(): ContentBundle {
         maxStack: 9,
         consumable: {
           effects: [{ type: "restore", attribute: "hp", amount: 30 }],
+        },
+      },
+      {
+        id: BOOTS_ID,
+        displayName: "疾行靴",
+        kind: "equipment",
+        description: "提高移动速度。",
+        maxStack: 1,
+        equipment: {
+          slot: "accessory",
+          modifiers: [{ attribute: "moveSpeed", operation: "add", value: 5.5 }],
+        },
+      },
+      {
+        id: MIXED_ID,
+        displayName: "混合药水",
+        kind: "consumable",
+        description: "同时恢复生命与法力（法力暂不支持）。",
+        maxStack: 9,
+        consumable: {
+          effects: [
+            { type: "restore", attribute: "hp", amount: 30 },
+            { type: "restore", attribute: "mp", amount: 30 },
+          ],
         },
       },
       {
@@ -196,6 +224,34 @@ describe("GameSession 背包：useItem", () => {
     expect(inventoryOf(session).some((item) => item.templateId === HERB_ID)).toBe(false);
   });
 
+  it("含不支持效果时整体拒绝：不消耗、不产生半生效治疗", () => {
+    const session = createSession();
+    killLooter(session);
+    session.advance(1500);
+    const hpBefore = playerOf(session).combat.hp;
+    expect(hpBefore).toBeLessThan(playerOf(session).combat.maxHp);
+    const mixed = itemOf(session, MIXED_ID);
+
+    expect(() => session.useItem(PLAYER_ID, mixed.instanceId)).toThrow(
+      /暂不支持恢复属性/,
+    );
+
+    expect(playerOf(session).combat.hp).toBe(hpBefore);
+    expect(itemOf(session, MIXED_ID).quantity).toBe(1);
+  });
+
+  it("tryUseItem 对过期/重复点击的实例返回友好失败而不是裸异常", () => {
+    const session = createSession();
+    killLooter(session);
+    const herb = itemOf(session, HERB_ID);
+    session.useItem(PLAYER_ID, herb.instanceId);
+    session.useItem(PLAYER_ID, herb.instanceId);
+
+    const result = session.tryUseItem(PLAYER_ID, herb.instanceId);
+    expect(result.ok).toBe(false);
+    expect(result.message).toMatch(/未知物品实例/);
+  });
+
   it("非消耗品不可使用", () => {
     const session = createSession();
     killLooter(session);
@@ -215,8 +271,20 @@ describe("GameSession 背包：useItem", () => {
   });
 });
 
-
 describe("GameSession 装备：equip / unequip", () => {
+  it("moveTo 使用修饰器后的 moveSpeed，而不是硬编码默认值", () => {
+    const session = createSession();
+    killLooter(session);
+    const boots = itemOf(session, BOOTS_ID);
+    session.equip(PLAYER_ID, boots.instanceId);
+    expect(playerOf(session).attributes.moveSpeed).toBe(11);
+
+    session.moveTo(PLAYER_ID, { x: 100, y: 0, z: 0 });
+    session.advance(1000);
+
+    expect(playerOf(session).position.x).toBeCloseTo(11, 5);
+  });
+
   it("装备武器后攻击属性即时变化，卸下后恢复", () => {
     const session = createSession();
     killLooter(session);
