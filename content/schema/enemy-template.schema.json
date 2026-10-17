@@ -4,26 +4,61 @@
   "title": "敌人模板",
   "type": "object",
   "additionalProperties": false,
-  "required": ["id", "displayName", "aiProfileId", "baseAttributes"],
+  "required": [
+    "id",
+    "displayName",
+    "aiProfileId",
+    "baseAttributes"
+  ],
   "properties": {
-    "id": { "$ref": "urn:content:common#/$defs/enemyTemplateId" },
-    "displayName": { "$ref": "urn:content:common#/$defs/displayName" },
-    "aiProfileId": { "$ref": "urn:content:common#/$defs/aiProfileId" },
-    "baseAttributes": { "$ref": "urn:content:common#/$defs/attributes" },
+    "id": {
+      "$ref": "urn:content:common#/$defs/enemyTemplateId"
+    },
+    "displayName": {
+      "$ref": "urn:content:common#/$defs/displayName"
+    },
+    "aiProfileId": {
+      "$ref": "urn:content:common#/$defs/aiProfileId"
+    },
+    "aiProfile": {
+      "$ref": "urn:content:common#/$defs/aiProfile"
+    },
+    "baseAttributes": {
+      "$ref": "urn:content:common#/$defs/attributes"
+    },
     "drops": {
       "type": "array",
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["itemId", "chance", "min", "max"],
+        "required": [
+          "itemId",
+          "chance",
+          "min",
+          "max"
+        ],
         "properties": {
-          "itemId": { "$ref": "urn:content:common#/$defs/itemId" },
-          "chance": { "type": "number", "minimum": 0, "maximum": 1 },
-          "min": { "type": "integer", "minimum": 0 },
-          "max": { "type": "integer", "minimum": 0 }
+          "itemId": {
+            "$ref": "urn:content:common#/$defs/itemId"
+          },
+          "chance": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "min": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "max": {
+            "type": "integer",
+            "minimum": 0
+          }
         }
       }
     },
-    "tags": { "$ref": "urn:content:common#/$defs/tags" }
+    "tags": {
+      "$ref": "urn:content:common#/$defs/tags"
+    }
   }
 }

@@ -45,6 +45,8 @@ export interface EntityReferences {
   dialogueId?: string;
   questIds: string[];
   aiProfileId?: string;
+  /** 票 36：AI 档案内容（原文），由逻辑层解释成状态机参数。 */
+  aiProfile?: unknown;
 }
 
 export interface Entity {
@@ -73,6 +75,7 @@ export interface CreateEntityInput {
   dialogueId?: string;
   questIds?: string[];
   aiProfileId?: string;
+  aiProfile?: unknown;
 }
 
 export function asEntityId(value: string): EntityId {
@@ -126,6 +129,7 @@ export function createEntity(input: CreateEntityInput): Entity {
       ...(input.dialogueId !== undefined ? { dialogueId: input.dialogueId } : {}),
       questIds: [...(input.questIds ?? [])],
       ...(input.aiProfileId !== undefined ? { aiProfileId: input.aiProfileId } : {}),
+      ...(input.aiProfile !== undefined ? { aiProfile: structuredClone(input.aiProfile) } : {}),
     },
   };
 }

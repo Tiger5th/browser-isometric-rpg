@@ -19,6 +19,7 @@
       "defense": 4,
       "moveSpeed": 5.5,
       "xpToNext": 100
-    }
+    },
+    "startingItems": [{ "itemId": "item:old_coin", "quantity": 25 }]
   }
 }

@@ -20,6 +20,7 @@
     "assets:blender": "blender --background --factory-startup --python tools/pipeline/blender/export_test_asset.py -- assets/character_test_lod0.glb",
     "assets:blender:repro": "bash tools/pipeline/blender/check_reproducibility.sh",
     "assets:lod-report": "python3 tools/pipeline/compare-lod-screenshots.py",
+    "enemies:textures": "node tools/pipeline/build-enemy-textures.mjs",
     "content:lint": "node tools/content/lint.mjs",
     "content:lint:negative": "node tools/content/lint-negative-test.mjs"
   },

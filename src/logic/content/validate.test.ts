@@ -196,6 +196,102 @@ describe("content 数据 L2 校验", () => {
   });
 });
 
+describe("content L2：aiProfile 与出生物品（票 36）", () => {
+  const schemas = loadSchemas();
+  const files = loadContentFiles();
+
+  it("新敌人模板的 aiProfile 正向通过", () => {
+    const result = validateContent(files, schemas, dialogueInputs());
+    expect(result.issues).toEqual([]);
+    expect(result.valid).toBe(true);
+  });
+
+  it("未知 aiProfile.kind 被拒绝", () => {
+    const broken = structuredClone(files);
+    const template = fileOf(broken, "content/enemy-templates/charger.json");
+    (template.data as { aiProfile: Record<string, unknown> }).aiProfile = {
+      kind: "teleport_chaser",
+    };
+
+    const result = validateContent(broken, schemas, dialogueInputs());
+    expect(result.valid).toBe(false);
+    const issue = result.issues.find(
+      (entry) => entry.file === template.file && entry.code === "schema",
+    );
+    expect(issue).toBeDefined();
+    expect(issue!.path).toBe("/aiProfile/kind");
+  });
+
+  it("aiProfile 数值字段类型错与未知字段被拒绝", () => {
+    const broken = structuredClone(files);
+    const template = fileOf(broken, "content/enemy-templates/charger.json");
+    const profile = (template.data as { aiProfile: Record<string, unknown> }).aiProfile;
+    profile.windupMs = "600ms";
+    profile.chargeSpeedNegative = 1;
+
+    const result = validateContent(broken, schemas, dialogueInputs());
+    expect(result.valid).toBe(false);
+    const paths = result.issues
+      .filter((entry) => entry.file === template.file && entry.code === "schema")
+      .map((entry) => entry.path);
+    expect(paths).toContain("/aiProfile/windupMs");
+    expect(paths).toContain("/aiProfile");
+  });
+
+  it("风车组与吐弹组各自的负数数值被拒绝", () => {
+    const broken = structuredClone(files);
+    const charger = fileOf(broken, "content/enemy-templates/charger.json");
+    (charger.data as { aiProfile: Record<string, unknown> }).aiProfile = {
+      kind: "windup-charge",
+      recoveryMs: -1,
+    };
+    const spitter = fileOf(broken, "content/enemy-templates/spitter.json");
+    (spitter.data as { aiProfile: Record<string, unknown> }).aiProfile = {
+      kind: "ranged-kite",
+      preferredRange: 0,
+    };
+
+    const result = validateContent(broken, schemas, dialogueInputs());
+    expect(result.valid).toBe(false);
+    const paths = result.issues
+      .filter((entry) => entry.code === "schema")
+      .map((entry) => `${entry.file}${entry.path}`);
+    expect(paths).toContain("content/enemy-templates/charger.json/aiProfile/recoveryMs");
+    expect(paths).toContain("content/enemy-templates/spitter.json/aiProfile/preferredRange");
+  });
+
+  it("出生物品必须引用已存在的物品、数量为正整数", () => {
+    const broken = structuredClone(files);
+    const region = fileOf(broken, "content/regions/green_hollow.json");
+    const player = (region.data as { player: Record<string, unknown> }).player;
+    player.startingItems = [{ itemId: "item:missing", quantity: 1 }];
+
+    const result = validateContent(broken, schemas, dialogueInputs());
+    expect(result.valid).toBe(false);
+    const issue = result.issues.find(
+      (entry) => entry.file === region.file && entry.path === "/player/startingItems/0/itemId",
+    );
+    expect(issue).toBeDefined();
+    expect(issue!.code).toBe("reference");
+  });
+
+  it("出生物品数量必须是正整数", () => {
+    const broken = structuredClone(files);
+    const region = fileOf(broken, "content/regions/green_hollow.json");
+    (region.data as { player: Record<string, unknown> }).player.startingItems = [
+      { itemId: "item:old_coin", quantity: 0 },
+    ];
+
+    const result = validateContent(broken, schemas, dialogueInputs());
+    expect(result.valid).toBe(false);
+    expect(
+      result.issues.some(
+        (entry) => entry.file === region.file && entry.path === "/player/startingItems/0/quantity",
+      ),
+    ).toBe(true);
+  });
+});
+
 describe("角色色板卡 L2 校验（票 29）", () => {
   const paletteSchemas = loadSchemas();
   const paletteFiles = loadContentFiles();
@@ -312,4 +408,5 @@ describe("角色色板卡 L2 校验（票 29）", () => {
     expect(result.valid).toBe(false);
     expect(result.issues.some((entry) => entry.code === "duplicate-id")).toBe(true);
   });
+
 });

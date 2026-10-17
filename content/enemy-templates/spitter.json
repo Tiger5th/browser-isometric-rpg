@@ -1,0 +1,26 @@
+{
+  "id": "enemy_template:spitter",
+  "displayName": "孢囊蟾",
+  "aiProfileId": "ai:ranged_kite",
+  "aiProfile": {
+    "kind": "ranged-kite",
+    "preferredRange": 8,
+    "retreatRange": 5,
+    "fireIntervalMs": 2000,
+    "projectileSpeed": 16,
+    "projectileDamage": 7,
+    "projectileRadius": 0.35,
+    "projectileLifetimeMs": 2500
+  },
+  "baseAttributes": {
+    "maxHp": 26,
+    "hp": 26,
+    "attack": 4,
+    "defense": 0,
+    "moveSpeed": 4,
+    "xp": 15,
+    "aggroRadius": 12
+  },
+  "drops": [{ "itemId": "item:slime_gel", "chance": 1, "min": 1, "max": 1 }],
+  "tags": ["enemy", "spitter"]
+}
