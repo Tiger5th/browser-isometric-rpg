@@ -1,0 +1,415 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-17T04:59:28.899Z",
+  "blender": {
+    "available": false,
+    "script": "tools/pipeline/blender/export_test_asset.py",
+    "determinism": "not-run",
+    "status": "blocked",
+    "reason": "本机 PATH 中无 blender；导出脚本已就绪。程序化后备生成器两次运行字节一致（见 reports/procedural-determinism.json），但 Blender 导出可重复性仍未实测。",
+    "fallback": "tools/pipeline/build-test-asset.mjs（程序化资产生成器）",
+    "fallbackDeterminism": "passed（reports/procedural-determinism.json）"
+  },
+  "source": {
+    "kind": "procedural-fallback",
+    "path": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a3dc6eec502545a32/assets/character_test_lod0.glb",
+    "totalBytes": 592736,
+    "jsonBytes": 3740,
+    "imageBytes": 127967,
+    "geometryBytes": 461000,
+    "decodedGeometryBytes": null,
+    "extensionsUsed": [],
+    "extensionsRequired": [],
+    "stats": {
+      "triangles": 11488,
+      "vertices": 5756,
+      "meshes": 1,
+      "primitives": 1,
+      "materials": 1,
+      "textures": [
+        {
+          "name": "texture_test_character_base",
+          "mimeType": "image/png",
+          "size": [
+            1024,
+            1024
+          ]
+        }
+      ],
+      "skins": 1,
+      "bones": 7,
+      "animations": [
+        {
+          "name": "anim_test_character_idle",
+          "channels": 2
+        }
+      ],
+      "morphTargets": 1
+    },
+    "sha256": "3f35796ca3d9e7348add5db9e3fbd6b0cf1ffe33b4c3e1ca23334f2c7662082a"
+  },
+  "compression": {
+    "baseline": {
+      "path": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a3dc6eec502545a32/assets/character_test_lod0.glb",
+      "totalBytes": 592736,
+      "jsonBytes": 3740,
+      "imageBytes": 127967,
+      "geometryBytes": 461000,
+      "decodedGeometryBytes": null,
+      "extensionsUsed": [],
+      "extensionsRequired": [],
+      "stats": {
+        "triangles": 11488,
+        "vertices": 5756,
+        "meshes": 1,
+        "primitives": 1,
+        "materials": 1,
+        "textures": [
+          {
+            "name": "texture_test_character_base",
+            "mimeType": "image/png",
+            "size": [
+              1024,
+              1024
+            ]
+          }
+        ],
+        "skins": 1,
+        "bones": 7,
+        "animations": [
+          {
+            "name": "anim_test_character_idle",
+            "channels": 2
+          }
+        ],
+        "morphTargets": 1
+      },
+      "sha256": "3f35796ca3d9e7348add5db9e3fbd6b0cf1ffe33b4c3e1ca23334f2c7662082a"
+    },
+    "meshopt": {
+      "path": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a3dc6eec502545a32/assets/character_test_meshopt.glb",
+      "totalBytes": 200660,
+      "jsonBytes": 5640,
+      "imageBytes": 127967,
+      "geometryBytes": 67001,
+      "decodedGeometryBytes": 253676,
+      "extensionsUsed": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization"
+      ],
+      "extensionsRequired": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization"
+      ],
+      "stats": {
+        "triangles": 11488,
+        "vertices": 5756,
+        "meshes": 1,
+        "primitives": 1,
+        "materials": 1,
+        "textures": [
+          {
+            "name": "texture_test_character_base",
+            "mimeType": "image/png",
+            "size": [
+              1024,
+              1024
+            ]
+          }
+        ],
+        "skins": 1,
+        "bones": 7,
+        "animations": [
+          {
+            "name": "anim_test_character_idle",
+            "channels": 2
+          }
+        ],
+        "morphTargets": 1
+      },
+      "sha256": "831d05f0bf8b0b3f959f30abbff241c3a12d5a23f30c8685c9338bfafb3228e5",
+      "totalRatio": 0.3385,
+      "geometryRatio": 0.1453
+    },
+    "draco": {
+      "path": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a3dc6eec502545a32/assets/character_test_draco.glb",
+      "totalBytes": 298924,
+      "jsonBytes": 3488,
+      "imageBytes": 127967,
+      "geometryBytes": 167438,
+      "decodedGeometryBytes": null,
+      "extensionsUsed": [
+        "KHR_draco_mesh_compression"
+      ],
+      "extensionsRequired": [
+        "KHR_draco_mesh_compression"
+      ],
+      "stats": {
+        "triangles": 11488,
+        "vertices": 5756,
+        "meshes": 1,
+        "primitives": 1,
+        "materials": 1,
+        "textures": [
+          {
+            "name": "texture_test_character_base",
+            "mimeType": "image/png",
+            "size": [
+              1024,
+              1024
+            ]
+          }
+        ],
+        "skins": 1,
+        "bones": 7,
+        "animations": [
+          {
+            "name": "anim_test_character_idle",
+            "channels": 2
+          }
+        ],
+        "morphTargets": 1
+      },
+      "sha256": "b21f92d1b3acdf6994e4efa22d4058e698a03894d86e460c0baa60e7b92aa4a8",
+      "totalRatio": 0.5043,
+      "geometryRatio": 0.3632
+    }
+  },
+  "lod": [
+    {
+      "level": 0,
+      "path": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a3dc6eec502545a32/assets/character_test_lod0.glb",
+      "totalBytes": 592736,
+      "jsonBytes": 3740,
+      "imageBytes": 127967,
+      "geometryBytes": 461000,
+      "decodedGeometryBytes": null,
+      "extensionsUsed": [],
+      "extensionsRequired": [],
+      "stats": {
+        "triangles": 11488,
+        "vertices": 5756,
+        "meshes": 1,
+        "primitives": 1,
+        "materials": 1,
+        "textures": [
+          {
+            "name": "texture_test_character_base",
+            "mimeType": "image/png",
+            "size": [
+              1024,
+              1024
+            ]
+          }
+        ],
+        "skins": 1,
+        "bones": 7,
+        "animations": [
+          {
+            "name": "anim_test_character_idle",
+            "channels": 2
+          }
+        ],
+        "morphTargets": 1
+      },
+      "sha256": "3f35796ca3d9e7348add5db9e3fbd6b0cf1ffe33b4c3e1ca23334f2c7662082a",
+      "triangleRatio": 1
+    },
+    {
+      "path": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a3dc6eec502545a32/assets/character_test_lod1.glb",
+      "level": 1,
+      "ratio": 0.5,
+      "totalBytes": 327740,
+      "jsonBytes": 3112,
+      "imageBytes": 127967,
+      "geometryBytes": 196632,
+      "decodedGeometryBytes": null,
+      "extensionsUsed": [],
+      "extensionsRequired": [],
+      "stats": {
+        "triangles": 5744,
+        "vertices": 2884,
+        "meshes": 1,
+        "primitives": 1,
+        "materials": 1,
+        "textures": [
+          {
+            "name": "texture_test_character_base",
+            "mimeType": "image/png",
+            "size": [
+              1024,
+              1024
+            ]
+          }
+        ],
+        "skins": 1,
+        "bones": 7,
+        "animations": [
+          {
+            "name": "anim_test_character_idle",
+            "channels": 1
+          }
+        ],
+        "morphTargets": 0
+      },
+      "sha256": "90df975629c05cbf3bb25e2d954e445f1fa2c3a663234adf989cc230e0711d0e",
+      "triangleRatio": 0.5
+    },
+    {
+      "path": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a3dc6eec502545a32/assets/character_test_lod2.glb",
+      "level": 2,
+      "ratio": 0.2,
+      "totalBytes": 210500,
+      "jsonBytes": 3104,
+      "imageBytes": 127967,
+      "geometryBytes": 79400,
+      "decodedGeometryBytes": null,
+      "extensionsUsed": [],
+      "extensionsRequired": [],
+      "stats": {
+        "triangles": 2296,
+        "vertices": 1160,
+        "meshes": 1,
+        "primitives": 1,
+        "materials": 1,
+        "textures": [
+          {
+            "name": "texture_test_character_base",
+            "mimeType": "image/png",
+            "size": [
+              1024,
+              1024
+            ]
+          }
+        ],
+        "skins": 1,
+        "bones": 7,
+        "animations": [
+          {
+            "name": "anim_test_character_idle",
+            "channels": 1
+          }
+        ],
+        "morphTargets": 0
+      },
+      "sha256": "4aa725af73e6798efc877fcc01b870b597ad8f676818dd4ba19d80bc7e985c39",
+      "triangleRatio": 0.1999
+    }
+  ],
+  "ktx2": {
+    "status": "ok",
+    "path": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a3dc6eec502545a32/assets/character_test_ktx2.glb",
+    "encoder": "KTX-Software etc1s (ETC1S + mipmaps)",
+    "totalBytes": 524580,
+    "jsonBytes": 3696,
+    "imageBytes": 59853,
+    "geometryBytes": 461000,
+    "decodedGeometryBytes": null,
+    "extensionsUsed": [
+      "KHR_texture_basisu"
+    ],
+    "extensionsRequired": [
+      "KHR_texture_basisu"
+    ],
+    "stats": {
+      "triangles": 11488,
+      "vertices": 5756,
+      "meshes": 1,
+      "primitives": 1,
+      "materials": 1,
+      "textures": [
+        {
+          "name": "texture_test_character_base",
+          "mimeType": "image/ktx2",
+          "size": [
+            1024,
+            1024
+          ]
+        }
+      ],
+      "skins": 1,
+      "bones": 7,
+      "animations": [
+        {
+          "name": "anim_test_character_idle",
+          "channels": 2
+        }
+      ],
+      "morphTargets": 1
+    },
+    "sha256": "b233e00a049040c4cf269111d583b2537be56d1bee0a339166ef272fc06f0bf2"
+  },
+  "textureCompression": {
+    "pngBytes": 127967,
+    "ktx2Bytes": 59853,
+    "byteRatio": 0.4677,
+    "note": "KTX2 ETC1S；运行时按设备能力转码为 ASTC/BC7/ETC2/RGBA"
+  },
+  "decoderPayloadBytes": {
+    "meshopt": 25486,
+    "draco": 763589
+  },
+  "production": {
+    "path": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a3dc6eec502545a32/assets/character_test_meshopt_ktx2.glb",
+    "label": "meshopt + KTX2（推荐生产组合）",
+    "totalBytes": 132620,
+    "jsonBytes": 5712,
+    "imageBytes": 59853,
+    "geometryBytes": 67001,
+    "decodedGeometryBytes": 253676,
+    "extensionsUsed": [
+      "EXT_meshopt_compression",
+      "KHR_mesh_quantization",
+      "KHR_texture_basisu"
+    ],
+    "extensionsRequired": [
+      "EXT_meshopt_compression",
+      "KHR_mesh_quantization",
+      "KHR_texture_basisu"
+    ],
+    "stats": {
+      "triangles": 11488,
+      "vertices": 5756,
+      "meshes": 1,
+      "primitives": 1,
+      "materials": 1,
+      "textures": [
+        {
+          "name": "texture_test_character_base",
+          "mimeType": "image/ktx2",
+          "size": [
+            1024,
+            1024
+          ]
+        }
+      ],
+      "skins": 1,
+      "bones": 7,
+      "animations": [
+        {
+          "name": "anim_test_character_idle",
+          "channels": 2
+        }
+      ],
+      "morphTargets": 1
+    },
+    "sha256": "6c7808b2cfff4075d9769b59ba881efcb1032ce1778e74bac05e76f2c00d8482",
+    "totalRatio": 0.2237
+  },
+  "recommendation": {
+    "geometryCompression": "meshopt",
+    "reason": "meshopt 总体积 33.9%、几何体积 14.5%；draco 分别为 50.4% / 36.3%。meshopt 同时压缩动画与 morph，且解码器体积远小于 Draco。",
+    "textureCompression": "KTX2 ETC1S（贴图字节 46.8%）",
+    "productionVariant": "meshopt + KTX2 组合 132620 B（源 592736 B，22.4%）",
+    "lod": "3 级可接受（近景 LOD1 48.0 dB / LOD2 37.6 dB；远景 LOD2 53.6 dB）",
+    "decodeTiming": "浏览器实测见 reports/p0-asset-pipeline.json 与 reports/asset-pipeline-browser-runs.json",
+    "decodeTimingInterpretation": "热路径两者相当（约 4–5 ms/次，差异在噪声内）；Draco 冷启动需额外加载约 764 KB 解码器。meshopt 的决策依据是体积与解码器足迹，不是解码速度。",
+    "webgpuKtx2": "Chromium WebGPU 实测通过（RGBA8 转码），见 reports/webgpu-ktx2.json",
+    "safari": "未实测；回退方案为 PNG（reports/ktx2-compatibility.json）"
+  },
+  "notes": [
+    "字节拆分：imageBytes 为内嵌贴图 bufferView，geometryBytes 为其余 bufferView（几何/蒙皮/动画/morph）。",
+    "压缩率 = 变体 / 源资产；小于 1 表示更小。",
+    "LOD 生成前移除 morph target 与权重动画，仅比较基础几何的视觉质量。"
+  ]
+}

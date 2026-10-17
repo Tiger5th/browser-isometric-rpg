@@ -7,6 +7,9 @@ import type { Scene } from "@babylonjs/core/scene";
 export const ISOMETRIC_ALPHA = -Math.PI / 4;
 export const ISOMETRIC_BETA = Math.acos(1 / Math.sqrt(3));
 
+/** 默认正交可视高度；寻路等场景可临时调整后在 teardown 恢复。 */
+export const DEFAULT_CAMERA_VERTICAL_SPAN = 20;
+
 export function updateOrthographicFrustum(
   camera: Camera,
   aspectRatio: number,

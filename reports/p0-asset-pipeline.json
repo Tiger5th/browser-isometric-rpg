@@ -1,0 +1,202 @@
+{
+  "schemaVersion": 1,
+  "harness": "P0Harness",
+  "scenario": "asset-pipeline",
+  "status": "passed",
+  "startedAt": "2026-10-17T04:59:08.317Z",
+  "finishedAt": "2026-10-17T04:59:08.708Z",
+  "durationMs": 391,
+  "environment": {
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "renderBackend": "webgl2",
+    "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+    "capturedAt": "2026-10-17T04:59:08.708Z",
+    "devicePixelRatio": 2,
+    "hardwareConcurrency": 10
+  },
+  "metrics": [
+    {
+      "name": "animationCount",
+      "value": 1,
+      "unit": "animations",
+      "threshold": 1,
+      "comparison": "gte",
+      "passed": true
+    },
+    {
+      "name": "baselineBytes",
+      "value": 592736,
+      "unit": "bytes"
+    },
+    {
+      "name": "baselineFetchMs",
+      "value": 3.8,
+      "unit": "ms"
+    },
+    {
+      "name": "baselineLoadFirstMs",
+      "value": 9.9,
+      "unit": "ms"
+    },
+    {
+      "name": "baselineLoadMedianMs",
+      "value": 6.5,
+      "unit": "ms"
+    },
+    {
+      "name": "boneCount",
+      "value": 7,
+      "unit": "bones",
+      "threshold": 7,
+      "comparison": "gte",
+      "passed": true
+    },
+    {
+      "name": "dracoBytes",
+      "value": 298924,
+      "unit": "bytes"
+    },
+    {
+      "name": "dracoGeometryBytes",
+      "value": 167438,
+      "unit": "bytes"
+    },
+    {
+      "name": "dracoLoadFirstMs",
+      "value": 18.9,
+      "unit": "ms"
+    },
+    {
+      "name": "dracoLoadMedianMs",
+      "value": 4.7,
+      "unit": "ms"
+    },
+    {
+      "name": "ktx2Bytes",
+      "value": 524580,
+      "unit": "bytes"
+    },
+    {
+      "name": "ktx2LoadMs",
+      "value": 147.9,
+      "unit": "ms"
+    },
+    {
+      "name": "ktx2LoadOk",
+      "value": 1,
+      "unit": "boolean",
+      "threshold": 1,
+      "comparison": "eq",
+      "passed": true
+    },
+    {
+      "name": "ktx2TextureCount",
+      "value": 1,
+      "unit": "textures"
+    },
+    {
+      "name": "ktx2TextureFormat",
+      "value": 37492,
+      "unit": "format"
+    },
+    {
+      "name": "lod0Triangles",
+      "value": 11488,
+      "unit": "triangles"
+    },
+    {
+      "name": "lod1Triangles",
+      "value": 5744,
+      "unit": "triangles"
+    },
+    {
+      "name": "lod2Triangles",
+      "value": 2296,
+      "unit": "triangles"
+    },
+    {
+      "name": "meshCount",
+      "value": 2,
+      "unit": "meshes"
+    },
+    {
+      "name": "meshoptBytes",
+      "value": 200660,
+      "unit": "bytes"
+    },
+    {
+      "name": "meshoptGeometryBytes",
+      "value": 67001,
+      "unit": "bytes"
+    },
+    {
+      "name": "meshoptLoadFirstMs",
+      "value": 21.9,
+      "unit": "ms"
+    },
+    {
+      "name": "meshoptLoadMedianMs",
+      "value": 5.8,
+      "unit": "ms"
+    },
+    {
+      "name": "morphTargetCount",
+      "value": 1,
+      "unit": "targets",
+      "threshold": 1,
+      "comparison": "gte",
+      "passed": true
+    },
+    {
+      "name": "productionBytes",
+      "value": 132620,
+      "unit": "bytes"
+    },
+    {
+      "name": "productionLoadMs",
+      "value": 10.9,
+      "unit": "ms"
+    },
+    {
+      "name": "productionLoadOk",
+      "value": 1,
+      "unit": "boolean",
+      "threshold": 1,
+      "comparison": "eq",
+      "passed": true
+    },
+    {
+      "name": "productionTextureFormat",
+      "value": 37492,
+      "unit": "format"
+    },
+    {
+      "name": "productionTriangleCount",
+      "value": 11488,
+      "unit": "triangles"
+    },
+    {
+      "name": "skinnedMeshCount",
+      "value": 1,
+      "unit": "meshes",
+      "threshold": 1,
+      "comparison": "gte",
+      "passed": true
+    },
+    {
+      "name": "sourceKindBlender",
+      "value": 0,
+      "unit": "boolean"
+    },
+    {
+      "name": "sourceTriangles",
+      "value": 11488,
+      "unit": "triangles"
+    },
+    {
+      "name": "triangleCount",
+      "value": 11488,
+      "unit": "triangles"
+    }
+  ]
+}

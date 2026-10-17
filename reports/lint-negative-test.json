@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "purpose": "负向测试：确认非流形/边界边规则会拦截 AI 生成的坏拓扑",
+  "fixture": "3 个三角共享同一条边（0-1），期望 non-manifold 错误",
+  "exitExpectation": "failed",
+  "status": "failed",
+  "violations": [
+    {
+      "rule": "non-manifold",
+      "severity": "error",
+      "path": "mesh:prop_nonmanifold_test",
+      "message": "非流形边 1 条（>2 个面共边）"
+    },
+    {
+      "rule": "boundary-edge",
+      "severity": "warning",
+      "path": "mesh:prop_nonmanifold_test",
+      "message": "边界边 6 条（开放网格；角色资产通常应为闭合）"
+    }
+  ],
+  "assertNonManifoldCaught": true,
+  "raw": {
+    "schemaVersion": 1,
+    "generatedAt": "2026-10-17T04:58:04.745Z",
+    "files": [
+      {
+        "file": "/var/folders/20/n666xdzn1r9fr2v9xx4sc3wc0000gn/T/p0-nonmanifold.glb",
+        "status": "failed",
+        "stats": {
+          "triangles": 3,
+          "vertices": 5,
+          "meshes": 1,
+          "materials": 0,
+          "textures": 0,
+          "animations": 0,
+          "skins": 0
+        },
+        "topology": [
+          {
+            "mesh": "prop_nonmanifold_test",
+            "vertexCount": 5,
+            "triangleCount": 3,
+            "nonManifoldEdges": 1,
+            "boundaryEdges": 6,
+            "degenerateTriangles": 0,
+            "looseVertices": 0
+          }
+        ],
+        "violations": [
+          {
+            "rule": "non-manifold",
+            "severity": "error",
+            "path": "mesh:prop_nonmanifold_test",
+            "message": "非流形边 1 条（>2 个面共边）"
+          },
+          {
+            "rule": "boundary-edge",
+            "severity": "warning",
+            "path": "mesh:prop_nonmanifold_test",
+            "message": "边界边 6 条（开放网格；角色资产通常应为闭合）"
+          }
+        ],
+        "errorCount": 1,
+        "warningCount": 1
+      }
+    ],
+    "summary": {
+      "files": 1,
+      "passed": 0,
+      "failed": 1,
+      "errors": 1,
+      "warnings": 1
+    }
+  }
+}
