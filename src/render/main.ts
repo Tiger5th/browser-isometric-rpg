@@ -58,6 +58,15 @@ function resolveRenderPath(): RenderPath {
   return requested === "webgpu" ? "webgpu" : "webgl2";
 }
 
+/**
+ * 正式场景默认不挂 P0Harness DOM（票 27，user story 36）：
+ * 只有 `?harness=1` 时才把调试面板插入页面。`window.P0Harness*` 调试 API
+ * 不受影响——ego-browser 冒烟与 L5 采样仍走 API 通道。
+ */
+function harnessPanelEnabled(): boolean {
+  return new URLSearchParams(window.location.search).get("harness") === "1";
+}
+
 async function createEngine(canvas: HTMLCanvasElement, renderPath: RenderPath): Promise<AbstractEngine> {
   if (renderPath === "webgpu") {
     if (!("gpu" in navigator)) {
@@ -86,28 +95,50 @@ function nextFrame(): Promise<void> {
 
 async function bootstrap(): Promise<void> {
   const canvas = requireElement<HTMLCanvasElement>("p0-canvas");
-  const scenarioSelect = requireElement<HTMLSelectElement>("scenario-select");
-  const backendSelect = requireElement<HTMLSelectElement>("backend-select");
-  const runButton = requireElement<HTMLButtonElement>("run-scenario");
-  const downloadButton = requireElement<HTMLButtonElement>("download-report");
-  const statusLabel = requireElement<HTMLSpanElement>("harness-status");
-  const reportOutput = requireElement<HTMLPreElement>("report-output");
+  const harnessPanel = document.getElementById("harness-panel");
+  const harnessEnabled = harnessPanelEnabled();
+  // 面板默认隐藏：正式游玩入口画面干净。?harness=1 时才显示并绑定控件。
+  if (harnessPanel !== null) {
+    harnessPanel.style.display = harnessEnabled ? "flex" : "none";
+  }
+  const scenarioSelect = harnessEnabled
+    ? requireElement<HTMLSelectElement>("scenario-select")
+    : null;
+  const backendSelect = harnessEnabled
+    ? requireElement<HTMLSelectElement>("backend-select")
+    : null;
+  const runButton = harnessEnabled
+    ? requireElement<HTMLButtonElement>("run-scenario")
+    : null;
+  const downloadButton = harnessEnabled
+    ? requireElement<HTMLButtonElement>("download-report")
+    : null;
+  const statusLabel = harnessEnabled
+    ? requireElement<HTMLSpanElement>("harness-status")
+    : null;
+  const reportOutput = harnessEnabled
+    ? requireElement<HTMLPreElement>("report-output")
+    : null;
 
   const renderPath = resolveRenderPath();
-  backendSelect.value = renderPath;
-  backendSelect.addEventListener("change", () => {
-    const url = new URL(window.location.href);
-    url.searchParams.set("backend", backendSelect.value);
-    window.location.assign(url.toString());
-  });
+  if (backendSelect !== null) {
+    backendSelect.value = renderPath;
+    backendSelect.addEventListener("change", () => {
+      const url = new URL(window.location.href);
+      url.searchParams.set("backend", backendSelect.value);
+      window.location.assign(url.toString());
+    });
+  }
 
   // 页面重载期间保持当前选中的 scenario。
   const requestedScenario = new URLSearchParams(window.location.search).get("scenario");
-  scenarioSelect.addEventListener("change", () => {
-    const url = new URL(window.location.href);
-    url.searchParams.set("scenario", scenarioSelect.value);
-    window.history.replaceState(null, "", url.toString());
-  });
+  if (scenarioSelect !== null) {
+    scenarioSelect.addEventListener("change", () => {
+      const url = new URL(window.location.href);
+      url.searchParams.set("scenario", scenarioSelect.value);
+      window.history.replaceState(null, "", url.toString());
+    });
+  }
 
   const engine = await createEngine(canvas, renderPath);
 
@@ -144,16 +175,24 @@ async function bootstrap(): Promise<void> {
 
   const showReport = (report: MeasurementReport): void => {
     lastReport = report;
-    statusLabel.textContent = `${report.scenario} · ${report.environment.renderBackend} · ${report.status} · ${report.durationMs} ms`;
-    statusLabel.dataset.status = report.status;
-    reportOutput.textContent = harness.serialize(report);
-    downloadButton.disabled = false;
+    if (statusLabel !== null) {
+      statusLabel.textContent = `${report.scenario} · ${report.environment.renderBackend} · ${report.status} · ${report.durationMs} ms`;
+      statusLabel.dataset.status = report.status;
+    }
+    if (reportOutput !== null) {
+      reportOutput.textContent = harness.serialize(report);
+    }
+    if (downloadButton !== null) {
+      downloadButton.disabled = false;
+    }
     window.P0HarnessLastReport = report;
     window.dispatchEvent(new CustomEvent("p0:report", { detail: report }));
   };
 
   const runScenario = async (name: string): Promise<MeasurementReport> => {
-    statusLabel.textContent = `${name} · 运行中…`;
+    if (statusLabel !== null) {
+      statusLabel.textContent = `${name} · 运行中…`;
+    }
     window.P0HarnessRunningScenario = name;
     try {
       const report = await harness.runScenario(name);
@@ -164,38 +203,52 @@ async function bootstrap(): Promise<void> {
     }
   };
 
-  for (const scenario of harness.listScenarios()) {
-    const option = document.createElement("option");
-    option.value = scenario.name;
-    option.textContent = scenario.name;
-    option.title = scenario.description;
-    scenarioSelect.append(option);
-  }
-  if (requestedScenario && harness.listScenarios().some((s) => s.name === requestedScenario)) {
-    scenarioSelect.value = requestedScenario;
-  }
-
-  runButton.addEventListener("click", () => {
-    void runScenario(scenarioSelect.value).catch((error: unknown) => {
-      statusLabel.textContent = `失败：${String(error)}`;
-      statusLabel.dataset.status = "failed";
-      reportOutput.textContent = String(error);
-    });
-  });
-
-  downloadButton.addEventListener("click", () => {
-    if (!lastReport) {
-      return;
+  // 面板控件只在 ?harness=1 时存在/绑定。
+  if (scenarioSelect !== null) {
+    for (const scenario of harness.listScenarios()) {
+      const option = document.createElement("option");
+      option.value = scenario.name;
+      option.textContent = scenario.name;
+      option.title = scenario.description;
+      scenarioSelect.append(option);
     }
-    const json = serializeMeasurementReport(lastReport);
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `p0-${lastReport.scenario}-${lastReport.environment.renderBackend}-${lastReport.finishedAt.replace(/[:.]/g, "-")}.json`;
-    anchor.click();
-    URL.revokeObjectURL(url);
-  });
+    if (
+      requestedScenario &&
+      harness.listScenarios().some((s) => s.name === requestedScenario)
+    ) {
+      scenarioSelect.value = requestedScenario;
+    }
+  }
+
+  if (runButton !== null && scenarioSelect !== null) {
+    runButton.addEventListener("click", () => {
+      void runScenario(scenarioSelect.value).catch((error: unknown) => {
+        if (statusLabel !== null) {
+          statusLabel.textContent = `失败：${String(error)}`;
+          statusLabel.dataset.status = "failed";
+        }
+        if (reportOutput !== null) {
+          reportOutput.textContent = String(error);
+        }
+      });
+    });
+  }
+
+  if (downloadButton !== null) {
+    downloadButton.addEventListener("click", () => {
+      if (!lastReport) {
+        return;
+      }
+      const json = serializeMeasurementReport(lastReport);
+      const blob = new Blob([json], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `p0-${lastReport.scenario}-${lastReport.environment.renderBackend}-${lastReport.finishedAt.replace(/[:.]/g, "-")}.json`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    });
+  }
 
   window.P0Harness = {
     listScenarios: () => harness.listScenarios(),
@@ -225,9 +278,13 @@ async function bootstrap(): Promise<void> {
     }
   } catch (error) {
     window.P0HarnessError = String(error);
-    statusLabel.textContent = `Harness 启动失败：${String(error)}`;
-    statusLabel.dataset.status = "failed";
-    reportOutput.textContent = String(error);
+    if (statusLabel !== null) {
+      statusLabel.textContent = `Harness 启动失败：${String(error)}`;
+      statusLabel.dataset.status = "failed";
+    }
+    if (reportOutput !== null) {
+      reportOutput.textContent = String(error);
+    }
     throw error;
   }
 

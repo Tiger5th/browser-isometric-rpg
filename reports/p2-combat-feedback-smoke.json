@@ -1,0 +1,137 @@
+{
+  "steps": [
+    {
+      "label": "harness-visible-with-flag",
+      "exists": true,
+      "display": "flex",
+      "visible": true
+    },
+    {
+      "label": "audio-unlock",
+      "unlocked": true
+    },
+    {
+      "label": "initial",
+      "enemyId": "enemy:slime_blue",
+      "enemyHp": 32,
+      "enemyPos": {
+        "x": 10.056779834498116,
+        "z": -5.944288336138379
+      },
+      "playerPos": {
+        "x": 1.9163901784796407,
+        "z": -0.09908475331670064
+      }
+    },
+    {
+      "label": "approach",
+      "distance": 1.2664808671379644
+    },
+    {
+      "label": "heavy-intent",
+      "result": {
+        "ok": true
+      },
+      "player": {
+        "heavyCooldownMs": 8000,
+        "attackCooldownMs": 1000,
+        "targetId": "enemy:slime_blue"
+      },
+      "feedback": {
+        "activeNumbers": 2,
+        "activeBars": 0,
+        "activeWindups": 2,
+        "hitStopRemainingMs": 0,
+        "shakeRemainingMs": 0,
+        "flashOpacity": 0.487308,
+        "selectedTargetId": "enemy:slime_blue"
+      }
+    },
+    {
+      "label": "windup",
+      "activeNumbers": 3,
+      "activeBars": 0,
+      "activeWindups": 1,
+      "hitStopRemainingMs": 0,
+      "shakeRemainingMs": 52.40000009536743,
+      "flashOpacity": 0.74,
+      "selectedTargetId": "enemy:slime_blue"
+    },
+    {
+      "label": "after-heavy",
+      "enemyHp": 4,
+      "playerHeavyCooldownMs": 6956.600000143051,
+      "feedback": {
+        "activeNumbers": 4,
+        "activeBars": 1,
+        "activeWindups": 1,
+        "hitStopRemainingMs": 0,
+        "shakeRemainingMs": 36.60000014305115,
+        "flashOpacity": 0.164615,
+        "selectedTargetId": "enemy:slime_blue"
+      },
+      "dom": {
+        "numbers": 4,
+        "heavyNumbers": 1,
+        "bars": 1,
+        "rings": 1,
+        "heavyButton": {
+          "text": "重击 7.1s",
+          "ready": "false",
+          "cooldownMs": "7084"
+        }
+      }
+    },
+    {
+      "label": "light-attack-feedback",
+      "feedback": {
+        "activeNumbers": 3,
+        "activeBars": 0,
+        "activeWindups": 0,
+        "hitStopRemainingMs": 0,
+        "shakeRemainingMs": 0,
+        "flashOpacity": 0.486923,
+        "selectedTargetId": "enemy:slime_blue"
+      },
+      "lightNumbers": 0,
+      "incomingNumbers": 3
+    },
+    {
+      "label": "walk-a-interrupts-attack",
+      "targetId": null,
+      "movement": true
+    },
+    {
+      "label": "save-load-heavy-cooldown",
+      "saved": {
+        "version": 3,
+        "elapsedMs": 44925.300000190735
+      },
+      "loaded": true,
+      "beforeCooldown": 5615,
+      "afterCooldown": 5615,
+      "same": true
+    },
+    {
+      "label": "health-bar-fades-after-5s",
+      "bars": 0,
+      "rings": 0,
+      "feedback": {
+        "activeNumbers": 0,
+        "activeBars": 0,
+        "activeWindups": 0,
+        "hitStopRemainingMs": 0,
+        "shakeRemainingMs": 0,
+        "flashOpacity": 0,
+        "selectedTargetId": "enemy:slime_blue"
+      }
+    },
+    {
+      "label": "harness-hidden-by-default",
+      "exists": true,
+      "display": "none",
+      "visible": false
+    }
+  ],
+  "errors": []
+}

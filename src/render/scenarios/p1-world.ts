@@ -17,6 +17,7 @@ import { SceneInstrumentation } from "@babylonjs/core/Instrumentation/sceneInstr
 import { HighlightLayer } from "@babylonjs/core/Layers/highlightLayer";
 import { ColorCurves } from "@babylonjs/core/Materials/colorCurves";
 import type { Material } from "@babylonjs/core/Materials/material";
+import { ShaderMaterial } from "@babylonjs/core/Materials/shaderMaterial";
 import type { BaseTexture } from "@babylonjs/core/Materials/Textures/baseTexture";
 import { ImageProcessingConfiguration } from "@babylonjs/core/Materials/imageProcessingConfiguration";
 import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
@@ -46,6 +47,7 @@ import {
   GameSession,
   type EntitySnapshot,
   type GameSessionSnapshot,
+  type IntentResult,
 } from "../../logic/game-session";
 import { summarizeFrameTimes } from "../../logic/perf";
 import type { Metric } from "../../logic/report";
@@ -89,6 +91,11 @@ import {
   resolvePresetRenderScale,
   type QualityLevel,
 } from "../presentation/quality";
+import {
+  createCombatFeedbackLayer,
+  type CombatFeedbackLayer,
+} from "../presentation/combat-feedback";
+import { CombatAudio } from "../presentation/combat-audio";
 import { createWhiteTexture } from "../presentation/textures";
 
 const SCENARIO_NAME = "p1-world";
@@ -125,6 +132,8 @@ interface EntityVisual {
   mesh: AbstractMesh;
   targetY: number;
   procedural: ProceduralCharacter | null;
+  /** 受击闪白要还原的原始 tint（敌人/NPC 才有）。 */
+  baseTint: Color3 | null;
 }
 
 interface P1WorldState {
@@ -170,6 +179,18 @@ interface P1WorldState {
   }>;
   probeHoldUntil: number;
   previousHardwareScaling: number;
+  /** 票 27：战斗反馈层（飘字/血条/顿帧/震屏/闪红），只消费订阅事件。 */
+  feedback: CombatFeedbackLayer;
+  /** 票 27：事件驱动的 CC0 音效；首次交互后解锁。 */
+  audio: CombatAudio;
+  /** 票 27：当前选中目标（目标圈常显的来源）。 */
+  selectedEnemyId: string | null;
+  /** 票 27：正在播放消散动画的敌人（id → 开始时刻）。 */
+  dyingEnemies: Map<string, number>;
+  /** 票 27：受击抖动（id → 结束时刻 + 方向）。 */
+  hitReacts: Map<string, { until: number; dirX: number; dirZ: number }>;
+  /** 票 27：选中目标并同步反馈层的目标圈常显。 */
+  selectEnemy: (enemyId: string | null) => void;
 }
 
 /** ego-browser 验证入口：只经 snapshot 读取、只经意图写入。 */
@@ -189,6 +210,21 @@ export interface P1WorldDebugApi {
   clearSave(): Promise<void>;
   hasSave(): Promise<boolean>;
   getMeshPosition(entityId: string): { x: number; y: number; z: number } | null;
+  /** 票 27：重击意图（1.5 倍伤害、8 秒冷却）。 */
+  heavyAttackEnemy(enemyId: string): IntentResult;
+  /** 票 27：反馈层状态（飘字/血条/顿帧/震屏/闪红）。 */
+  getFeedback(): {
+    activeNumbers: number;
+    activeBars: number;
+    hitStopRemainingMs: number;
+    shakeRemainingMs: number;
+    flashOpacity: number;
+    selectedTargetId: string | null;
+  };
+  /** 票 27：当前选中目标（目标圈常显的来源）。 */
+  setSelectedTarget(enemyId: string | null): void;
+  /** 票 27：音效是否已解锁（首次交互后为 true）。 */
+  isAudioUnlocked(): boolean;
   /** 画质档位：运行时切换，返回最终 renderScale。 */
   setQuality(level: QualityLevel): number;
   getQuality(): {
@@ -399,6 +435,7 @@ function createEntityVisual(
       mesh: procedural.mesh,
       targetY: 0.55,
       procedural,
+      baseTint: Color3.FromHexString(tint),
     };
   } else {
     const tint = entity.identity.displayName.includes("蓝") ? "#60a5fa" : "#86efac";
@@ -416,6 +453,7 @@ function createEntityVisual(
       mesh: procedural.mesh,
       targetY: 0.45,
       procedural,
+      baseTint: Color3.FromHexString(tint),
     };
   }
 
@@ -434,10 +472,14 @@ function syncVisualToSnapshot(
     }
     if (
       entity.identity.type === "enemy" &&
-      (!entity.combat.alive || state.deadEnemies.has(entity.id))
+      (!entity.combat.alive || state.deadEnemies.has(entity.id)) &&
+      !state.dyingEnemies.has(entity.id)
     ) {
       visual.node.setEnabled(false);
       continue;
+    }
+    if (state.dyingEnemies.has(entity.id)) {
+      continue; // 消散动画接管位置/缩放。
     }
     visual.node.setEnabled(true);
     if (entity.identity.type === "enemy") {
@@ -635,9 +677,37 @@ function settleFrames(scene: Scene, durationMs: number): Promise<void> {
 
 function installDebugApi(scene: Scene, state: P1WorldState): void {
   state.session.subscribe((event) => {
-    if (event.type === "enemy-killed" && !state.deadEnemies.has(event.enemyId)) {
-      state.deadEnemies.add(event.enemyId);
-      state.visuals.get(event.enemyId)?.node.setEnabled(false);
+    if (event.type === "enemy-killed") {
+      if (!state.deadEnemies.has(event.enemyId)) {
+        // 消散动画：300ms 缩到 0 并微微上浮，结束后再彻底隐藏。
+        state.dyingEnemies.set(event.enemyId, performance.now());
+      }
+      return;
+    }
+    if (event.type === "damage-dealt" && event.targetId !== PLAYER_ID) {
+      const visual = state.visuals.get(event.targetId);
+      if (visual === undefined || visual.baseTint === null) {
+        return;
+      }
+      // 受击闪白：临时把 tint 拉到接近白色，160ms 后还原。
+      const material = visual.procedural?.material;
+      if (material !== undefined && material instanceof ShaderMaterial) {
+        const toon = material;
+        toon.setColor3("tintColor", Color3.White());
+        window.setTimeout(() => {
+          toon.setColor3("tintColor", visual.baseTint ?? Color3.White());
+        }, 110);
+      }
+      // 轻微击退抖动：沿「攻击者 → 目标」方向偏移，160ms 内衰减。
+      const attacker = state.visuals.get(event.attackerId);
+      const dx = visual.node.position.x - (attacker?.node.position.x ?? visual.node.position.x);
+      const dz = visual.node.position.z - (attacker?.node.position.z ?? visual.node.position.z);
+      const length = Math.hypot(dx, dz) || 1;
+      state.hitReacts.set(event.targetId, {
+        until: performance.now() + 160,
+        dirX: dx / length,
+        dirZ: dz / length,
+      });
     }
   });
 
@@ -658,6 +728,20 @@ function installDebugApi(scene: Scene, state: P1WorldState): void {
         state.ui.setSaveStatus(`无法攻击：${result.message ?? "未知原因"}`, "idle");
       }
     },
+    heavyAttackEnemy: (enemyId) => {
+      // 前摇音效由 attack-windup-started 事件驱动（反馈层统一消费）。
+      const result = state.session.tryHeavyAttack(PLAYER_ID, enemyId);
+      if (!result.ok) {
+        state.ui.setSaveStatus(`无法重击：${result.message ?? "未知原因"}`, "idle");
+      }
+      return result;
+    },
+    getFeedback: () => ({
+      ...state.feedback.debugState(),
+      selectedTargetId: state.selectedEnemyId,
+    }),
+    setSelectedTarget: (enemyId) => state.selectEnemy(enemyId),
+    isAudioUnlocked: () => state.audio.isUnlocked,
     useItem: (instanceId) => state.session.tryUseItem(PLAYER_ID, instanceId),
     equipItem: (instanceId) => state.session.tryEquip(PLAYER_ID, instanceId),
     unequipItem: (instanceId) => state.session.tryUnequip(PLAYER_ID, instanceId),
@@ -805,6 +889,7 @@ export const p1WorldScenario: ScenarioDefinition = {
       mesh: player.meshes[0],
       targetY: 0.55,
       procedural: null,
+      baseTint: null,
     });
 
     const initialSnapshot = session.snapshot();
@@ -875,8 +960,29 @@ export const p1WorldScenario: ScenarioDefinition = {
       occlusionTargets: [],
       probeHoldUntil: 0,
       previousHardwareScaling: engine.getHardwareScalingLevel(),
+      feedback: null as unknown as CombatFeedbackLayer,
+      audio: new CombatAudio(),
+      selectedEnemyId: null,
+      selectEnemy: () => undefined,
+      dyingEnemies: new Map(),
+      hitReacts: new Map(),
     };
     states.set(context, state);
+
+    // 票 27：反馈层与音效。音效预加载失败不阻断场景（视觉反馈仍可用）。
+    state.audio = new CombatAudio();
+    state.feedback = createCombatFeedbackLayer(session, {
+      mount: document.body,
+      audio: state.audio,
+      resolveItemName: (itemId) =>
+        CONTENT_BUNDLE.items.find((item) => item.id === itemId)?.displayName ?? itemId,
+    });
+    void state.audio.preloadAll();
+    // 选中目标变化时同步到反馈层（目标圈常显）。
+    state.selectEnemy = (enemyId: string | null): void => {
+      state.selectedEnemyId = enemyId;
+      state.feedback.setSelected(enemyId);
+    };
 
     syncVisualToSnapshot(state, initialSnapshot);
 
@@ -894,6 +1000,30 @@ export const p1WorldScenario: ScenarioDefinition = {
       }
     };
 
+    /** 重击按钮：对当前选中目标（或最近的活敌人）发起重击意图。 */
+    const heavyAttack = (): IntentResult => {
+      const entities = state.session.snapshot().entities;
+      const targetId =
+        state.selectedEnemyId ??
+        entities.find(
+          (entity) =>
+            entity.identity.type === "enemy" &&
+            entity.combat.alive &&
+            !state.deadEnemies.has(entity.id),
+        )?.id;
+      if (targetId === undefined) {
+        state.ui.setSaveStatus("周围没有可攻击的敌人", "idle");
+        return { ok: false, message: "没有可攻击的敌人" };
+      }
+      const result = state.session.tryHeavyAttack(PLAYER_ID, targetId);
+      if (result.ok) {
+        state.ui.setSaveStatus(`重击 ${targetId}`, "ok");
+      } else {
+        state.ui.setSaveStatus(`无法重击：${result.message ?? "未知原因"}`, "idle");
+      }
+      return result;
+    };
+
     state.ui = createQuestLoopUi({
       mount: document.body,
       bundle: CONTENT_BUNDLE,
@@ -902,6 +1032,7 @@ export const p1WorldScenario: ScenarioDefinition = {
       onEquipItem: (instanceId) => session.tryEquip(PLAYER_ID, instanceId),
       onUnequipItem: (instanceId) => session.tryUnequip(PLAYER_ID, instanceId),
       onDebugKill: killNextEnemy,
+      onHeavyAttack: () => heavyAttack(),
       onSave: () => {
         void saveToStorage(state);
       },
@@ -924,6 +1055,10 @@ export const p1WorldScenario: ScenarioDefinition = {
     const pointerObserver = scene.onPointerObservable.add((pointerInfo) => {
       if (pointerInfo.type !== PointerEventTypes.POINTERDOWN) {
         return;
+      }
+      // 浏览器自动播放策略：首次用户交互后才允许 AudioContext 发声。
+      if (!state.audio.isUnlocked) {
+        void state.audio.unlock();
       }
       if (session.snapshot().dialogue !== null) {
         return;
@@ -952,6 +1087,7 @@ export const p1WorldScenario: ScenarioDefinition = {
         }
         if (picked?.identity.type === "enemy") {
           if (!picked.combat.alive) {
+            state.selectEnemy(null);
             return;
           }
           const player = playerSnapshot(session);
@@ -959,12 +1095,16 @@ export const p1WorldScenario: ScenarioDefinition = {
             state.ui.setSaveStatus("角色倒下中，等待重生", "idle");
             return;
           }
+          // 选中 = 目标圈常显；普攻是默认意图（重击走 HUD 按钮）。
+          state.selectEnemy(pickedId);
           const result = session.tryAttack(PLAYER_ID, pickedId);
           if (!result.ok) {
             state.ui.setSaveStatus(`无法攻击：${result.message ?? "未知原因"}`, "idle");
           }
           return;
         }
+        // 点到地面/其它实体：取消目标圈（走 A 由 moveTo 打断攻击意图）。
+        state.selectEnemy(null);
         if (picked !== undefined) {
           moveAlongNavMesh(state, {
             x: picked.position.x,
@@ -990,6 +1130,11 @@ export const p1WorldScenario: ScenarioDefinition = {
     }));
     state.occlusionTargets = targets;
 
+    // 票 27：把实体视觉注册为反馈层的投影锚点（只读位置，不写回）。
+    for (const [id, visual] of visuals) {
+      state.feedback.trackEntity(id, visual.node, visual.targetY + 0.35);
+    }
+
     let lastFrameAt = performance.now();
     let lastUiUpdateAt = 0;
     let previousX = player.rootNode.position.x;
@@ -999,7 +1144,9 @@ export const p1WorldScenario: ScenarioDefinition = {
       const deltaMs = Math.min(Math.max(now - lastFrameAt, 0), 100);
       lastFrameAt = now;
 
-      session.advance(deltaMs);
+      // 反馈层先消费：顿帧会削减本帧实际推进给逻辑层的时间。
+      const effectiveDelta = state.feedback.update(scene, deltaMs, now);
+      session.advance(effectiveDelta);
       const snapshot = session.snapshot();
       // 路点队列：上一个 moveTo 到达（movement=null）后继续下一个。
       if (state.waypoints.length > 0) {
@@ -1019,6 +1166,33 @@ export const p1WorldScenario: ScenarioDefinition = {
         snapshot,
         now < state.probeHoldUntil ? PLAYER_ID : null,
       );
+
+      // 票 27：受击抖动（衰减位移）与击杀消散（缩小上浮）。
+      for (const [entityId, react] of state.hitReacts) {
+        const visual = state.visuals.get(entityId);
+        if (visual === undefined || now >= react.until) {
+          state.hitReacts.delete(entityId);
+          continue;
+        }
+        const remaining = (react.until - now) / 160;
+        const offset = 0.16 * remaining;
+        visual.node.position.x += react.dirX * offset;
+        visual.node.position.z += react.dirZ * offset;
+      }
+      for (const [entityId, startedAt] of state.dyingEnemies) {
+        const visual = state.visuals.get(entityId);
+        const progress = Math.min(1, (now - startedAt) / 300);
+        if (visual !== undefined) {
+          const scale = Math.max(0, 1 - progress);
+          visual.node.scaling.set(scale, scale, scale);
+          visual.node.position.y += progress * 0.35;
+        }
+        if (progress >= 1) {
+          visual?.node.setEnabled(false);
+          state.dyingEnemies.delete(entityId);
+          state.deadEnemies.add(entityId);
+        }
+      }
 
       const dx = player.rootNode.position.x - previousX;
       const dz = player.rootNode.position.z - previousZ;
@@ -1354,6 +1528,9 @@ export const p1WorldScenario: ScenarioDefinition = {
       context.scene.onAfterRenderObservable.remove(state.afterRenderObserver);
     }
     state.ui.dispose();
+
+    state.feedback.dispose();
+    state.audio.dispose();
 
     state.occlusion.dispose();
     state.layer.dispose();
