@@ -2,6 +2,7 @@ node_modules/
 dist/
 coverage/
 .DS_Store
+.claude/
 
 # 运行时解码器由 tools/pipeline/vendor-decoders.mjs 本地化，不入库
 public/vendor/
