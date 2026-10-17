@@ -1,0 +1,187 @@
+{
+  "schemaVersion": 1,
+  "ticket": 17,
+  "title": "二次元链路验证（VRoid → glTF → toon 渲染）",
+  "generatedAt": "2026-10-17T05:20:00.000Z",
+  "environmentProbe": {
+    "blender": {
+      "available": false,
+      "detail": "which blender 无输出；15 号票已确认未安装"
+    },
+    "vroidStudio": {
+      "available": false,
+      "detail": "/Applications 下未找到 VRoid Studio；桌面应用无法无头自动化捏人"
+    },
+    "mixamo": {
+      "loggedIn": false,
+      "detail": "ego-browser 打开 https://www.mixamo.com/ 显示 Log in / Sign up，无 Adobe 登录态"
+    }
+  },
+  "degradation": {
+    "route": "A（Blender 不可用）",
+    "character": "程序化卡通占位角色（降级）",
+    "animation": "GLB 内嵌程序化 walk / run 骨骼动画（模拟 Mixamo 烘焙结果）",
+    "vrmConversion": "自研 GLB 块级 VRM 扩展剥离工具，已通过伪造 VRM 扩展的自测",
+    "realVroidChain": "blocked（需用户手做，见 userActions）"
+  },
+  "character": {
+    "source": "procedural-placeholder",
+    "file": "assets/character_anime_placeholder.glb",
+    "bytes": 529816,
+    "triangles": 11236,
+    "vertices": 5664,
+    "bones": 22,
+    "morphTargets": 1,
+    "animations": [
+      "anim_anime_placeholder_walk",
+      "anim_anime_placeholder_run"
+    ],
+    "materials": 1,
+    "textures": 1,
+    "textureFormat": "PNG 512×512",
+    "vertexColors": true,
+    "namedPerPipelineSpec": true
+  },
+  "lint": {
+    "command": "npm run assets:lint",
+    "assetStatus": "passed",
+    "errors": 0,
+    "warnings": 0,
+    "topology": {
+      "nonManifoldEdges": 0,
+      "boundaryEdges": 0,
+      "degenerateTriangles": 0,
+      "looseVertices": 0
+    },
+    "allAssets": "8/8 passed · 0 errors · 0 warnings"
+  },
+  "vrmConverter": {
+    "tool": "tools/pipeline/vrm-to-glb.mjs",
+    "selfTest": "passed",
+    "selfTestCommand": "node tools/pipeline/vrm-to-glb.mjs --self-test assets/character_anime_placeholder.glb",
+    "detectedExtensions": ["VRM", "VRMC_springBone"],
+    "strippedExtensions": ["VRM", "VRMC_node_constraint", "VRMC_springBone"],
+    "preserved": "1 primitive · 1 skin (22 joints) · 2 animations · 1 material · 1 texture",
+    "note": "容器级验证，非真实 VRoid 资产；真实 VRM 仍需用户导出后复跑"
+  },
+  "render": {
+    "scenario": "anime-pipeline",
+    "harnessReport": "reports/p0-anime-pipeline.json",
+    "harnessStatus": "passed",
+    "backend": "webgl2",
+    "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5)",
+    "toonMaterial": "自定义 ShaderMaterial（三阶色阶 + 硬高光 + rim light + 顶点色×贴图）",
+    "toonMaterialNote": "Babylon.js 9.31.0 的 @babylonjs/core 与 @babylonjs/materials 均未导出 ToonMaterial（旧版 Materials/toon 路径已不存在），因此使用自定义 ShaderMaterial 实现等价效果",
+    "outline": "Mesh.renderOutline（OutlineRenderer 支持蒙皮骨骼）",
+    "colorGrading": "DefaultRenderingPipeline：ACES tone mapping + contrast 1.18 + exposure 1.05 + ColorCurves + vignette + FXAA",
+    "skeleton": {
+      "boneMotionRangeRad": 0.533,
+      "note": "采样腿骨 quaternion 角度范围，证明动画在推进"
+    },
+    "performance": {
+      "fps": 62.26,
+      "sampledFrames": 28,
+      "gpu": "Apple M5 / WebGL2"
+    }
+  },
+  "artifacts": [
+    {
+      "file": "artifacts/anime-pipeline/toon-on.png",
+      "description": "Toon 开：自定义色阶材质 + 描边 + 色彩分级（walk）"
+    },
+    {
+      "file": "artifacts/anime-pipeline/toon-off.png",
+      "description": "Toon 关：StandardMaterial + 无描边 + 无色彩分级（walk）"
+    },
+    {
+      "file": "artifacts/anime-pipeline/toon-on-run.png",
+      "description": "Toon 开 + run 动画动态姿势"
+    },
+    {
+      "file": "artifacts/anime-pipeline/toon-on-closeup.png",
+      "description": "Toon 开近景：色阶/描边/rim light 细节"
+    },
+    {
+      "file": "artifacts/anime-pipeline/toon-off-closeup.png",
+      "description": "Toon 关近景：同机位对比"
+    }
+  ],
+  "pitfalls": [
+    {
+      "area": "坐标系",
+      "detail": "glTF 右手系 → Babylon 默认左手系，loader 会翻转 Z。首次用 alpha=+45° 相机拍到的是角色背面，改为 -45° 才看到脸。真实 VRoid/Blender 导出后需先确认朝向再定相机。"
+    },
+    {
+      "area": "骨骼命名/重定向",
+      "detail": "VRM 人形骨骼常见 J_Bip_L_UpperLeg / J_Bip_R_UpperLeg；Mixamo 为 mixamorig:LeftUpLeg 等。程序化 fallback 用正则匹配常见命名，但 Mixamo 动作仍需 Blender 重定向/烘焙，不能只靠名字匹配。"
+    },
+    {
+      "area": "morph / blendshape",
+      "detail": "占位资产的 blink morph 能正确加载（morphTargetCount=1），但自定义 ShaderMaterial 只声明 position/normal/uv/color，不会应用 morph target。真实 VRoid 表情（VRM expression/blendshape）需要改为 NodeMaterial、StandardMaterial 或给 toon shader 增加 morph include，否则表情静止。"
+    },
+    {
+      "area": "贴图格式",
+      "detail": "glTF baseColor 是 sRGB；自定义 shader 直接 texture2D 采样，未做显式 sRGB→linear 转换（本次贴图接近白色，影响很小）。真实 VRoid 贴图应确认 sRGB/线性设置；KTX2 资产需先 npm run assets:vendor。"
+    },
+    {
+      "area": "描边",
+      "detail": "Mesh.renderOutline 对蒙皮网格可用（OutlineRenderer 注入 bones define），但宽度是世界单位，需按角色尺寸调；多层 VRoid 头发/面部网格可能出现 outline 叠加，P1 建议评估 13 号票的后处理描边方案。"
+    },
+    {
+      "area": "ToonMaterial 可用性",
+      "detail": "Babylon 9.31.0 未导出 ToonMaterial/PBRToonMaterial；本票用 ShaderMaterial 自实现。若团队希望使用官方维护材质，可评估 NodeMaterial 或锁定旧版 Babylon，但后者与当前 9.31.0 依赖树冲突。"
+    },
+    {
+      "area": "Blender 缺失",
+      "detail": "VRM→glTF（Blender VRM 插件）与 Mixamo FBX 烘焙均不可执行。已提供 GLB 块级 VRM 转换器兜底，但它只剥离 VRM 扩展，不做 FBX 转换/重定向。"
+    }
+  ],
+  "blocked": [
+    {
+      "item": "一个 VRoid 角色在灰盒场景中播放 Mixamo 动画",
+      "reason": "本机无 VRoid Studio、无 Blender、Mixamo 无 Adobe 登录态；无法自动化捏人/绑骨/烘焙",
+      "status": "blocked"
+    },
+    {
+      "item": "真实 VRM 资产的端到端加载",
+      "reason": "没有可用的 .vrm 样本；已完成容器级转换自测，真实资产需用户导出后复跑",
+      "status": "blocked"
+    }
+  ],
+  "completed": [
+    "降级占位角色（卡通色块 + 描边友好 + 22 骨骼 + walk/run + blink morph + 顶点色/贴图）",
+    "GLB 资产通过 15 号 lint（0 errors / 0 warnings，11236 tris ≤ 15k）",
+    "Harness 场景 anime-pipeline 加载角色并播放骨骼动画",
+    "自定义 toon shader + 蒙皮描边 + 统一色彩分级，开关对比通过",
+    "toon 开/关与 run/近景截图 5 张",
+    "VRM→glTF GLB 块级转换工具 + 自测"
+  ],
+  "userActions": [
+    {
+      "step": 1,
+      "estimate": "5 分钟",
+      "detail": "安装 VRoid Studio（https://vroid.com/studio，免费），用默认模板捏一个角色，导出 VRM（File → Export → VRM）。"
+    },
+    {
+      "step": 2,
+      "estimate": "3 分钟",
+      "detail": "把 .vrm 放到本机后运行：node tools/pipeline/vrm-to-glb.mjs ~/Downloads/character.vrm assets/character_vroid_lod0.glb。该命令剥离 VRM/MToon/SpringBone 扩展，保留骨骼、蒙皮、贴图与动画。"
+    },
+    {
+      "step": 3,
+      "estimate": "5 分钟",
+      "detail": "（可选，Mixamo 动画）安装 Blender + VRM Add-on，导入 VRM → 导出 FBX；登录 Mixamo（Adobe 账号）上传 FBX 自动绑骨，下载走/跑动画 FBX；回 Blender 烘焙到 VRoid 骨架后按 05 规范导出 glTF。若只要验证 toon 渲染，第 2 步的静态 VRM 已足够（场景会播放程序化 fallback 动画）。"
+    },
+    {
+      "step": 4,
+      "estimate": "1 分钟",
+      "detail": "运行 npm run assets:lint -- assets/character_vroid_lod0.glb。VRoid 角色常超过 15k 三角；若超标，记录数字并在 Blender 做 Decimate/LOD（这是已知的生成资产问题，不阻塞渲染验证）。"
+    },
+    {
+      "step": 5,
+      "estimate": "1 分钟",
+      "detail": "npm run dev 后打开 http://127.0.0.1:5173/?scenario=anime-pipeline。场景会自动优先加载 assets/character_vroid_lod0.glb；在控制台调用 window.__animePipeline.setToonEnabled(false/true) 重新截对比图。"
+    }
+  ],
+  "conclusion": "二次元渲染链路（蒙皮角色 + toon 色阶 + 描边 + 色彩分级）已在占位资产上完整验证并达到 60fps；真实 VRoid/Mixamo 资产获取链路因本机缺少 VRoid Studio、Blender 与 Adobe 登录态而 blocked。VRM 容器转换路径已实现并自测通过，用户按 15 分钟指引导出真实 VRM 后即可复用同一场景验证。建议 P1 继续投入引擎侧 toon/描边方案，同时把真实 VRoid 资产接入作为用户手做项排期。"
+}

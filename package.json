@@ -12,6 +12,8 @@
     "assets:vendor": "node tools/pipeline/vendor-decoders.mjs",
     "assets:build-test": "node tools/pipeline/build-test-asset.mjs",
     "assets:build": "node tools/pipeline/build-assets.mjs",
+    "assets:anime": "node tools/pipeline/build-anime-asset.mjs",
+    "assets:vrm": "node tools/pipeline/vrm-to-glb.mjs",
     "assets:lint": "node tools/pipeline/lint.mjs",
     "assets:lint:negative": "node tools/pipeline/lint-negative-test.mjs",
     "assets:blender": "blender --background --factory-startup --python tools/pipeline/blender/export_test_asset.py -- assets/character_test_lod0.glb",

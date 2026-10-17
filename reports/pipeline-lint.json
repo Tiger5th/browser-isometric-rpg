@@ -1,9 +1,36 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-17T04:58:02.456Z",
+  "generatedAt": "2026-10-17T05:14:42.675Z",
   "files": [
     {
-      "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a3dc6eec502545a32/assets/character_test_draco.glb",
+      "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-af862c3cc4a7f723b/assets/character_anime_placeholder.glb",
+      "status": "passed",
+      "stats": {
+        "triangles": 11236,
+        "vertices": 5664,
+        "meshes": 1,
+        "materials": 1,
+        "textures": 1,
+        "animations": 2,
+        "skins": 1
+      },
+      "topology": [
+        {
+          "mesh": "character_anime_placeholder_lod0",
+          "vertexCount": 5664,
+          "triangleCount": 11236,
+          "nonManifoldEdges": 0,
+          "boundaryEdges": 0,
+          "degenerateTriangles": 0,
+          "looseVertices": 0
+        }
+      ],
+      "violations": [],
+      "errorCount": 0,
+      "warningCount": 0
+    },
+    {
+      "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-af862c3cc4a7f723b/assets/character_test_draco.glb",
       "status": "passed",
       "stats": {
         "triangles": 11488,
@@ -30,7 +57,7 @@
       "warningCount": 0
     },
     {
-      "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a3dc6eec502545a32/assets/character_test_ktx2.glb",
+      "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-af862c3cc4a7f723b/assets/character_test_ktx2.glb",
       "status": "passed",
       "stats": {
         "triangles": 11488,
@@ -57,7 +84,7 @@
       "warningCount": 0
     },
     {
-      "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a3dc6eec502545a32/assets/character_test_lod0.glb",
+      "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-af862c3cc4a7f723b/assets/character_test_lod0.glb",
       "status": "passed",
       "stats": {
         "triangles": 11488,
@@ -84,7 +111,7 @@
       "warningCount": 0
     },
     {
-      "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a3dc6eec502545a32/assets/character_test_lod1.glb",
+      "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-af862c3cc4a7f723b/assets/character_test_lod1.glb",
       "status": "passed",
       "stats": {
         "triangles": 5744,
@@ -111,7 +138,7 @@
       "warningCount": 0
     },
     {
-      "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a3dc6eec502545a32/assets/character_test_lod2.glb",
+      "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-af862c3cc4a7f723b/assets/character_test_lod2.glb",
       "status": "passed",
       "stats": {
         "triangles": 2296,
@@ -138,7 +165,7 @@
       "warningCount": 0
     },
     {
-      "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a3dc6eec502545a32/assets/character_test_meshopt.glb",
+      "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-af862c3cc4a7f723b/assets/character_test_meshopt.glb",
       "status": "passed",
       "stats": {
         "triangles": 11488,
@@ -165,7 +192,7 @@
       "warningCount": 0
     },
     {
-      "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a3dc6eec502545a32/assets/character_test_meshopt_ktx2.glb",
+      "file": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-af862c3cc4a7f723b/assets/character_test_meshopt_ktx2.glb",
       "status": "passed",
       "stats": {
         "triangles": 11488,
@@ -193,8 +220,8 @@
     }
   ],
   "summary": {
-    "files": 7,
-    "passed": 7,
+    "files": 8,
+    "passed": 8,
     "failed": 0,
     "errors": 0,
     "warnings": 0

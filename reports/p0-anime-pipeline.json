@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "harness": "P0Harness",
+  "scenario": "anime-pipeline",
+  "status": "passed",
+  "startedAt": "2026-10-17T05:15:36.429Z",
+  "finishedAt": "2026-10-17T05:15:37.045Z",
+  "durationMs": 616,
+  "environment": {
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "renderBackend": "webgl2",
+    "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+    "capturedAt": "2026-10-17T05:15:37.045Z",
+    "devicePixelRatio": 2,
+    "hardwareConcurrency": 10
+  },
+  "metrics": [
+    {
+      "name": "characterLoaded",
+      "value": 1,
+      "unit": "boolean",
+      "threshold": 1,
+      "comparison": "eq",
+      "passed": true
+    },
+    {
+      "name": "vroidAssetLoaded",
+      "value": 0,
+      "unit": "boolean"
+    },
+    {
+      "name": "mixamoAnimationLoaded",
+      "value": 0,
+      "unit": "boolean"
+    },
+    {
+      "name": "triangleCount",
+      "value": 11236,
+      "unit": "triangles",
+      "threshold": 15000,
+      "comparison": "lte",
+      "passed": true
+    },
+    {
+      "name": "boneCount",
+      "value": 22,
+      "unit": "bones",
+      "threshold": 20,
+      "comparison": "gte",
+      "passed": true
+    },
+    {
+      "name": "morphTargetCount",
+      "value": 1,
+      "unit": "targets",
+      "threshold": 1,
+      "comparison": "gte",
+      "passed": true
+    },
+    {
+      "name": "animationCount",
+      "value": 2,
+      "unit": "animations",
+      "threshold": 1,
+      "comparison": "gte",
+      "passed": true
+    },
+    {
+      "name": "animationPlaying",
+      "value": 1,
+      "unit": "boolean",
+      "threshold": 1,
+      "comparison": "eq",
+      "passed": true
+    },
+    {
+      "name": "boneMotionRangeRad",
+      "value": 0.539,
+      "unit": "rad",
+      "threshold": 0.2,
+      "comparison": "gte",
+      "passed": true
+    },
+    {
+      "name": "toonMaterialActive",
+      "value": 1,
+      "unit": "boolean",
+      "threshold": 1,
+      "comparison": "eq",
+      "passed": true
+    },
+    {
+      "name": "outlineEnabled",
+      "value": 1,
+      "unit": "boolean",
+      "threshold": 1,
+      "comparison": "eq",
+      "passed": true
+    },
+    {
+      "name": "imageProcessingEnabled",
+      "value": 1,
+      "unit": "boolean",
+      "threshold": 1,
+      "comparison": "eq",
+      "passed": true
+    },
+    {
+      "name": "textureCount",
+      "value": 1,
+      "unit": "textures",
+      "threshold": 1,
+      "comparison": "gte",
+      "passed": true
+    },
+    {
+      "name": "materialCount",
+      "value": 1,
+      "unit": "materials"
+    },
+    {
+      "name": "assetBytes",
+      "value": 529816,
+      "unit": "bytes"
+    },
+    {
+      "name": "fps",
+      "value": 62.26,
+      "unit": "fps"
+    },
+    {
+      "name": "sampledFrames",
+      "value": 28,
+      "unit": "frames"
+    }
+  ]
+}

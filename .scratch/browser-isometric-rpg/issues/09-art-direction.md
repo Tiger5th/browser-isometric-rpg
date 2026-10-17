@@ -125,3 +125,15 @@ Blocked by: —
 **全部免费可行**：VRoid（角色）+ Mixamo（动画）+ AI 免费档（场景件）+ Babylon toon 渲染（拉齐）。此前「Meshy Pro + 风格化」推荐作废，替换为本方案。商用许可风险清零（VRoid 模型自由使用、AI 免费档署名即可、不商用）。
 
 **待实测**（并入 P1 前置）：VRoid 角色 → Blender → glTF → Babylon toon 渲染的完整走通；Mixamo 动作在 Babylon 骨骼动画系统中的重定向质量。
+
+## Comments
+
+### 2026-10-17 · 17 号票实测反馈（降级路线 A）
+
+- **环境阻塞**：本机无 Blender / VRoid Studio，Mixamo 无 Adobe 登录态。真实 VRoid→Mixamo→glTF 链路未走通，已用程序化二次元占位角色验证渲染侧；用户 15 分钟手做指引见 17 号票 Comments。
+- **Babylon toon 材质现状**：9.31.0 的 `@babylonjs/core` / `@babylonjs/materials` 均未导出 `ToonMaterial` / `PBRToonMaterial`（旧版 `Materials/toon` 路径已移除）。自实现 ShaderMaterial（三阶色阶 + rim light + 顶点色×贴图）可行，且能通过 Babylon 的 `bonesDeclaration`/`bonesVertex` include 支持蒙皮；描边用 `Mesh.renderOutline` 可用，色彩分级用 `DefaultRenderingPipeline`。建议 09 的「引擎侧卡通渲染是最大杠杆」继续成立，但技术选型改为 **自定义 ShaderMaterial / NodeMaterial**，不要假设官方 ToonMaterial 可用。
+- **坐标系坑**：glTF 右手系 → Babylon 默认左手系，loader 翻转 Z；相机朝向必须按加载后的实际朝向校准（本次首次截图拍到了角色背面）。
+- **morph 坑**：VRM blendshape/表情会作为 glTF morph target 导入；自定义 toon ShaderMaterial 默认不应用 morph，真实 VRoid 表情需要 NodeMaterial、StandardMaterial 或给 shader 增加 morph include。P1 若要做表情/眨眼，需提前排期。
+- **骨骼重定向**：VRM `J_Bip_*` 与 Mixamo `mixamorig:*` 命名差异大，Mixamo 动作必须经 Blender 重定向/烘焙；建议 P1 把「Mixamo → VRoid 骨架」固化为 Blender 脚本，而不是运行时按名字匹配。
+- **描边**：`renderOutline` 适合单层蒙皮角色；VRoid 的多层头发/面部网格可能叠加描边，P1 建议评估 13 号票的屏幕空间/后处理描边。
+- **建议**：二次元渲染链路可继续投入；真实资产获取作为用户手做前置项排期（VRoid + Blender + Adobe 账号），不阻塞引擎侧 toon/描边开发。
