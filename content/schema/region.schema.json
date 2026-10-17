@@ -4,37 +4,94 @@
   "title": "区域",
   "type": "object",
   "additionalProperties": false,
-  "required": ["id", "displayName", "asset", "player"],
+  "required": [
+    "id",
+    "displayName",
+    "asset",
+    "player"
+  ],
   "properties": {
-    "id": { "$ref": "urn:content:common#/$defs/regionId" },
-    "displayName": { "$ref": "urn:content:common#/$defs/displayName" },
+    "id": {
+      "$ref": "urn:content:common#/$defs/regionId"
+    },
+    "displayName": {
+      "$ref": "urn:content:common#/$defs/displayName"
+    },
     "asset": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["model"],
+      "required": [
+        "model"
+      ],
       "properties": {
-        "model": { "type": "string", "minLength": 1 },
-        "navmesh": { "type": "string", "minLength": 1 }
+        "model": {
+          "type": "string",
+          "minLength": 1
+        },
+        "navmesh": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     },
     "player": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "templateId", "displayName", "spawn", "baseAttributes"],
+      "required": [
+        "id",
+        "templateId",
+        "displayName",
+        "spawn",
+        "baseAttributes"
+      ],
       "properties": {
-        "id": { "$ref": "urn:content:common#/$defs/entityId" },
-        "templateId": { "$ref": "urn:content:common#/$defs/templateId" },
-        "displayName": { "$ref": "urn:content:common#/$defs/displayName" },
+        "id": {
+          "$ref": "urn:content:common#/$defs/entityId"
+        },
+        "templateId": {
+          "$ref": "urn:content:common#/$defs/templateId"
+        },
+        "displayName": {
+          "$ref": "urn:content:common#/$defs/displayName"
+        },
         "spawn": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["position"],
+          "required": [
+            "position"
+          ],
           "properties": {
-            "position": { "$ref": "urn:content:common#/$defs/vec3" },
-            "rotation": { "$ref": "urn:content:common#/$defs/vec3" }
+            "position": {
+              "$ref": "urn:content:common#/$defs/vec3"
+            },
+            "rotation": {
+              "$ref": "urn:content:common#/$defs/vec3"
+            }
           }
         },
-        "baseAttributes": { "$ref": "urn:content:common#/$defs/attributes" }
+        "baseAttributes": {
+          "$ref": "urn:content:common#/$defs/attributes"
+        },
+        "startingItems": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "itemId",
+              "quantity"
+            ],
+            "properties": {
+              "itemId": {
+                "$ref": "urn:content:common#/$defs/itemId"
+              },
+              "quantity": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          }
+        }
       }
     },
     "exits": {
@@ -42,12 +99,25 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "targetRegionId", "position"],
+        "required": [
+          "id",
+          "targetRegionId",
+          "position"
+        ],
         "properties": {
-          "id": { "type": "string", "pattern": "^exit:[a-z0-9_]+$" },
-          "targetRegionId": { "$ref": "urn:content:common#/$defs/regionId" },
-          "position": { "$ref": "urn:content:common#/$defs/vec3" },
-          "rotation": { "$ref": "urn:content:common#/$defs/vec3" }
+          "id": {
+            "type": "string",
+            "pattern": "^exit:[a-z0-9_]+$"
+          },
+          "targetRegionId": {
+            "$ref": "urn:content:common#/$defs/regionId"
+          },
+          "position": {
+            "$ref": "urn:content:common#/$defs/vec3"
+          },
+          "rotation": {
+            "$ref": "urn:content:common#/$defs/vec3"
+          }
         }
       }
     }

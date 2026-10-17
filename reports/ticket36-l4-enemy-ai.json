@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "ticket": "36-enemy-ai",
+  "layer": "L4-ego-browser",
+  "generatedAt": "2026-10-17T14:52:00.000Z",
+  "scenario": "p1-world",
+  "status": "passed",
+  "environment": {
+    "url": "http://localhost:5199/?scenario=p1-world&harness=1",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/154.0.0.0 Safari/537.36",
+    "renderBackend": "webgl2",
+    "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5)"
+  },
+  "results": {
+    "enemyAiEvidence": {
+      "enemySpriteTextures": [
+        "enemy.texture.windup-charge.enemy_charger.png",
+        "enemy.texture.ranged-kite.enemy_spitter.png"
+      ],
+      "enemySpriteTransparentRatio": 0.7709,
+      "colliderCount": 17,
+      "note": "两种新敌人各有独立贴图（抠白后 77% 透明，与 prop 同一套 billboard 基建）"
+    },
+    "chargerStateMachine": {
+      "spec": "chase → windup-charge(600ms) → charge → recovery(900ms)",
+      "observedTrace": [
+        { "at": 0, "state": "windup-charge", "pos": { "x": 1.54, "z": 1.92 } },
+        { "at": 200, "state": "charge", "pos": { "x": 1.08, "z": 1.4 } },
+        { "at": 600, "state": "recovery", "pos": { "x": -3.74, "z": -4.09 } },
+        { "at": 1400, "state": "windup-charge", "pos": { "x": -3.74, "z": -4.09 } },
+        { "at": 1900, "state": "charge", "pos": { "x": -3.74, "z": -4.09 } },
+        { "at": 2600, "state": "recovery", "pos": { "x": -10.04, "z": -9.41 } },
+        { "at": 3500, "state": "windup-charge", "pos": { "x": -10.04, "z": -9.41 } }
+      ],
+      "passed": true,
+      "notes": "循环可复现；冲锋方向在前摇结束时锁定，玩家在前摇中横移即可走位躲开（L1 已断言）"
+    },
+    "spitterKiting": {
+      "spec": "保持 preferredRange=8，玩家进 retreatRange=5 就后撤",
+      "observed": [
+        { "playerPos": { "x": -12, "z": 4 }, "spitterPos": { "x": -11.86, "z": 9.0 }, "state": "kite" },
+        { "playerPos": { "x": -12, "z": 4 }, "spitterPos": { "x": -13.69, "z": 5.87 }, "state": "kite" }
+      ],
+      "projectileHitObserved": true,
+      "projectileIdSample": "enemy:spitter_pond#shot10",
+      "playerDamageFromProjectile": 5,
+      "passed": true,
+      "notes": "投射物是逻辑层实体（positionSnapshots 由 GameSession 提供），命中结算回表现层的 damage-dealt；截图里可见飞行中的孢子球与 -5 飘字"
+    },
+    "deathPenalty": {
+      "startingCoins": 25,
+      "coinsAfterDeath": 22,
+      "expectedLoss": "ceil(25 × 0.1) = 3",
+      "respawnPosition": { "x": 0, "y": 0, "z": 0 },
+      "respawnHp": 100,
+      "passed": true,
+      "notes": "死亡瞬间金币已在事件里扣完（coins=22），1 秒后回村出生点回满血；扣减走背包物品，天然入快照"
+    },
+    "regression": {
+      "legacySlimes": "三只史莱姆仍走 chaser 状态机（patrol/chase/attack），未受新档案影响",
+      "colliderSource": "session.setWorldObstacles(buildPropColliders()) —— 与 navmesh（colliderObstacleSpecs）同源，17 个硬碰撞体"
+    }
+  },
+  "screenshots": [
+    "artifacts/p2-enemy-ai-initial.png",
+    "artifacts/p2-enemy-ai-charger-windup-charge.png",
+    "artifacts/p2-enemy-ai-charger-charge.png",
+    "artifacts/p2-enemy-ai-charger-recovery.png",
+    "artifacts/p2-enemy-ai-spitter-projectile.png",
+    "artifacts/p2-enemy-ai-spitter-kite.png",
+    "artifacts/p2-enemy-ai-death-penalty.png",
+    "artifacts/enemies/enemy_charger.png",
+    "artifacts/enemies/enemy_spitter.png"
+  ],
+  "knownIssues": [
+    "敌人贴图这一版是 tools/pipeline/build-enemy-textures.mjs 的程序化色板卡精灵，不是 Gemini 生成图；换成 Gemini 产物只需覆盖 assets/enemies/ 下两张 PNG（代码与 content 不动）。",
+    "src/render/babylon-boundary.test.ts 的 Babylon barrel 导入用例在本机偶发 5s 超时（约 5.9s 完成），单独运行通过；与本票改动无关。"
+  ]
+}

@@ -146,6 +146,7 @@ export function instantiateRegionEntities(index: ContentIndex, regionId: string)
         rotation: enemy.rotation,
         tags: mergeTags(template.tags, enemy.tags),
         aiProfileId: template.aiProfileId,
+        aiProfile: template.aiProfile,
       }),
     );
   }

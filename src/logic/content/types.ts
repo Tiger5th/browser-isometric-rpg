@@ -28,6 +28,8 @@ export interface PlayerDefinition {
     rotation?: Vec3;
   };
   baseAttributes: Record<string, number>;
+  /** 出生时进背包的物品（死亡轻惩罚用的金币从这里来）。 */
+  startingItems?: Array<{ itemId: string; quantity: number }>;
 }
 
 export interface RegionExitDefinition {
@@ -73,11 +75,49 @@ export interface DropDefinition {
   max: number;
 }
 
+/**
+ * AI 档案（票 36）：内容里的纯数据形态，由 `src/logic/enemy-ai.ts` 的
+ * resolveEnemyAiProfile 解释。缺省（不写）= 既有 chaser 近战追击状态机。
+ * kind 决定状态机分支，数值均可省略（省略即用档案默认值）。
+ */
+export interface EnemyAiProfileData {
+  /** chaser = 既有近战追击；windup-charge = 蓄力冲锋；ranged-kite = 保持距离吐弹。 */
+  kind: "chaser" | "windup-charge" | "ranged-kite";
+  /** windup-charge：前摇时长（毫秒，默认 600）。 */
+  windupMs?: number;
+  /** windup-charge：冲锋速度（米/秒）。 */
+  chargeSpeed?: number;
+  /** windup-charge：单次冲锋的最长直线距离（米）。 */
+  chargeDistance?: number;
+  /** windup-charge：冲锋结束后的硬直（毫秒）。 */
+  recoveryMs?: number;
+  /** windup-charge：进入该距离就起手前摇。 */
+  triggerRange?: number;
+  /** windup-charge：冲锋路径命中半径（米）。 */
+  hitRadius?: number;
+  /** ranged-kite：期望交战距离（米），比它远就追近。 */
+  preferredRange?: number;
+  /** ranged-kite：玩家进入该距离就后撤。 */
+  retreatRange?: number;
+  /** ranged-kite：开火间隔（毫秒）。 */
+  fireIntervalMs?: number;
+  /** ranged-kite：投射物速度（米/秒）。 */
+  projectileSpeed?: number;
+  /** ranged-kite：投射物伤害（固定值）。 */
+  projectileDamage?: number;
+  /** ranged-kite：投射物碰撞半径（米）。 */
+  projectileRadius?: number;
+  /** ranged-kite：投射物存活时限（毫秒）。 */
+  projectileLifetimeMs?: number;
+}
+
 export interface EnemyTemplateDefinition {
   id: string;
   displayName: string;
   /** 敌人 AI 档案 id，由逻辑层解释（P1 = melee_chaser 状态机）。 */
   aiProfileId: string;
+  /** 票 36：AI 档案；缺省 = 既有 chaser 状态机。 */
+  aiProfile?: EnemyAiProfileData;
   baseAttributes: Record<string, number>;
   drops?: DropDefinition[];
   tags?: string[];

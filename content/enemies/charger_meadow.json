@@ -1,0 +1,8 @@
+{
+  "id": "enemy:charger_meadow",
+  "templateId": "enemy_template:charger",
+  "displayName": "角冲兽",
+  "regionId": "region:green_hollow",
+  "position": { "x": -8, "y": 0, "z": -10 },
+  "tags": ["charger"]
+}

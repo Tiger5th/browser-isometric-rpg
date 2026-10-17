@@ -47,6 +47,20 @@ import type {
   GameSessionEvent,
   GameSessionEventListener,
 } from "./game-events";
+import {
+  chargeDirection,
+  coinPenaltyFor,
+  kiteMoveTarget,
+  resolveEnemyAiProfile,
+  stepCharge,
+  stepProjectile,
+  type EnemyAiProfile,
+  type ProjectileRuntime,
+  type ProjectileSnapshot,
+  type RangedKiteAiProfile,
+  type WindupChargeAiProfile,
+  type WorldObstacle,
+} from "./enemy-ai";
 import { createContentIndex, instantiateRegionEntities } from "./content/region-loader";
 import type {
   ContentBundle,
@@ -90,10 +104,28 @@ export const DEFAULT_AGGRO_RADIUS = 8;
 export const DEFAULT_PATROL_RADIUS = 4;
 export const DEFAULT_IDLE_MS = 2000;
 export const DEFAULT_RESPAWN_DELAY_MS = 1000;
+/** 死亡惩罚：默认损失 10% 金币（向上取整）；内容可用 region.player.deathPenalty 覆盖。 */
+export const DEFAULT_DEATH_PENALTY_COIN_ID = "item:old_coin";
+export const DEFAULT_DEATH_PENALTY_RATE = 0.1;
+/** 逻辑层角色/投射物的碰撞半径（与表现层 CHARACTER_COLLIDER_RADIUS 对齐）。 */
+export const LOGIC_COLLIDER_RADIUS = 0.4;
 /** 内部模拟固定步长：大 delta 也能稳定走位/结算，不受帧率影响。 */
 const SIMULATION_STEP_MS = 100;
 
-export type EnemyAiState = "idle" | "patrol" | "chase" | "attack" | "dead";
+/**
+ * 敌人 AI 状态。票 36 在既有 5 态之上加冲锋链路
+ * （windup-charge → charge → recovery）与 kiting（kite = 远程吐弹的交战态）。
+ */
+export type EnemyAiState =
+  | "idle"
+  | "patrol"
+  | "chase"
+  | "attack"
+  | "dead"
+  | "windup-charge"
+  | "charge"
+  | "recovery"
+  | "kite";
 
 /** 渲染层可提交的意图集合；后续按票逐步扩展 useItem/equip 等。 */
 export interface GameSessionIntents {
@@ -144,6 +176,15 @@ export interface GameSessionOptions {
   random?: () => number;
   /** 玩家死亡到重生的延迟（毫秒）。 */
   respawnDelayMs?: number;
+  /** 死亡惩罚的金币物品 id；缺省 item:old_coin（内容可覆盖）。 */
+  deathPenaltyCoinItemId?: string;
+  /** 死亡惩罚的金币扣除比例；缺省 0.1（向上取整）。 */
+  deathPenaltyRate?: number;
+  /**
+   * 硬碰撞障碍清单（票 36 冲锋挡停用）。形状与表现层票 28 的 PropCollider 兼容，
+   * 场景把 buildPropColliders() 的结果交进来即可，碰撞与 navmesh 同源。
+   */
+  worldObstacles?: readonly WorldObstacle[];
 }
 
 export interface EntityMovementSnapshot {
@@ -286,6 +327,18 @@ interface CombatRuntime {
   aiState: EnemyAiState | null;
   idleMs: number;
   patrolIndex: number;
+  /** 票 36：冲锋链路状态（windup 剩余、冲锋已走距离、recovery 剩余）。 */
+  chargeWindupMs: number;
+  chargeRemaining: number;
+  chargeRemainingMs: number;
+  /** 冲锋方向在前摇结束时锁定，冲锋途中不再跟随目标。 */
+  chargeDir: { x: number; z: number } | null;
+  /** 本次冲锋是否已结算过伤害（一次冲锋只打一下）。 */
+  chargeHit: boolean;
+  /** 吐弹型开火倒计时。 */
+  fireCooldownMs: number;
+  /** 逻辑层投射物编号。 */
+  projectilesFired: number;
 }
 
 interface SpawnRecord {
@@ -296,6 +349,8 @@ interface SpawnRecord {
 interface EnemyProfile {
   aiProfileId: string;
   drops: DropDefinition[];
+  /** 票 36：aiProfile 档案；缺省 = 既有 chaser 状态机。 */
+  aiProfile: EnemyAiProfile | null;
 }
 
 function assertFiniteVec3(value: Vec3, label: string): void {
@@ -411,6 +466,10 @@ export class GameSession implements GameSessionIntents {
   private readonly spawns = new Map<EntityId, SpawnRecord>();
   private readonly enemyProfiles = new Map<EntityId, EnemyProfile>();
   private readonly itemDefinitions = new Map<string, ItemDefinition>();
+  private readonly projectiles = new Map<string, ProjectileRuntime>();
+  private obstacles: readonly WorldObstacle[];
+  private readonly deathPenaltyCoinItemId: string;
+  private readonly deathPenaltyRate: number;
   private readonly events: CombatEvent[] = [];
   /** 上一次广播过的生命值；health-changed 只在数值真变时发布。 */
   private readonly lastPublishedHp = new Map<EntityId, number>();
@@ -424,6 +483,14 @@ export class GameSession implements GameSessionIntents {
 
   constructor(options: GameSessionOptions = {}) {
     this.random = options.random ?? createSeededRandom(0x5eed);
+    this.obstacles = options.worldObstacles ?? [];
+    this.deathPenaltyCoinItemId =
+      options.deathPenaltyCoinItemId ?? DEFAULT_DEATH_PENALTY_COIN_ID;
+    const rate = options.deathPenaltyRate ?? DEFAULT_DEATH_PENALTY_RATE;
+    if (!Number.isFinite(rate) || rate < 0 || rate > 1) {
+      throw new Error("deathPenaltyRate 必须在 [0,1] 之间");
+    }
+    this.deathPenaltyRate = rate;
     const delay = options.respawnDelayMs ?? DEFAULT_RESPAWN_DELAY_MS;
     if (!Number.isFinite(delay) || delay < 0) {
       throw new Error("respawnDelayMs 必须是非负有限数值");
@@ -473,6 +540,13 @@ export class GameSession implements GameSessionIntents {
       aiState: cloned.identity.type === "enemy" ? "idle" : null,
       idleMs: 0,
       patrolIndex: 0,
+      chargeWindupMs: 0,
+      chargeRemaining: 0,
+      chargeRemainingMs: 0,
+      chargeDir: null,
+      chargeHit: false,
+      fireCooldownMs: 0,
+      projectilesFired: 0,
     });
     this.lastPublishedHp.set(cloned.id, this.combat.get(cloned.id)!.hp);
 
@@ -480,6 +554,7 @@ export class GameSession implements GameSessionIntents {
       this.enemyProfiles.set(cloned.id, {
         aiProfileId: cloned.references.aiProfileId ?? "ai:melee_chaser",
         drops: [],
+        aiProfile: null,
       });
     }
   }
@@ -493,6 +568,10 @@ export class GameSession implements GameSessionIntents {
       throw new Error(`已加载区域 ${this.regionId}，P1 不支持切换区域`);
     }
     const index = createContentIndex(bundle);
+    const region = index.regions.get(regionId);
+    if (region === undefined) {
+      throw new Error(`未知区域：${regionId}`);
+    }
     const entities = instantiateRegionEntities(index, regionId);
     // 先整体检查再写入，避免中途失败留下半加载状态。
     for (const entity of entities) {
@@ -514,6 +593,12 @@ export class GameSession implements GameSessionIntents {
       this.itemDefinitions.set(item.id, structuredClone(item));
     }
 
+    // 出生物品（当前只有死亡轻惩罚要用的金币）。物品定义已就绪，直接入包。
+    const player = this.requirePlayer();
+    for (const starting of region.player.startingItems ?? []) {
+      this.addItem(player, starting.itemId, starting.quantity);
+    }
+
     for (const enemy of index.enemies.values()) {
       if (enemy.regionId !== regionId) {
         continue;
@@ -525,6 +610,7 @@ export class GameSession implements GameSessionIntents {
       this.enemyProfiles.set(enemy.id as EntityId, {
         aiProfileId: template.aiProfileId,
         drops: (template.drops ?? []).map((drop) => ({ ...drop })),
+        aiProfile: resolveEnemyAiProfile(template.aiProfile),
       });
     }
 
@@ -949,6 +1035,28 @@ export class GameSession implements GameSessionIntents {
   }
 
   /** 取走并清空自上次调用以来的战斗事件（攻击/死亡/经验/掉落/重生）。 */
+  /**
+   * 设置硬碰撞障碍清单（票 36）。场景把 world-physics.buildPropColliders()
+   * 的结果传进来，冲锋被挡停与投射物撞墙共用这一份数据；navmesh 也由同一份
+   * collider 生成（colliderObstacleSpecs），因此碰撞与寻路不会漂移。
+   * 纯数据、可在会话运行中替换（关卡切换）。
+   */
+  setWorldObstacles(obstacles: readonly WorldObstacle[]): void {
+    this.obstacles = [...obstacles];
+  }
+
+  /** 逻辑层投射物快照（位置/半径/归属）；表现层只渲染，不参与结算。 */
+  projectileSnapshots(): ProjectileSnapshot[] {
+    return [...this.projectiles.values()]
+      .sort((left, right) => (left.id < right.id ? -1 : left.id > right.id ? 1 : 0))
+      .map((projectile) => ({
+        id: projectile.id,
+        ownerId: projectile.ownerId,
+        position: cloneVec3(projectile.position),
+        radius: projectile.radius,
+      }));
+  }
+
   drainEvents(): CombatEvent[] {
     return this.events.splice(0, this.events.length);
   }
@@ -1050,6 +1158,7 @@ export class GameSession implements GameSessionIntents {
       this.updateBehavior(id, stepMs);
     }
     this.moveEntities(stepMs);
+    this.stepProjectiles(stepMs);
     for (const id of ids) {
       this.resolveAttackIfReady(id);
     }
@@ -1076,6 +1185,8 @@ export class GameSession implements GameSessionIntents {
     runtime.alive = true;
     runtime.cooldownMs = 0;
     runtime.targetId = null;
+    // 空中残留的投射物随重生一起消失，避免落地即中弹。
+    this.projectiles.clear();
     player.state.position = cloneVec3(spawn.position);
     player.state.rotation = cloneVec3(spawn.rotation);
     this.movements.delete(player.id);
@@ -1094,6 +1205,12 @@ export class GameSession implements GameSessionIntents {
       otherRuntime.cooldownMs = 0;
       otherRuntime.idleMs = 0;
       otherRuntime.patrolIndex = 0;
+      otherRuntime.chargeWindupMs = 0;
+      otherRuntime.chargeRemaining = 0;
+      otherRuntime.chargeRemainingMs = 0;
+      otherRuntime.chargeDir = null;
+      otherRuntime.chargeHit = false;
+      otherRuntime.fireCooldownMs = 0;
       if (!otherRuntime.alive) {
         continue; // P1：已死亡的敌人不随玩家重生刷新。
       }
@@ -1153,6 +1270,15 @@ export class GameSession implements GameSessionIntents {
     runtime: CombatRuntime,
     stepMs: number,
   ): void {
+    const profile = this.enemyProfiles.get(entity.id)?.aiProfile ?? null;
+    if (profile?.kind === "windup-charge") {
+      this.updateChargeBehavior(entity, runtime, profile, stepMs);
+      return;
+    }
+    if (profile?.kind === "ranged-kite") {
+      this.updateKiteBehavior(entity, runtime, profile, stepMs);
+      return;
+    }
     const player = this.playerId === null ? undefined : this.entities.get(this.playerId);
     const playerRuntime =
       this.playerId === null ? undefined : this.combat.get(this.playerId);
@@ -1239,6 +1365,346 @@ export class GameSession implements GameSessionIntents {
     });
   }
 
+  /**
+   * 冲锋型状态机（票 36）：
+   * chase →（进入 triggerRange）windup-charge 0.6s（发 attack-windup-started，
+   * heavy=true 让反馈层播长前摇提示）→ charge 直线高速（路径命中判定一次，
+   * 被硬碰撞挡停）→ recovery 硬直 → chase。
+   * 前摇结束时锁定冲锋方向：玩家此时横移就能躲开（走位有意义）。
+   */
+  private updateChargeBehavior(
+    entity: Entity,
+    runtime: CombatRuntime,
+    profile: WindupChargeAiProfile,
+    stepMs: number,
+  ): void {
+    const player = this.playerId === null ? undefined : this.entities.get(this.playerId);
+    const playerRuntime =
+      this.playerId === null ? undefined : this.combat.get(this.playerId);
+
+    if (!player || !playerRuntime || !playerRuntime.alive) {
+      runtime.targetId = null;
+      runtime.chargeDir = null;
+      runtime.chargeWindupMs = 0;
+      runtime.chargeRemaining = 0;
+      runtime.aiState = "idle";
+      runtime.idleMs = 0;
+      this.movements.delete(entity.id);
+      return;
+    }
+
+    const distance = horizontalDistance(entity.state.position, player.state.position);
+    const attributes = this.attributesOf(entity);
+    const aggroRadius = Math.max(0, attributes.aggroRadius ?? DEFAULT_AGGRO_RADIUS);
+
+    // 冲锋途中与硬直中脱战判定同样生效（玩家拉开太远就放弃这次冲锋）。
+    if (distance > aggroRadius * 2) {
+      runtime.targetId = null;
+      runtime.chargeDir = null;
+      runtime.chargeWindupMs = 0;
+      runtime.chargeRemaining = 0;
+      runtime.chargeRemainingMs = 0;
+      runtime.chargeHit = false;
+      runtime.aiState = "idle";
+      runtime.idleMs = 0;
+      this.movements.delete(entity.id);
+      return;
+    }
+
+    // recovery：硬直期间站桩不动、不结算伤害（走位躲开后的白打窗口）。
+    if (runtime.aiState === "recovery") {
+      runtime.chargeRemainingMs = Math.max(0, runtime.chargeRemainingMs - stepMs);
+      this.movements.delete(entity.id);
+      if (runtime.chargeRemainingMs === 0) {
+        runtime.aiState = "chase";
+        runtime.idleMs = 0;
+      }
+      return;
+    }
+
+    // charge：沿锁定方向直线推进；被挡停或走完距离即进入 recovery。
+    if (runtime.aiState === "charge") {
+      const dir = runtime.chargeDir ?? { x: 0, z: 0 };
+      const step = stepCharge(
+        entity.state.position,
+        dir,
+        (profile.chargeSpeed * stepMs) / 1000,
+        this.obstacles,
+        LOGIC_COLLIDER_RADIUS,
+      );
+      entity.state.position = step.position;
+      this.movements.delete(entity.id);
+
+      if (step.blocked) {
+        this.publish({
+          type: "charge-blocked",
+          attackerId: entity.id,
+          targetId: player.id,
+          obstacleId: step.blockedBy ?? "",
+          at: this.elapsedMs,
+        });
+        this.enterChargeRecovery(runtime, profile);
+        return;
+      }
+
+      // 路径命中判定：整段冲锋只结算一次（用本步落点重新量距离）。
+      runtime.chargeRemaining = Math.max(0, runtime.chargeRemaining - step.travelled);
+      const gapAfterStep = horizontalDistance(entity.state.position, player.state.position);
+      if (!runtime.chargeHit && gapAfterStep <= profile.hitRadius) {
+        runtime.chargeHit = true;
+        this.resolveEnemyDamage(entity, player, this.chargeDamageOf(entity, player), false);
+      }
+      if (runtime.chargeRemaining <= 1e-9) {
+        this.enterChargeRecovery(runtime, profile);
+      }
+      return;
+    }
+
+    // windup-charge：明显前摇；冲锋方向在前摇结束那一刻锁定。
+    if (runtime.aiState === "windup-charge") {
+      runtime.chargeWindupMs = Math.max(0, runtime.chargeWindupMs - stepMs);
+      this.movements.delete(entity.id);
+      this.facePosition(entity, player.state.position);
+      if (runtime.chargeWindupMs === 0) {
+        runtime.chargeDir = chargeDirection(entity.state.position, player.state.position);
+        runtime.chargeRemaining = profile.chargeDistance;
+        runtime.chargeHit = false;
+        runtime.aiState = "charge";
+      }
+      return;
+    }
+
+    runtime.targetId = player.id;
+
+    // 追击：进入 triggerRange 就起手前摇，否则继续接近。
+    if (distance <= profile.triggerRange) {
+      runtime.chargeWindupMs = profile.windupMs;
+      runtime.chargeRemaining = 0;
+      runtime.chargeRemainingMs = 0;
+      runtime.chargeDir = null;
+      runtime.chargeHit = false;
+      runtime.aiState = "windup-charge";
+      this.movements.delete(entity.id);
+      this.facePosition(entity, player.state.position);
+      this.publish({
+        type: "attack-windup-started",
+        attackerId: entity.id,
+        targetId: player.id,
+        heavy: true, // 前摇明显长于普攻，反馈层用重击提示样式。
+        durationMs: profile.windupMs,
+        at: this.elapsedMs,
+      });
+      return;
+    }
+
+    runtime.aiState = "chase";
+    this.movements.set(entity.id, {
+      target: cloneVec3(player.state.position),
+      speed: this.moveSpeedOf(entity),
+    });
+  }
+
+  private enterChargeRecovery(runtime: CombatRuntime, profile: WindupChargeAiProfile): void {
+    runtime.chargeRemaining = 0;
+    runtime.chargeRemainingMs = profile.recoveryMs;
+    runtime.chargeDir = null;
+    runtime.aiState = "recovery";
+  }
+
+  /** 冲锋伤害：与普攻同源的攻击 - 防御，向上取整且至少 1 点。 */
+  private chargeDamageOf(attacker: Entity, target: Entity): number {
+    const attack = this.attributesOf(attacker).attack ?? 0;
+    const defense = this.attributesOf(target).defense ?? 0;
+    return Math.max(1, Math.round(attack - defense));
+  }
+
+  private facePosition(entity: Entity, target: Vec3): void {
+    const dx = target.x - entity.state.position.x;
+    const dz = target.z - entity.state.position.z;
+    if (dx === 0 && dz === 0) {
+      return;
+    }
+    entity.state.rotation.y = Math.atan2(dx, dz);
+  }
+
+  /**
+   * 吐弹型状态机（票 36）：kiting——保持 preferredRange，玩家进入 retreatRange
+   * 就后撤，太远则追近；开火倒计时归零时朝玩家当前位置发射逻辑层投射物。
+   * 命中判定完全在 GameSession（投射物步进 + 命中即 resolveEnemyDamage）。
+   */
+  private updateKiteBehavior(
+    entity: Entity,
+    runtime: CombatRuntime,
+    profile: RangedKiteAiProfile,
+    stepMs: number,
+  ): void {
+    const player = this.playerId === null ? undefined : this.entities.get(this.playerId);
+    const playerRuntime =
+      this.playerId === null ? undefined : this.combat.get(this.playerId);
+
+    if (!player || !playerRuntime || !playerRuntime.alive) {
+      runtime.targetId = null;
+      runtime.aiState = "idle";
+      runtime.idleMs = 0;
+      this.movements.delete(entity.id);
+      return;
+    }
+
+    const attributes = this.attributesOf(entity);
+    const aggroRadius = Math.max(0, attributes.aggroRadius ?? DEFAULT_AGGRO_RADIUS);
+    const distance = horizontalDistance(entity.state.position, player.state.position);
+
+    if (distance > aggroRadius * 2) {
+      runtime.targetId = null;
+      runtime.aiState = "idle";
+      runtime.idleMs = 0;
+      this.movements.delete(entity.id);
+      return;
+    }
+
+    runtime.targetId = player.id;
+    runtime.aiState = "kite";
+    this.facePosition(entity, player.state.position);
+
+    const moveTarget = kiteMoveTarget(
+      entity.state.position,
+      player.state.position,
+      profile.preferredRange,
+      profile.retreatRange,
+      (this.moveSpeedOf(entity) * stepMs) / 1000,
+    );
+    if (moveTarget === null) {
+      this.movements.delete(entity.id);
+    } else {
+      this.movements.set(entity.id, {
+        target: moveTarget,
+        speed: this.moveSpeedOf(entity),
+      });
+    }
+
+    runtime.fireCooldownMs = Math.max(0, runtime.fireCooldownMs - stepMs);
+    if (runtime.fireCooldownMs === 0 && distance <= profile.preferredRange + 2) {
+      this.fireProjectile(entity, runtime, player, profile);
+    }
+  }
+
+  private fireProjectile(
+    entity: Entity,
+    runtime: CombatRuntime,
+    player: Entity,
+    profile: RangedKiteAiProfile,
+  ): void {
+    runtime.projectilesFired += 1;
+    runtime.fireCooldownMs = profile.fireIntervalMs;
+    const projectileId = `${entity.id}#shot${runtime.projectilesFired}`;
+    const dir = chargeDirection(entity.state.position, player.state.position);
+    const position = {
+      x: entity.state.position.x + dir.x * 0.6,
+      y: entity.state.position.y,
+      z: entity.state.position.z + dir.z * 0.6,
+    };
+    this.projectiles.set(projectileId, {
+      id: projectileId,
+      ownerId: entity.id,
+      targetId: player.id,
+      position,
+      velocity: { x: dir.x * profile.projectileSpeed, z: dir.z * profile.projectileSpeed },
+      damage: profile.projectileDamage,
+      radius: profile.projectileRadius,
+      remainingMs: profile.projectileLifetimeMs,
+    });
+    this.publish({
+      type: "projectile-spawned",
+      projectileId,
+      ownerId: entity.id,
+      targetId: player.id,
+      position,
+      at: this.elapsedMs,
+    });
+  }
+
+  /** 投射物步进：命中 → 伤害；撞障碍/超时 → 消失。表现层只消费两个事件。 */
+  private stepProjectiles(stepMs: number): void {
+    const player = this.playerId === null ? undefined : this.entities.get(this.playerId);
+    if (!player) {
+      return;
+    }
+    for (const [id, projectile] of this.projectiles) {
+      const owner = this.entities.get(projectile.ownerId as EntityId);
+      const step = stepProjectile(
+        projectile,
+        stepMs,
+        player.state.position,
+        LOGIC_COLLIDER_RADIUS,
+        this.obstacles,
+      );
+      this.projectiles.set(id, step.projectile);
+
+      if (step.hit) {
+        this.projectiles.delete(id);
+        // 伤害与战斗日志都由 resolveEnemyDamage 统一结算，这里不重复记账。
+        if (owner !== undefined) {
+          this.resolveEnemyDamage(owner, player, projectile.damage, false);
+        }
+        this.publish({
+          type: "projectile-removed",
+          projectileId: id,
+          ownerId: projectile.ownerId as EntityId,
+          reason: "hit",
+          at: this.elapsedMs,
+        });
+        continue;
+      }
+      if (step.blocked || step.expired) {
+        this.projectiles.delete(id);
+        this.publish({
+          type: "projectile-removed",
+          projectileId: id,
+          ownerId: projectile.ownerId as EntityId,
+          reason: step.blocked ? "blocked" : "expired",
+          at: this.elapsedMs,
+        });
+      }
+    }
+  }
+
+  /**
+   * 敌人直接结算一次伤害（冲锋命中 / 投射物命中）。
+   * 命中判定在 AI 侧完成，damage 是**已算好的最终伤害**：冲锋走攻防公式，
+   * 投射物用档案里的固定伤害（威胁来自距离与走位，不来自防御）。
+   */
+  private resolveEnemyDamage(
+    attacker: Entity,
+    target: Entity,
+    damage: number,
+    heavy: boolean,
+  ): void {
+    const targetRuntime = this.combat.get(target.id);
+    if (!targetRuntime || !targetRuntime.alive) {
+      return;
+    }
+    targetRuntime.hp = Math.max(0, targetRuntime.hp - damage);
+    this.publishDamageDealt(attacker, target, {
+      amount: damage,
+      heavy,
+      at: this.elapsedMs,
+    });
+    this.publishHealthChange(target, "damage");
+    this.events.push({
+      type: "attack",
+      at: this.elapsedMs,
+      attackerId: attacker.id,
+      targetId: target.id,
+      hit: true,
+      damage,
+      targetHp: targetRuntime.hp,
+      targetMaxHp: this.maxHpOf(target),
+    });
+    if (targetRuntime.hp <= 0) {
+      this.handleDeath(target, attacker);
+    }
+  }
+
   /** 移动按固定步长推进；与 Crowd V2 的朝向约定一致（+Z 为 0，朝 +X 为 π/2）。 */
   private moveEntities(stepMs: number): void {
     for (const [id, movement] of this.movements) {
@@ -1272,6 +1738,12 @@ export class GameSession implements GameSessionIntents {
     const attacker = this.entities.get(attackerId);
     const runtime = this.combat.get(attackerId);
     if (!attacker || !runtime || !runtime.alive || runtime.targetId === null) {
+      return;
+    }
+    // 票 36：windup-charge / ranged-kite 有自己的结算管线（冲锋命中判定、
+    // 投射物步进），不走通用普攻结算器，否则两套状态机会互相打断。
+    const profile = this.enemyProfiles.get(attackerId)?.aiProfile ?? null;
+    if (attacker.identity.type === "enemy" && profile !== null) {
       return;
     }
     // 前摇结束时 cooldownMs 已经在本回合起手时锁定，因此 windupReady 要绕过冷却门。
@@ -1525,6 +1997,9 @@ export class GameSession implements GameSessionIntents {
       });
       this.respawnAtMs = this.elapsedMs + this.respawnDelayMs;
 
+      // 票 36 死亡轻惩罚：回村出生点由 processRespawn 负责，这里只扣金币。
+      this.applyDeathPenalty(this.requirePlayer());
+
       // 玩家倒下瞬间让敌人停手，避免重生前继续吃伤害。
       for (const [id, other] of this.entities) {
         if (other.identity.type !== "enemy") {
@@ -1542,6 +2017,67 @@ export class GameSession implements GameSessionIntents {
         }
       }
     }
+  }
+
+  /**
+   * 死亡轻惩罚（票 36）：损失 ceil(rate × 金币总数) 枚金币物品。
+   * 金币就是背包物品，所以扣减结果随实体背包自然进快照，不需要新快照字段。
+   * 金币不足一份（0 枚）时免罚，不广播事件。
+   */
+  private applyDeathPenalty(player: Entity): void {
+    const itemId = this.deathPenaltyCoinItemId;
+    const total = player.container.items
+      .filter((item) => item.templateId === itemId)
+      .reduce((sum, item) => sum + item.quantity, 0);
+    const lost = coinPenaltyFor(total, this.deathPenaltyRate);
+    if (lost <= 0) {
+      return;
+    }
+    const remaining = this.removeItem(player, itemId, lost);
+    this.events.push({
+      type: "loot",
+      at: this.elapsedMs,
+      entityId: player.id,
+      itemId,
+      quantity: -lost,
+    });
+    this.publish({
+      type: "item-lost",
+      entityId: player.id,
+      itemId,
+      quantity: lost,
+    });
+    this.publish({
+      type: "player-death-penalty",
+      entityId: player.id,
+      itemId,
+      lostQuantity: lost,
+      remainingQuantity: remaining,
+      at: this.elapsedMs,
+    });
+  }
+
+  /** 从背包扣减物品，返回扣减后的剩余总量；数量不足时按现有量扣。 */
+  private removeItem(entity: Entity, itemId: string, quantity: number): number {
+    let remaining = Math.max(0, Math.floor(quantity));
+    let left = 0;
+    for (const item of entity.container.items) {
+      left += item.templateId === itemId ? item.quantity : 0;
+    }
+    for (const item of entity.container.items) {
+      if (remaining <= 0) {
+        break;
+      }
+      if (item.templateId !== itemId) {
+        continue;
+      }
+      const taken = Math.min(item.quantity, remaining);
+      item.quantity -= taken;
+      remaining -= taken;
+      left -= taken;
+    }
+    entity.container.items = entity.container.items.filter((item) => item.quantity > 0);
+    return left;
   }
 
   /** 击杀奖励：经验进玩家属性，掉落按模板概率/区间进背包。 */
@@ -1910,7 +2446,15 @@ export class GameSession implements GameSessionIntents {
       runtime.aiState = entitySnapshot.combat.aiState;
       runtime.idleMs = 0;
       runtime.patrolIndex = 0;
+      // 冲锋链路与投射物是瞬态（同前摇）：快照 v3 不记录，读档后从头开始。
+      runtime.chargeWindupMs = 0;
+      runtime.chargeRemaining = 0;
+      runtime.chargeRemainingMs = 0;
+      runtime.chargeDir = null;
+      runtime.chargeHit = false;
+      runtime.fireCooldownMs = 0;
     }
+    this.projectiles.clear();
 
     this.dialogue = restoredDialogue;
     this.questLog.restore(snapshot.quests);
