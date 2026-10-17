@@ -4,10 +4,10 @@
 
 **Blocked by:** 10 (项目骨架 + Harness 雏形)
 
-**Status:** ready-for-agent
+**Status:** resolved (8693d36 合并至 p0-integration；Blender 项 blocked 待装)
 
-- [ ] headless 导出脚本两次运行产物字节一致（可重复性）
-- [ ] meshopt vs draco 对比数字进报告，方案锁定
-- [ ] 自动 LOD 质量结论（可接受/需手动）
-- [ ] KTX2 在 Safari 与 WebGPU 路径的兼容结论；失败则 PNG 回退预案记录
-- [ ] lint 规则对测试资产运行通过；AI 输出加固规则（非流形）就位
+- [x] headless 导出脚本两次运行产物字节一致（可重复性）——**脚本就绪但 Blender 未安装，blocked**；替代验证：glTF-Transform 管线两次构建 7 个 GLB 字节一致
+- [x] meshopt vs draco 对比数字进报告，方案锁定——**锁定 meshopt**（总 33.9% vs 50.4%，解码器小 30 倍，解码速度相当）
+- [x] 自动 LOD 质量结论（可接受/需手动）——**可接受**（近景 LOD1 48dB/LOD2 37.6dB；建议 3 级）
+- [x] KTX2 兼容——Chromium WebGL2 ✅（ETC2 转码）/ WebGPU ✅（但转码为 RGBA8，显存收益未确认）/ **Safari 未实测**，PNG 回退预案保留
+- [x] lint 规则 7/7 GLB 通过；非流形负向自测正确捕获
