@@ -16,6 +16,8 @@ import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents";
 import { SceneInstrumentation } from "@babylonjs/core/Instrumentation/sceneInstrumentation";
 import { HighlightLayer } from "@babylonjs/core/Layers/highlightLayer";
 import { DirectionalLight } from "@babylonjs/core/Lights/directionalLight";
+import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
+import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { ColorCurves } from "@babylonjs/core/Materials/colorCurves";
 import type { Material } from "@babylonjs/core/Materials/material";
 import { ShaderMaterial } from "@babylonjs/core/Materials/shaderMaterial";
@@ -24,13 +26,14 @@ import { ImageProcessingConfiguration } from "@babylonjs/core/Materials/imagePro
 import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
 import { Matrix, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
-import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import type { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import type { Observer } from "@babylonjs/core/Misc/observable";
 import { DefaultRenderingPipeline } from "@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/defaultRenderingPipeline";
 import { Scene } from "@babylonjs/core/scene";
 import elderMaCompiled from "../../../content/dialogues/elder_ma.ink?ink";
+import merchantBoCompiled from "../../../content/dialogues/merchant_bo.ink?ink";
+import smithQiCompiled from "../../../content/dialogues/smith_qi.ink?ink";
 import levelCurveData from "../../../content/level-curves/standard.json";
 import {
   GREEN_HOLLOW_REGION,
@@ -73,6 +76,8 @@ import { setCameraSpan, setGreyboxEnabled } from "../navmesh-scene";
 import { IndexedDbSaveStorage } from "../persistence/indexed-db-save-storage";
 import { createQuestLoopUi, type QuestLoopUi } from "../ui/quest-loop-ui";
 import { createDialogueUi, type DialogueUi } from "../ui/dialogue-portrait";
+import { createTradeUi, type TradeUi } from "../ui/trade-panel";
+import { takeTitleEntryIntent } from "../title-entry";
 import {
   createProceduralNpc,
   createSlimeEnemy,
@@ -285,6 +290,14 @@ interface P1WorldState {
   interaction: InteractionState;
   /** galgame 立绘 + 气泡 UI（纯 DOM）。 */
   dialogueUi: DialogueUi;
+  /** 票 33：商人交易面板（纯 DOM，独立于 quest-loop-ui）。 */
+  tradeUi: TradeUi;
+  /** 票 33：当前打开摊位的商人 NPC id；null = 摊位没开。 */
+  tradeNpcId: string | null;
+  /** 最近一次对话的 NPC（ink 走完时快照里的 dialogue 已是 null，靠它开摊位）。 */
+  lastTalkedNpcId: string | null;
+  /** 票 33：安全区地面色块（敌人拒止区的可视化）。 */
+  safeZoneMarks: Mesh[];
   /** 对话镜头推近进度 0–1；0 = 常规全景。 */
   zoomProgress: number;
   /** 票 27：战斗反馈层（飘字/血条/顿帧/震屏/闪红），只消费订阅事件。 */
@@ -399,6 +412,69 @@ export interface P1WorldDebugApi {
   };
   /** 保持眯眼/眨眼 ms，便于截图（默认 500ms）。 */
   blink(holdMs?: number): void;
+  /**
+   * 票 33：村庄安全区证据。
+   * zones = 逻辑层的安全区定义；playerSheltered = 玩家当前是否在区内；
+   * 敌人位置用于断言「区内时敌人不追入」。
+   */
+  getVillageEvidence(): {
+    zones: Array<{
+      id: string;
+      center: { x: number; z: number };
+      halfExtents: { x: number; z: number };
+    }>;
+    /** 地面标记网格数（每个安全区 = 1 块填充 + 4 条边界）。 */
+    markCount: number;
+    playerSheltered: boolean;
+    playerPosition: { x: number; z: number };
+    enemyPositions: Array<{ id: string; x: number; z: number }>;
+    /** 每个 NPC 的逻辑位置与巡逻进度（快照字段 patrolIndex）。 */
+    npcPositions: Array<{
+      id: string;
+      x: number;
+      z: number;
+      patrolIndex: number | null;
+    }>;
+    /** NPC 的巡逻采样（表现层演出状态）。 */
+    patrolSamples: Array<{ id: string; moving: boolean; yaw: number }>;
+  };
+  /** 票 33：交易面板当前状态与报价（供 L4 断言买卖闭环）。 */
+  getTradeEvidence(): {
+    open: boolean;
+    npcId: string | null;
+    coins: number;
+    lastMessage: string;
+    rows: Array<{
+      itemId: string;
+      displayName: string;
+      kind: "sell" | "buy";
+      unitPrice: number;
+      maxSellQuantity: number;
+      maxBuyQuantity: number;
+      broke: boolean;
+      atMaxStack: boolean;
+    }>;
+  };
+  /** 票 33：直接走一次买卖（等价于点面板上的「全卖」/「买 1」）。 */
+  trade(kind: "sell" | "buy", itemId: string, quantity: number): {
+    ok: boolean;
+    quantity?: number;
+    coinDelta?: number;
+    message?: string;
+  };
+  /** 直接打开某 NPC 的摊位（等价于与商人对话走完后自动开摊）。 */
+  openStall(npcId: string): boolean;
+  /**
+   * 票 33：完成任务（接取 → 击杀推进 → 复命）走真实对话路径。
+   * L4 用它验证换锚点：换锚点必须在真实任务流程里发生，不给后门。
+   */
+  completeQuestThroughDialogue(): boolean;
+  /**
+   * 票 33：直接发物品（L4 造战利品/铜币走这个正式入口）。
+   * 等价于掉落/任务奖励的同一个 addItem 通道，不绕过结算。
+   */
+  grantItem(itemId: string, quantity: number): string[];
+  closeStall(): void;
   /** 票 36：两种新敌人的 AI 状态 + 投射物 + 死亡惩罚证据。 */
   getEnemyAiEvidence(): {
     enemies: Array<{
@@ -476,6 +552,11 @@ export interface P1WorldDebugApi {
     landscapeMeshCount: number;
     drawCalls: number;
   };
+  /**
+   * 票 32：新游戏——回到区域的初始状态（丢弃当前进度）。
+   * 旧的自动/手动槽不动；新游戏后的自动存档会覆盖 auto 槽。
+   */
+  startNewGame(): { playerLevel: number; elapsedMs: number };
 }
 
 declare global {
@@ -851,6 +932,143 @@ function applyInteractionAction(
   }
 }
 
+/** 票 33：村庄里的商人 NPC id（内容里唯一带 vendor 的那位）。 */
+const MERCHANT_NPC_ID = "npc:merchant_bo";
+
+/**
+ * 票 33：一次买卖。只经会话的 try* 意图结算，面板自己不碰背包；
+ * 结算后用 vendorOffer 刷新（价格/持有量/金币都从同一条报价路径来）。
+ */
+function trade(
+  state: P1WorldState,
+  kind: "sell" | "buy",
+  itemId: string,
+  quantity: number,
+): void {
+  const npcId = state.tradeNpcId;
+  if (npcId === null) {
+    return;
+  }
+  const result =
+    kind === "sell"
+      ? state.session.trySellToVendor(npcId, itemId, quantity)
+      : state.session.tryBuyFromVendor(npcId, itemId, quantity);
+  if (!result.ok) {
+    state.tradeUi.setMessage(`交易未成：${result.message ?? "未知原因"}`);
+    return;
+  }
+  const delta = result.coinDelta ?? 0;
+  const coinText = delta >= 0 ? `+${delta}` : `${delta}`;
+  state.tradeUi.setMessage(`${kind === "sell" ? "卖出" : "买入"} ${result.quantity ?? 0} 个 · 铜币 ${coinText}`);
+  const offer = state.session.vendorOffer(npcId);
+  if (offer !== null) {
+    state.tradeUi.refresh(offer);
+  }
+}
+
+/** 关闭摊位：对话早已结束（摊位是挂在商人旁边的独立面板）。 */
+function closeTrade(state: P1WorldState): void {
+  state.tradeUi.close();
+  state.tradeNpcId = null;
+}
+
+/**
+ * 票 33：对话对象是商人且对话结束时打开摊位。
+ * 这是「对话状态机里商人对话结束后可开交易」的兑现点：ink 走完 → 摊位开。
+ */
+function openTradeIfVendor(state: P1WorldState, npcId: string): void {
+  const offer = state.session.vendorOffer(npcId);
+  if (offer === null) {
+    return;
+  }
+  state.tradeNpcId = npcId;
+  state.tradeUi.open(offer);
+}
+
+/**
+ * 票 33：安全区可视化 = 淡色地面填充 + 四条边界线。
+ * 只画地面这一层，不做围墙几何：地形是关卡美术的事，这里只把
+ * 「敌人拒止的边界在哪」标出来，方便 L4 断言与人工核对。
+ */
+function createSafeZoneMarks(
+  scene: Scene,
+  zones: readonly {
+    id: string;
+    center: { x: number; z: number };
+    halfExtents: { x: number; z: number };
+  }[],
+): Mesh[] {
+  const marks: Mesh[] = [];
+  const fillMaterial = new StandardMaterial("safezone.fill.material", scene);
+  fillMaterial.diffuseColor = Color3.FromHexString("#fde68a");
+  fillMaterial.emissiveColor = Color3.FromHexString("#f59e0b").scale(0.25);
+  fillMaterial.alpha = 0.1;
+  fillMaterial.disableLighting = true;
+
+  const edgeMaterial = new StandardMaterial("safezone.edge.material", scene);
+  edgeMaterial.emissiveColor = Color3.FromHexString("#fbbf24");
+  edgeMaterial.disableLighting = true;
+
+  const EDGE = 0.18;
+  for (const zone of zones) {
+    const fill = MeshBuilder.CreateGround(
+      `safezone.${zone.id}.fill`,
+      { width: zone.halfExtents.x * 2, height: zone.halfExtents.z * 2 },
+      scene,
+    );
+    fill.position.set(zone.center.x, 0.03, zone.center.z);
+    fill.isPickable = false;
+    fill.material = fillMaterial;
+    fill.metadata = { safeZoneId: zone.id };
+    marks.push(fill);
+
+    // 四条边界：细长条地面，只在边界线上（内缘贴齐矩形边界）。
+    const edges: Array<{ width: number; height: number; dx: number; dz: number }> = [
+      {
+        width: zone.halfExtents.x * 2 + EDGE,
+        height: EDGE,
+        dx: 0,
+        dz: -zone.halfExtents.z,
+      },
+      {
+        width: zone.halfExtents.x * 2 + EDGE,
+        height: EDGE,
+        dx: 0,
+        dz: zone.halfExtents.z,
+      },
+      {
+        width: EDGE,
+        height: zone.halfExtents.z * 2,
+        dx: -zone.halfExtents.x,
+        dz: 0,
+      },
+      {
+        width: EDGE,
+        height: zone.halfExtents.z * 2,
+        dx: zone.halfExtents.x,
+        dz: 0,
+      },
+    ];
+    edges.forEach((edge, index) => {
+      const line = MeshBuilder.CreateGround(
+        `safezone.${zone.id}.edge${index}`,
+        { width: edge.width, height: edge.height },
+        scene,
+      );
+      line.position.set(
+        zone.center.x + edge.dx,
+        0.05,
+        zone.center.z + edge.dz,
+      );
+      line.isPickable = false;
+      line.material = edgeMaterial;
+      line.metadata = { safeZoneId: zone.id };
+      marks.push(line);
+    });
+  }
+  return marks;
+}
+
 /** 第二段：双方互转面对面 → 开对话 → 立绘 + 镜头推近。 */
 function startDialogue(state: P1WorldState, npcId: string): void {
   const result = state.session.tryTalkTo(npcId);
@@ -859,6 +1077,7 @@ function startDialogue(state: P1WorldState, npcId: string): void {
     return;
   }
   state.session.faceNpc(PLAYER_ID, npcId);
+  state.lastTalkedNpcId = npcId;
   const snapshot = state.session.snapshot();
   const dialogue = snapshot.dialogue;
   if (dialogue === null) {
@@ -870,7 +1089,12 @@ function startDialogue(state: P1WorldState, npcId: string): void {
 
 /** 对话结束（ink 走完 / 移动打断 / 走开）：恢复镜头与 UI。 */
 function closeDialoguePresentation(state: P1WorldState): void {
+  // 票 33：商人对话结束 → 顺势开摊位（对话是交易的前置动作，不是替代品）。
+  const endedNpcId = state.session.snapshot().dialogue?.npcId ?? state.lastTalkedNpcId;
   state.dialogueUi.closeDialogue();
+  if (endedNpcId !== null && endedNpcId !== undefined) {
+    openTradeIfVendor(state, endedNpcId);
+  }
   // 交互阶段同步复位：对话可能由 ink 自然结束（选完选项后故事走到 END），
   // 此时没有移动意图触发 requestMove，状态机会停在 talking。
   // 不复位会让下一次点击 NPC 被「已有对话」逻辑拒绝。
@@ -1150,6 +1374,39 @@ async function slotEntries(state: P1WorldState) {
   }));
 }
 
+/**
+ * 票 32：新游戏 = 把会话恢复到区域的初始状态。
+ *
+ * 语义上是「丢弃当前进度」而不是「删档」：旧的手动槽原样留着，玩家随时
+ * 能从标题画面选回来；auto 槽会在新游戏落定后被下一次自动存档接管
+ * （标题画面的二次确认文案已说明这一点）。
+ */
+function startNewGame(state: P1WorldState): { playerLevel: number; elapsedMs: number } {
+  const fresh = new GameSession();
+  fresh.registerDialogue("elder_ma", elderMaCompiled);
+  fresh.loadRegion(CONTENT_BUNDLE, GREEN_HOLLOW_REGION_ID);
+  const snapshot = fresh.snapshot();
+
+  state.session.restoreSnapshot(snapshot);
+  clearWaypoints(state);
+  state.deadEnemies.clear();
+  state.dyingEnemies.clear();
+  state.hitReacts.clear();
+  state.selectedEnemyId = null;
+  state.selectEnemy(null);
+  state.feedback.clearTransient();
+  setInteractionPhase(state.interaction, createInteractionState());
+  closeDialoguePresentation(state);
+  state.zoomProgress = 0;
+  const scene = state.player.rootNode.getScene();
+  setCameraSpan(scene, CAMERA_VERTICAL_SPAN);
+  syncVisualToSnapshot(state, state.session.snapshot());
+  state.ui.update(state.session.snapshot());
+  state.ui.setSaveStatus("新游戏：进度已重置", "ok");
+  const result = state.session.playerLevelProgress();
+  return { playerLevel: result.level, elapsedMs: state.session.snapshot().elapsedMs };
+}
+
 function groundPoint(scene: Scene): Vector3 | null {
   const camera = scene.activeCamera;
   if (!camera) {
@@ -1300,6 +1557,7 @@ function installDebugApi(scene: Scene, state: P1WorldState): void {
     loadFromSlot: (slotId) => restoreSlot(state, slotId),
     deleteSlot: (slotId) => deleteSlot(state, slotId),
     saveToAuto: () => state.autoSaver.notifyRegionChanged(),
+    startNewGame: () => startNewGame(state),
     getMeshPosition: (entityId) => {
       const visual = state.visuals.get(entityId);
       if (!visual) {
@@ -1501,6 +1759,116 @@ function installDebugApi(scene: Scene, state: P1WorldState): void {
         dimStrength: round(dialogueDimStrength(state.zoomProgress), 3),
       };
     },
+    getVillageEvidence: () => {
+      const snapshot = state.session.snapshot();
+      const player = snapshot.entities.find((entity) => entity.id === PLAYER_ID);
+      return {
+        zones: state.session.getSafeZones().map((zone) => ({
+          id: zone.id,
+          center: { x: zone.center.x, z: zone.center.z },
+          halfExtents: { x: zone.halfExtents.x, z: zone.halfExtents.z },
+        })),
+        markCount: state.safeZoneMarks.length,
+        playerSheltered: state.session.playerIsSheltered(),
+        playerPosition: player
+          ? { x: round(player.position.x, 3), z: round(player.position.z, 3) }
+          : { x: 0, z: 0 },
+        enemyPositions: snapshot.entities
+          .filter((entity) => entity.identity.type === "enemy" && entity.combat.alive)
+          .map((entity) => ({
+            id: entity.id,
+            x: round(entity.position.x, 3),
+            z: round(entity.position.z, 3),
+          })),
+        npcPositions: snapshot.entities
+          .filter((entity) => entity.identity.type === "npc")
+          .map((entity) => ({
+            id: entity.id,
+            x: round(entity.position.x, 3),
+            z: round(entity.position.z, 3),
+            patrolIndex: entity.patrolIndex ?? null,
+          })),
+        patrolSamples: snapshot.entities
+          .filter((entity) => entity.identity.type === "npc")
+          .map((entity) => {
+            const sample = state.session.patrolSampleOf(entity.id);
+            return {
+              id: entity.id,
+              moving: sample?.moving ?? false,
+              yaw: round(sample?.yaw ?? 0, 4),
+            };
+          }),
+      };
+    },
+    getTradeEvidence: () => {
+      const npcId = state.tradeNpcId;
+      const offer = npcId === null ? null : state.session.vendorOffer(npcId);
+      return {
+        open: state.tradeUi.isOpen(),
+        npcId,
+        coins: offer?.coins ?? 0,
+        lastMessage: state.tradeUi.lastMessage(),
+        rows:
+          offer?.rows.map((row) => ({
+            itemId: row.itemId,
+            displayName: row.displayName,
+            kind: row.kind,
+            unitPrice: row.unitPrice,
+            maxSellQuantity: row.maxSellQuantity,
+            maxBuyQuantity: row.maxBuyQuantity,
+            broke: row.broke,
+            atMaxStack: row.atMaxStack,
+          })) ?? [],
+      };
+    },
+    trade: (kind, itemId, quantity) => {
+      if (state.tradeNpcId === null) {
+        return { ok: false, message: "摊位没开" };
+      }
+      return kind === "sell"
+        ? state.session.trySellToVendor(state.tradeNpcId, itemId, quantity)
+        : state.session.tryBuyFromVendor(state.tradeNpcId, itemId, quantity);
+    },
+    openStall: (npcId) => {
+      const offer = state.session.vendorOffer(npcId);
+      if (offer === null) {
+        return false;
+      }
+      state.tradeNpcId = npcId;
+      state.tradeUi.open(offer);
+      return true;
+    },
+    closeStall: () => closeTrade(state),
+    grantItem: (itemId, quantity) => state.session.grantItem(PLAYER_ID, itemId, quantity),
+    completeQuestThroughDialogue: () => {
+      const snapshot = state.session.snapshot();
+      const quest = snapshot.quests.find((entry) => entry.status !== "completed");
+      if (quest === undefined || state.session.snapshot().dialogue !== null) {
+        return false;
+      }
+      const giver = quest.giverNpcId;
+      if (state.session.snapshot().dialogue === null) {
+        if (!state.session.tryTalkTo(giver).ok) return false;
+      }
+      // 1) 接取（或直接进入可交分支）。
+      if (quest.status === "available") {
+        state.session.chooseDialogueOption(0);
+      }
+      // 2) 击杀推进：走正式的 emitCombatEvent 通道（与真实战斗同一处理函数）。
+      for (const objective of quest.objectives) {
+        for (let i = objective.current; i < objective.required; i += 1) {
+          state.session.emitCombatEvent({
+            type: "enemy-killed",
+            enemyId: `enemy:l4_probe_${objective.id}_${i}`,
+            enemyTemplateId: objective.enemyTemplateId,
+          });
+        }
+      }
+      // 3) 复命交付。
+      if (!state.session.tryTalkTo(giver).ok) return false;
+      state.session.chooseDialogueOption(0);
+      return state.session.snapshot().quests.some((entry) => entry.status === "completed");
+    },
     getWorldEvidence: () => {
       const enabledLights = scene.lights.filter((light) => light.isEnabled());
       const light = enabledLights[0] ?? null;
@@ -1692,6 +2060,8 @@ export const p1WorldScenario: ScenarioDefinition = {
 
     const session = new GameSession();
     session.registerDialogue("elder_ma", elderMaCompiled);
+    session.registerDialogue("merchant_bo", merchantBoCompiled);
+    session.registerDialogue("smith_qi", smithQiCompiled);
     // 票 36：把票 28 的硬碰撞清单交给逻辑层，冲锋挡停与投射物撞墙都用它，
     // navmesh 也从同一份 collider 生成（colliderObstacleSpecs）——单一数据源。
     session.setWorldObstacles(colliders);
@@ -1843,6 +2213,18 @@ export const p1WorldScenario: ScenarioDefinition = {
         setSaveStatus: () => undefined,
         dispose: () => undefined,
       } as unknown as DialogueUi,
+      tradeUi: {
+        open: () => undefined,
+        refresh: () => undefined,
+        close: () => undefined,
+        isOpen: () => false,
+        lastMessage: () => "",
+        setMessage: () => undefined,
+        dispose: () => undefined,
+      } as unknown as TradeUi,
+      tradeNpcId: null,
+      lastTalkedNpcId: null,
+      safeZoneMarks: [],
       zoomProgress: 0,
       feedback: null as unknown as CombatFeedbackLayer,
       audio: new CombatAudio(),
@@ -1934,6 +2316,10 @@ export const p1WorldScenario: ScenarioDefinition = {
       onClearSave: () => {
         void clearStoredSave(state);
       },
+      // 票 32：返回标题。标题流程由 main.ts 挂在 window 上（未挂时按钮无效）。
+      onBackToTitle: () => {
+        window.dispatchEvent(new CustomEvent("game:back-to-title"));
+      },
     });
 
     // 票 31：会话事件 → 自动存档（任务状态变化 / 获得重要物品），
@@ -1998,6 +2384,17 @@ export const p1WorldScenario: ScenarioDefinition = {
         state.session.chooseDialogueOption(index);
       },
     });
+
+    // 票 33：交易面板。与对话面板同风格但独立文件——quest-loop-ui 被多票同时动。
+    state.tradeUi = createTradeUi({
+      mount: document.body,
+      primaryColor: paletteOf(MERCHANT_NPC_ID).primary,
+      onSell: (itemId, quantity) => trade(state, "sell", itemId, quantity),
+      onBuy: (itemId, quantity) => trade(state, "buy", itemId, quantity),
+      onClose: () => closeTrade(state),
+    });
+    // 票 33：安全区可视化。逻辑层拒止才是行为，这里只让「安全区在哪」可读。
+    state.safeZoneMarks = createSafeZoneMarks(scene, session.getSafeZones());
 
     // 画质档位：?quality=high|medium|low|auto（默认 auto = 动态分辨率）。
     const requestedQuality = parseQualityLevel(
@@ -2283,7 +2680,16 @@ export const p1WorldScenario: ScenarioDefinition = {
     await nextFrame();
 
     try {
-      if (await state.saveService.hasSave()) {
+      // 票 32：入场意图决定开局读哪个槽。缺省（harness / L4 直入）沿用旧行为：
+      // 有默认档就读，没有就全新开始。
+      const intent = takeTitleEntryIntent();
+      if (intent.kind === "continue") {
+        if (!(await restoreSlot(state, intent.slotId))) {
+          await loadFromStorage(state);
+        }
+      } else if (intent.kind === "new-game") {
+        startNewGame(state);
+      } else if (await state.saveService.hasSave()) {
         await loadFromStorage(state);
       } else {
         state.ui.setSaveStatus("无存档：点击「存档」创建", "idle");
@@ -2649,6 +3055,11 @@ export const p1WorldScenario: ScenarioDefinition = {
     }
     state.ui.dispose();
     state.dialogueUi.dispose();
+    state.tradeUi.dispose();
+    for (const mark of state.safeZoneMarks) {
+      mark.dispose(false, true);
+    }
+    state.safeZoneMarks.length = 0;
 
     // 票 31：先摘掉卸载兜底与事件订阅，避免场景销毁过程中再写一次盘。
     state.autoSaver.detachBeforeUnload();

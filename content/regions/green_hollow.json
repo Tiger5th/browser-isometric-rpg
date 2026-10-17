@@ -29,5 +29,13 @@
       "position": { "x": 0, "y": 0, "z": 19 },
       "rotation": { "x": 0, "y": 3.141592653589793, "z": 0 }
     }
+  ],
+  "safeZones": [
+    {
+      "id": "zone:green_hollow_village",
+      "shape": "rect",
+      "center": { "x": 0, "y": 0, "z": 0 },
+      "halfExtents": { "x": 9, "z": 9 }
+    }
   ]
 }

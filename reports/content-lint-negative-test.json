@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "purpose": "L2 负向测试：确认色板卡/立绘（票 29）、等级曲线（票 34）与区域出口/敌人掉落引用（票 35）的 schema、引用与结构规则会拦截坏数据",
+  "purpose": "L2 负向测试：确认色板卡/立绘（票 29）、等级曲线（票 34）、村庄经济（票 33）与区域出口/敌人掉落引用（票 35）的 schema、引用与结构规则会拦截坏数据",
   "exitExpectation": "failed",
   "status": "passed",
   "control": {
@@ -131,6 +131,111 @@
           "file": "content/level-curves/standard.json",
           "path": "/defaultModifiers",
           "message": "must NOT have fewer than 1 items"
+        }
+      ]
+    },
+    {
+      "id": "vendor-bad-item-ref",
+      "label": "vendor.sell 引用不存在的物品",
+      "expectation": "reference 错误指向 /vendor/sell/<itemId>",
+      "status": "failed",
+      "caught": true,
+      "issues": [
+        {
+          "code": "reference",
+          "file": "content/npcs/merchant_bo.json",
+          "path": "/vendor/sell/item:mystery_gel",
+          "message": "物品不存在：item:mystery_gel"
+        }
+      ]
+    },
+    {
+      "id": "vendor-zero-price",
+      "label": "vendor 价格为 0",
+      "expectation": "schema 错误指向 /vendor/buy",
+      "status": "failed",
+      "caught": true,
+      "issues": [
+        {
+          "code": "schema",
+          "file": "content/npcs/merchant_bo.json",
+          "path": "/vendor/buy/item:healing_herb",
+          "message": "must be >= 1"
+        }
+      ]
+    },
+    {
+      "id": "vendor-no-spread",
+      "label": "同一物品同时 sell 与 buy",
+      "expectation": "range 错误指向 /vendor/buy",
+      "status": "failed",
+      "caught": true,
+      "issues": [
+        {
+          "code": "range",
+          "file": "content/npcs/merchant_bo.json",
+          "path": "/vendor/buy/item:healing_herb",
+          "message": "物品 item:healing_herb 不能同时出现在 sell 与 buy（需要买卖价差）"
+        }
+      ]
+    },
+    {
+      "id": "patrol-single-waypoint",
+      "label": "巡逻路线只有一个点位",
+      "expectation": "schema 错误指向 /patrol/waypoints",
+      "status": "failed",
+      "caught": true,
+      "issues": [
+        {
+          "code": "schema",
+          "file": "content/npcs/scout_lin.json",
+          "path": "/patrol/waypoints",
+          "message": "must NOT have fewer than 2 items"
+        }
+      ]
+    },
+    {
+      "id": "patrol-anchor-mismatch",
+      "label": "巡逻首点与 NPC 初始位置不一致",
+      "expectation": "range 错误指向 /patrol/waypoints/0",
+      "status": "failed",
+      "caught": true,
+      "issues": [
+        {
+          "code": "range",
+          "file": "content/npcs/scout_lin.json",
+          "path": "/patrol/waypoints/0",
+          "message": "巡逻路线首点应等于 NPC 的初始 position（否则读档/开局会瞬移）"
+        }
+      ]
+    },
+    {
+      "id": "reanchor-bad-quest-ref",
+      "label": "reanchors 引用不存在的任务",
+      "expectation": "reference 错误指向 /reanchors/0/questId",
+      "status": "failed",
+      "caught": true,
+      "issues": [
+        {
+          "code": "reference",
+          "file": "content/npcs/elder_ma.json",
+          "path": "/reanchors/0/questId",
+          "message": "任务不存在：quest:missing"
+        }
+      ]
+    },
+    {
+      "id": "safe-zone-zero-extent",
+      "label": "安全区 halfExtents 为 0",
+      "expectation": "schema 错误指向 /safeZones/0/halfExtents",
+      "status": "failed",
+      "caught": true,
+      "issues": [
+        {
+          "code": "schema",
+          "file": "content/regions/green_hollow.json",
+          "path": "/safeZones/0/halfExtents/x",
+          "message": "must be > 0"
         }
       ]
     }

@@ -14,14 +14,19 @@
  */
 
 import elderMaPalette from "../../../content/character-palettes/elder_ma.json";
+import merchantBoPalette from "../../../content/character-palettes/merchant_bo.json";
 import playerHeroPalette from "../../../content/character-palettes/player_hero.json";
 import scoutLinPalette from "../../../content/character-palettes/scout_lin.json";
+import smithQiPalette from "../../../content/character-palettes/smith_qi.json";
 import type { CharacterPaletteDefinition } from "../../logic/content/types";
 
 const PALETTES = [
   elderMaPalette,
   playerHeroPalette,
   scoutLinPalette,
+  // 票 33：村庄补齐 4 个 NPC（商人老陶 + 铁匠铁七）。
+  merchantBoPalette,
+  smithQiPalette,
 ] as CharacterPaletteDefinition[];
 
 /** 色板卡 id → 定义。 */
@@ -33,6 +38,8 @@ export const CHARACTER_PALETTES: ReadonlyMap<string, CharacterPaletteDefinition>
 const NPC_PALETTE_IDS: ReadonlyMap<string, string> = new Map([
   ["npc:elder_ma", "character_palette:elder_ma"],
   ["npc:scout_lin", "character_palette:scout_lin"],
+  ["npc:merchant_bo", "character_palette:merchant_bo"],
+  ["npc:smith_qi", "character_palette:smith_qi"],
 ]);
 
 /** 玩家实体的色板卡 id（玩家没有 npc 定义，固定挂主角卡）。 */
@@ -64,6 +71,9 @@ export function paletteOf(entityId: string): CharacterPalette {
 const PORTRAIT_FILES: ReadonlyMap<string, string> = new Map([
   ["npc:elder_ma", "elder_ma.png"],
   ["npc:scout_lin", "scout_lin.png"],
+  // 票 33：新 NPC 立绘尚未出图，缺省走主色程序化占位（同色板卡主色）。
+  ["npc:merchant_bo", "merchant_bo.png"],
+  ["npc:smith_qi", "smith_qi.png"],
   ["entity:player", "player_hero.png"],
 ]);
 

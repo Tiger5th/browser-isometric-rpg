@@ -18,5 +18,24 @@
   "portrait": {
     "image": "assets/portraits/elder_ma.png",
     "keywords": ["elder village woman", "purple robe", "silver bun"]
-  }
+  },
+  "patrol": {
+    "waypoints": [
+      { "x": 6, "y": 0, "z": 4 },
+      { "x": 4, "y": 0, "z": 2 },
+      { "x": 7, "y": 0, "z": 1 }
+    ],
+    "dwellMs": 2600
+  },
+  "reanchors": [
+    {
+      "questId": "quest:cull_slimes",
+      "waypoints": [
+        { "x": 9, "y": 0, "z": -2 },
+        { "x": 7, "y": 0, "z": -4 },
+        { "x": 9, "y": 0, "z": -5 }
+      ],
+      "dwellMs": 2600
+    }
+  ]
 }

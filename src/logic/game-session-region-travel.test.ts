@@ -124,7 +124,9 @@ describe("区域联动（票 35）：路口触发区域切换", () => {
       "enemy:spitter_pond",
       "entity:player",
       "npc:elder_ma",
+      "npc:merchant_bo",
       "npc:scout_lin",
+      "npc:smith_qi",
     ]);
   });
 
@@ -331,6 +333,17 @@ describe("区域联动（票 35）：路口触发区域切换", () => {
       ?.container.items.map((item) => item.templateId);
     expect(items).toContain("item:slime_gel");
     expect(items).not.toContain("item:slime_core");
+  });
+
+  it("区域 2 专属掉落物进了商人收购价目表（供票 33 交易闭环）", () => {
+    // 老陶（票 33 的商人）收 slime_core：区域 2 掉的东西在区域 1 卖得掉，
+    // 这是「探索新地图有独特回报」闭环的最后一环。
+    const merchant = BUNDLE.npcs.find((npc) => npc.id === "npc:merchant_bo");
+    const sell = (merchant?.vendor as { sell?: Record<string, number> } | undefined)?.sell;
+    expect(sell?.["item:slime_core"]).toBeGreaterThan(0);
+    // 凝胶（区域 1 的掉落）同样在价目表里，两者价格不同以体现稀缺度。
+    expect(sell?.["item:slime_gel"]).toBeGreaterThan(0);
+    expect(sell?.["item:slime_core"]).toBeGreaterThan(sell?.["item:slime_gel"] ?? 0);
   });
 
   it("巢穴专属掉落物：巢穴史莱姆有机会掉落巢穴核心（供票 33 商人收购）", () => {

@@ -186,6 +186,20 @@ export type GameSessionEvent =
   | { type: "dialogue-ended"; npcId: string; dialogueId: string }
   | { type: "quest-accepted"; questId: string; npcId: string }
   | { type: "quest-ready"; questId: string }
-  | { type: "quest-completed"; questId: string; npcId: string };
+  | { type: "quest-completed"; questId: string; npcId: string }
+  /**
+   * 换锚点完成（票 33，user story 16）：任务状态变化后 NPC 站到了新锚点。
+   * 表现层据此把演出目标切到新位置（过渡插值/镜头提示）。
+   */
+  | { type: "npc-reanchored"; npcId: string; questId: string; position: { x: number; y: number; z: number } }
+  /** 一笔买卖结算完成（票 33）：coinDelta 正数 = 玩家收到金币。 */
+  | {
+      type: "trade-completed";
+      npcId: string;
+      itemId: string;
+      kind: "sell" | "buy";
+      quantity: number;
+      coinDelta: number;
+    };
 
 export type GameSessionEventListener = (event: GameSessionEvent) => void;

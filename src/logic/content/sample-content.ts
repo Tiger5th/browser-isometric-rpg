@@ -28,7 +28,9 @@ import oldCoinData from "../../../content/items/old_coin.json";
 import slimeGelData from "../../../content/items/slime_gel.json";
 import travelerSwordData from "../../../content/items/traveler_sword.json";
 import npcElderData from "../../../content/npcs/elder_ma.json";
+import npcMerchantData from "../../../content/npcs/merchant_bo.json";
 import npcScoutData from "../../../content/npcs/scout_lin.json";
+import npcSmithData from "../../../content/npcs/smith_qi.json";
 import cullSlimesData from "../../../content/quests/cull_slimes.json";
 import greenHollowData from "../../../content/regions/green_hollow.json";
 import slimeDenData from "../../../content/regions/slime_den.json";
@@ -36,7 +38,8 @@ import type { ContentBundle } from "./types";
 
 export const SAMPLE_CONTENT_BUNDLE = {
   regions: [greenHollowData, slimeDenData],
-  npcs: [npcElderData, npcScoutData],
+  // 村庄 4 个 NPC（票 33）：马婆婆（任务）、林斥候（氛围）、老陶（商人）、铁七（铁匠/伏笔）。
+  npcs: [npcElderData, npcScoutData, npcMerchantData, npcSmithData],
   enemyTemplates: [slimeTemplateData, slimeDenTemplateData, chargerTemplateData, spitterTemplateData],
   enemies: [
     slimeMeadowData,
