@@ -4,10 +4,10 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** resolved (合并至 p0-integration: 714b3bb，测试 5/5，build 通过)
 
-- [ ] 打开页面可见正交相机灰盒场景（程序化几何体）
-- [ ] 至少一个 hello scenario 可执行并输出结构化 JSON 报告
-- [ ] src/logic 有一个纯 TS 模块被 vitest 覆盖（验证逻辑/表现分离可行）
-- [ ] Babylon 与 recast 版本锁定在 package.json（精确版本，非 caret）
-- [ ] GLOSSARY.md 词汇在代码命名中沿用（Region/Harness/Entity 等）
+- [x] 打开页面可见正交相机灰盒场景（程序化几何体）
+- [x] 至少一个 hello scenario 可执行并输出结构化 JSON 报告
+- [x] src/logic 有一个纯 TS 模块被 vitest 覆盖（验证逻辑/表现分离可行）
+- [x] Babylon 与 recast 版本锁定在 package.json（精确版本，非 caret）
+- [x] GLOSSARY.md 词汇在代码命名中沿用（Region/Harness/Entity 等）

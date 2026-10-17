@@ -32,7 +32,8 @@
 - **文档基建完成（2026-10-17）**：GLOSSARY.md 建立；ADR-0002~0005 写入（点击移动/区域流式/数据驱动系统/测试分层）。
 - **P0 已规格化并拆票**：specs/p0-prototype-validation.md（18 条 user story，ready-for-agent）→ 拆为 tickets 10–18。10 无阻塞；10→{11,12,14,15,16} 并行；13←11；17←10,15；18←11..17 汇总。
 - **09 美术已修订**：二次元风格 + 自用不商用 → 免费方案（VRoid + Mixamo + AI 免费档 + toon 渲染）；链路验证在 17 号票。
-- **当前 frontier：10 号票（项目骨架 + Harness）可立即开工。**
+- **10 号票已完成并合并**（714b3bb：Babylon 9.31.0 / recast-navigation 0.43.1 锁版本，P0Harness + hello 场景 + JSON 报告，vitest 5/5）。备注：recast 包名实为 `recast-navigation`。
+- **当前 frontier：11/12/14/15/16 并行可开工。**
 
 ## Fog
 
