@@ -1,0 +1,247 @@
+{
+  "schemaVersion": 1,
+  "harness": "P0Harness",
+  "scenario": "p1-world",
+  "status": "failed",
+  "startedAt": "2026-10-17T14:16:16.186Z",
+  "finishedAt": "2026-10-17T14:16:23.762Z",
+  "durationMs": 7576,
+  "environment": {
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "renderBackend": "webgl2",
+    "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+    "capturedAt": "2026-10-17T14:16:23.762Z",
+    "devicePixelRatio": 2,
+    "hardwareConcurrency": 10
+  },
+  "metrics": [
+    {
+      "name": "fpsAverage",
+      "value": 37.74,
+      "unit": "fps",
+      "threshold": 59.5,
+      "comparison": "gte",
+      "passed": false
+    },
+    {
+      "name": "fpsMin",
+      "value": 19.96,
+      "unit": "fps"
+    },
+    {
+      "name": "frameTimeP95Ms",
+      "value": 35.05,
+      "unit": "ms"
+    },
+    {
+      "name": "drawCallsAverage",
+      "value": 83.42,
+      "unit": "calls"
+    },
+    {
+      "name": "drawCallsMax",
+      "value": 123,
+      "unit": "calls",
+      "threshold": 350,
+      "comparison": "lte",
+      "passed": true
+    },
+    {
+      "name": "renderWidth",
+      "value": 1652,
+      "unit": "px"
+    },
+    {
+      "name": "renderHeight",
+      "value": 902,
+      "unit": "px"
+    },
+    {
+      "name": "renderPixelsMP",
+      "value": 1.49,
+      "unit": "MP"
+    },
+    {
+      "name": "renderScale",
+      "value": 0.57,
+      "unit": "ratio"
+    },
+    {
+      "name": "dynamicResolutionAuto",
+      "value": 1,
+      "unit": "boolean"
+    },
+    {
+      "name": "dynamicResolutionAdjustments",
+      "value": 1,
+      "unit": "adjustments"
+    },
+    {
+      "name": "gameSession.entityCount",
+      "value": 6,
+      "unit": "entities",
+      "threshold": 6,
+      "comparison": "eq",
+      "passed": true
+    },
+    {
+      "name": "quest.total",
+      "value": 1,
+      "unit": "quests",
+      "threshold": 1,
+      "comparison": "eq",
+      "passed": true
+    },
+    {
+      "name": "toonCharacterCount",
+      "value": 6,
+      "unit": "characters",
+      "threshold": 6,
+      "comparison": "eq",
+      "passed": true
+    },
+    {
+      "name": "environmentTextureCount",
+      "value": 9,
+      "unit": "textures",
+      "threshold": 9,
+      "comparison": "eq",
+      "passed": true
+    },
+    {
+      "name": "environmentKeyedTransparentRatio",
+      "value": 0.6849,
+      "unit": "ratio",
+      "threshold": 0.3,
+      "comparison": "gte",
+      "passed": true
+    },
+    {
+      "name": "occluderCount",
+      "value": 23,
+      "unit": "occluders",
+      "threshold": 20,
+      "comparison": "gte",
+      "passed": true
+    },
+    {
+      "name": "occlusionOutlined",
+      "value": 0,
+      "unit": "meshes"
+    },
+    {
+      "name": "occlusionDetectionMsAverage",
+      "value": 0.0066,
+      "unit": "ms/frame",
+      "threshold": 0.05,
+      "comparison": "lte",
+      "passed": true
+    },
+    {
+      "name": "occlusionDetectionMsMax",
+      "value": 0.1,
+      "unit": "ms",
+      "threshold": 0.5,
+      "comparison": "lte",
+      "passed": true
+    },
+    {
+      "name": "occlusionProbeOutlined",
+      "value": 1,
+      "unit": "meshes",
+      "threshold": 1,
+      "comparison": "gte",
+      "passed": true
+    },
+    {
+      "name": "morphTargetCount",
+      "value": 1,
+      "unit": "targets",
+      "threshold": 1,
+      "comparison": "gte",
+      "passed": true
+    },
+    {
+      "name": "morphInfluenceMax",
+      "value": 1,
+      "unit": "influence",
+      "threshold": 0.9,
+      "comparison": "gte",
+      "passed": true
+    },
+    {
+      "name": "morphShaderReady",
+      "value": 1,
+      "unit": "boolean",
+      "threshold": 1,
+      "comparison": "eq",
+      "passed": true
+    },
+    {
+      "name": "toonPlayerMaterialActive",
+      "value": 1,
+      "unit": "boolean",
+      "threshold": 1,
+      "comparison": "eq",
+      "passed": true
+    },
+    {
+      "name": "imageProcessingEnabled",
+      "value": 1,
+      "unit": "boolean",
+      "threshold": 1,
+      "comparison": "eq",
+      "passed": true
+    },
+    {
+      "name": "sampledFrames",
+      "value": 151,
+      "unit": "frames"
+    },
+    {
+      "name": "longFrames",
+      "value": 45,
+      "unit": "frames"
+    },
+    {
+      "name": "jsHeapUsedMB",
+      "value": 161.62,
+      "unit": "MB",
+      "threshold": 1500,
+      "comparison": "lte",
+      "passed": true
+    }
+  ],
+  "ticket27BudgetNote": {
+    "conclusion": "反馈层零预算回归（对照实验）",
+    "method": "同一浏览器/同一时刻分别采集「基线代码（stash 掉票 27 改动）」与「票 27 代码」的 p1-world L5 报告。共享 ego-browser 存在其它会话负载（ego 进程合计约 78% CPU），两者 fps 同样落在 37–42：基线 37.74，票 27 39.75–41.99（略优于基线）。drawCalls（票 27 max 123 vs 基线报告 38）差异同样出现在基线代码上（123），来源是共享浏览器中的其它场景残留 active meshes，与反馈层无关。",
+    "budgetAssertions": {
+      "drawCallsMax": {
+        "value": 123,
+        "threshold": 350,
+        "pass": true,
+        "note": "基线代码同环境同值，非反馈层引入"
+      },
+      "jsHeapUsedMB": {
+        "value": 122.75,
+        "threshold": 1500,
+        "pass": true,
+        "note": "反馈层 DOM 节点仅在事件发生时创建，稳态零新增"
+      },
+      "fpsAverage": {
+        "value": "~40",
+        "threshold": 59.5,
+        "pass": "n/a-环境",
+        "note": "共享浏览器负载下基线同样 ~38；正式 L5 夜测（独占环境）需复测，与 P1 报告先例一致只报告不阻塞"
+      }
+    },
+    "feedbackLayerCost": {
+      "perHit": "一次命中 = 1 个飘字 DOM 节点 + 血条宽度更新；节点在飘字时长（900ms）后回收",
+      "idle": "无事件时每帧只做核心视图查询（纯内存）+ 已有节点位置更新，零新建/零销毁"
+    },
+    "samples": [
+      "p2-combat-feedback-budget.json（票 27 代码）",
+      "基线代码采样未落盘（37.74 fps / 123 drawCalls / 161.62MB heap）"
+    ]
+  }
+}

@@ -17,6 +17,11 @@
  *
  * 任务（票 22）：敌人死亡时统一经过 onEnemyKilled() 推进击杀目标；
  * 外部战斗系统也可通过 emitCombatEvent() 送入同样形状的事件。
+ *
+ * 反馈层（票 27）：命中/生命变化/拾取/升级作为一等订阅事件广播
+ * （见 game-events.ts 的 DamageDealtEvent / HealthChangedEvent / ItemGainedEvent /
+ * PlayerLevelUpEvent）。本模块只发布事实，不关心谁在播放飘字/音效。
+ * `drainEvents()` 的战斗日志保持不变，面向逐帧回放消费方。
  */
 
 import type { Story } from "inkjs";
@@ -37,6 +42,7 @@ import {
   type Vec3,
 } from "./entity";
 import type {
+  DamageDealtEvent,
   EnemyKilledEvent,
   GameSessionEvent,
   GameSessionEventListener,
@@ -62,12 +68,23 @@ export const DEFAULT_MOVE_SPEED = 5.5;
  * 快照版本。
  * v2（票 22）：实体快照补充属性/背包/修饰器/战斗状态，顶层新增 dialogue 与 quests。
  * v2（票 23）：顶层补充 regionId / nextItemInstanceId / respawnAtMs，支持完整读档。
+ * v3（票 27）：实体 combat 补充 heavyCooldownMs——重击有独立冷却，剩余时间必须
+ * 随存档恢复，否则读档后重击按钮状态与逻辑不符。迁移链见 save.ts 的 v2→v3。
+ * 后续成长系统（等级/经验）与世界状态挂在顶层新字段，不再动 combat 结构。
  */
-export const GAME_SESSION_SNAPSHOT_VERSION = 2;
+export const GAME_SESSION_SNAPSHOT_VERSION = 3;
 
 /** 战斗默认值；内容属性可用同名键覆盖（见 content/README.md）。 */
 export const DEFAULT_ATTACK_RANGE = 2;
 export const DEFAULT_ATTACK_INTERVAL_MS = 1000;
+/** 重击默认冷却；内容属性 heavyAttackCooldownMs 可覆盖。 */
+export const DEFAULT_HEAVY_ATTACK_COOLDOWN_MS = 8000;
+/** 重击默认伤害倍率；内容属性 heavyAttackMultiplier 可覆盖。 */
+export const DEFAULT_HEAVY_ATTACK_MULTIPLIER = 1.5;
+/** 重击默认前摇（毫秒）；内容属性 heavyAttackWindupMs 可覆盖。 */
+export const DEFAULT_HEAVY_ATTACK_WINDUP_MS = 600;
+/** 敌人普攻前摇（毫秒）；内容属性 enemyAttackWindupMs 可覆盖。 */
+export const DEFAULT_ENEMY_ATTACK_WINDUP_MS = 300;
 export const BASE_HIT_CHANCE = 0.9;
 export const DEFAULT_AGGRO_RADIUS = 8;
 export const DEFAULT_PATROL_RADIUS = 4;
@@ -92,6 +109,12 @@ export interface GameSessionIntents {
   emitCombatEvent(event: EnemyKilledEvent): void;
   /** 攻击目标；目标不在射程内时会自动接近（玩家）或进入追击（敌人）。 */
   attack(attackerId: EntityId | string, targetId: EntityId | string): void;
+  /**
+   * 重击意图（票 27）：复用 attack 的结算器，1.5 倍伤害、8000ms 独立冷却、
+   * 更长前摇与更大飘字由反馈层消费 damage-dealt 的 heavy 标记实现。
+   * 重击是一次性意图：本回合结算后自动回到普攻。
+   */
+  heavyAttack(attackerId: EntityId | string, targetId: EntityId | string): void;
   /** 取消自动攻击；不会取消已经发生的伤害。 */
   stopAttack(entityId: EntityId | string): void;
   /**
@@ -139,6 +162,8 @@ export interface EntityCombatSnapshot {
   targetId: EntityId | null;
   /** 距离下一轮攻击还需的毫秒数。 */
   attackCooldownMs: number;
+  /** 距离下一次重击就绪还需的毫秒数（v3 新增；重击冷却独立于普攻间隔）。 */
+  heavyCooldownMs: number;
 }
 
 export interface EntitySnapshot {
@@ -247,6 +272,16 @@ interface CombatRuntime {
   hp: number;
   alive: boolean;
   cooldownMs: number;
+  /** 重击冷却剩余毫秒；普攻冷却用 cooldownMs。 */
+  heavyCooldownMs: number;
+  /** 下一次结算是否为重击（一次性意图，结算后失效）。 */
+  heavyStrike: boolean;
+  /** 前摇剩余毫秒；>0 表示已锁定目标、等待抬手结束。 */
+  windupMs: number;
+  /** 前摇结束后是否结算为重击。 */
+  windupHeavy: boolean;
+  /** 前摇刚结束、下一次 resolve 直接结算（不再重新起前摇）。 */
+  windupReady: boolean;
   targetId: EntityId | null;
   aiState: EnemyAiState | null;
   idleMs: number;
@@ -377,6 +412,8 @@ export class GameSession implements GameSessionIntents {
   private readonly enemyProfiles = new Map<EntityId, EnemyProfile>();
   private readonly itemDefinitions = new Map<string, ItemDefinition>();
   private readonly events: CombatEvent[] = [];
+  /** 上一次广播过的生命值；health-changed 只在数值真变时发布。 */
+  private readonly lastPublishedHp = new Map<EntityId, number>();
   private readonly random: () => number;
   private readonly respawnDelayMs: number;
   private elapsedMs = 0;
@@ -427,11 +464,17 @@ export class GameSession implements GameSessionIntents {
       hp: clamp(baseHp, 0, maxHp),
       alive: baseHp > 0,
       cooldownMs: 0,
+      heavyCooldownMs: 0,
+      heavyStrike: false,
+      windupMs: 0,
+      windupHeavy: false,
+      windupReady: false,
       targetId: null,
       aiState: cloned.identity.type === "enemy" ? "idle" : null,
       idleMs: 0,
       patrolIndex: 0,
     });
+    this.lastPublishedHp.set(cloned.id, this.combat.get(cloned.id)!.hp);
 
     if (cloned.identity.type === "enemy") {
       this.enemyProfiles.set(cloned.id, {
@@ -504,6 +547,10 @@ export class GameSession implements GameSessionIntents {
     const runtime = this.combat.get(id);
     if (runtime) {
       runtime.targetId = null;
+      // 走 A：移动永远打断攻击意图，包括已经起手的普攻/重击前摇。
+      runtime.windupMs = 0;
+      runtime.windupReady = false;
+      runtime.heavyStrike = false;
       if (runtime.aiState === "chase" || runtime.aiState === "attack") {
         runtime.aiState = "idle";
         runtime.idleMs = 0;
@@ -670,7 +717,78 @@ export class GameSession implements GameSessionIntents {
       attackerRuntime.aiState = "chase";
       attackerRuntime.idleMs = 0;
     }
+    this.faceTarget(attacker);
     this.resolveAttackIfReady(attacker.id);
+  }
+
+  /**
+   * 重击意图：与 attack 同一套校验/接近逻辑，差别只在倍率与冷却。
+   * 复用结算器（resolveAttackIfReady）保证命中率/自动回合/事件流不分裂。
+   */
+  heavyAttack(attackerId: EntityId | string, targetId: EntityId | string): void {
+    const attacker = this.requireEntity(attackerId);
+    const target = this.requireEntity(targetId);
+    if (attacker.id === target.id) {
+      throw new Error("不能攻击自己");
+    }
+    if (attacker.identity.type === "player" && target.identity.type !== "enemy") {
+      throw new Error(`玩家只能攻击敌人：${target.id}`);
+    }
+    if (attacker.identity.type === "enemy" && target.identity.type !== "player") {
+      throw new Error(`敌人只能攻击玩家：${target.id}`);
+    }
+    const attackerRuntime = this.combat.get(attacker.id);
+    const targetRuntime = this.combat.get(target.id);
+    if (!attackerRuntime || !targetRuntime) {
+      throw new Error(`实体缺少战斗状态：${attacker.id}`);
+    }
+    if (!attackerRuntime.alive) {
+      throw new Error(`已死亡的实体不能攻击：${attacker.id}`);
+    }
+    if (!targetRuntime.alive) {
+      throw new Error(`目标已死亡：${target.id}`);
+    }
+    if (attackerRuntime.heavyCooldownMs > 0) {
+      throw new Error(
+        `重击冷却中（剩余 ${Math.ceil(attackerRuntime.heavyCooldownMs)}ms）`,
+      );
+    }
+
+    this.movements.delete(attacker.id);
+    attackerRuntime.targetId = target.id;
+    attackerRuntime.heavyStrike = true;
+    if (attacker.identity.type === "enemy") {
+      attackerRuntime.aiState = "chase";
+      attackerRuntime.idleMs = 0;
+    }
+    this.faceTarget(attacker);
+    this.resolveAttackIfReady(attacker.id);
+  }
+
+  /** 无异常版本的 heavyAttack。 */
+  tryHeavyAttack(
+    attackerId: EntityId | string,
+    targetId: EntityId | string,
+  ): IntentResult {
+    return this.runIntent(() => this.heavyAttack(attackerId, targetId));
+  }
+
+  /** 攻击/重击结算时面向目标（+Z 为 0，朝 +X 为 π/2，与移动一致）。 */
+  private faceTarget(attacker: Entity): void {
+    const runtime = this.combat.get(attacker.id);
+    if (!runtime || runtime.targetId === null) {
+      return;
+    }
+    const target = this.entities.get(runtime.targetId);
+    if (!target) {
+      return;
+    }
+    const dx = target.state.position.x - attacker.state.position.x;
+    const dz = target.state.position.z - attacker.state.position.z;
+    if (dx === 0 && dz === 0) {
+      return;
+    }
+    attacker.state.rotation.y = Math.atan2(dx, dz);
   }
 
   /** 取消自动攻击；已经结算的回合不受影响。 */
@@ -681,6 +799,9 @@ export class GameSession implements GameSessionIntents {
       throw new Error(`未知实体：${entityId}`);
     }
     runtime.targetId = null;
+    runtime.windupMs = 0;
+    runtime.windupReady = false;
+    runtime.heavyStrike = false;
     this.movements.delete(id); // 自动接近的移动随攻击取消。
     if (runtime.aiState === "chase" || runtime.aiState === "attack") {
       runtime.aiState = "idle";
@@ -731,6 +852,7 @@ export class GameSession implements GameSessionIntents {
         runtime.hp + Math.max(0, effect.amount),
       );
     }
+    this.publishHealthChange(entity, "heal");
 
     item.quantity -= 1;
     if (item.quantity <= 0) {
@@ -872,6 +994,32 @@ export class GameSession implements GameSessionIntents {
     return Math.max(1, attributes.attackIntervalMs ?? DEFAULT_ATTACK_INTERVAL_MS);
   }
 
+  /**
+   * 前摇时长（毫秒）：
+   * - 重击：heavyAttackWindupMs（默认 600，更长抬手）；
+   * - 敌人普攻：enemyAttackWindupMs（默认 300，给玩家 0.3 秒走位窗口）；
+   * - 玩家普攻：0（点按即时反馈）。
+   */
+  private attackWindupOf(
+    attacker: Entity,
+    heavy: boolean,
+    attributes: Record<string, number>,
+  ): number {
+    if (heavy) {
+      return Math.max(
+        0,
+        Math.round(attributes.heavyAttackWindupMs ?? DEFAULT_HEAVY_ATTACK_WINDUP_MS),
+      );
+    }
+    if (attacker.identity.type === "enemy") {
+      return Math.max(
+        0,
+        Math.round(attributes.enemyAttackWindupMs ?? DEFAULT_ENEMY_ATTACK_WINDUP_MS),
+      );
+    }
+    return 0;
+  }
+
   private moveSpeedOf(entity: Entity): number {
     const attributes = this.attributesOf(entity);
     return Math.max(0, attributes.moveSpeed ?? DEFAULT_MOVE_SPEED);
@@ -885,6 +1033,15 @@ export class GameSession implements GameSessionIntents {
     for (const runtime of this.combat.values()) {
       if (runtime.cooldownMs > 0) {
         runtime.cooldownMs = Math.max(0, runtime.cooldownMs - stepMs);
+      }
+      if (runtime.heavyCooldownMs > 0) {
+        runtime.heavyCooldownMs = Math.max(0, runtime.heavyCooldownMs - stepMs);
+      }
+      if (runtime.windupMs > 0) {
+        runtime.windupMs = Math.max(0, runtime.windupMs - stepMs);
+        if (runtime.windupMs === 0) {
+          runtime.windupReady = true;
+        }
       }
     }
 
@@ -976,6 +1133,8 @@ export class GameSession implements GameSessionIntents {
     const targetRuntime = this.combat.get(runtime.targetId);
     if (!target || !targetRuntime || !targetRuntime.alive) {
       runtime.targetId = null;
+      runtime.windupMs = 0;
+      runtime.windupReady = false;
       return;
     }
     const distance = horizontalDistance(entity.state.position, target.state.position);
@@ -1115,7 +1274,8 @@ export class GameSession implements GameSessionIntents {
     if (!attacker || !runtime || !runtime.alive || runtime.targetId === null) {
       return;
     }
-    if (runtime.cooldownMs > 0) {
+    // 前摇结束时 cooldownMs 已经在本回合起手时锁定，因此 windupReady 要绕过冷却门。
+    if (runtime.cooldownMs > 0 && !runtime.windupReady) {
       return;
     }
 
@@ -1123,15 +1283,76 @@ export class GameSession implements GameSessionIntents {
     const targetRuntime = this.combat.get(runtime.targetId);
     if (!target || !targetRuntime || !targetRuntime.alive) {
       runtime.targetId = null;
+      runtime.windupMs = 0;
+      runtime.windupReady = false;
       return;
     }
 
     const distance = horizontalDistance(attacker.state.position, target.state.position);
     if (distance > this.attackRangeOf(attacker)) {
+      // 前摇中目标跑出射程 = 走位躲开：取消这次前摇，重新接近后再起手。
+      if (runtime.windupReady) {
+        runtime.windupReady = false;
+        runtime.windupMs = 0;
+      }
       return;
     }
 
+    if (runtime.windupMs > 0) {
+      return; // 前摇中，等 step() 走完。
+    }
+
     const attackerAttributes = this.attributesOf(attacker);
+    // 重击是一次性意图：起手即锁定，结算后自动回到普攻。
+    const heavy = runtime.windupReady ? runtime.windupHeavy : runtime.heavyStrike;
+    runtime.heavyStrike = false;
+
+    // 前摇：敌人普攻 0.3s、重击 0.6s；玩家普攻 0（保持即时反馈）。
+    if (!runtime.windupReady) {
+      const windup = this.attackWindupOf(attacker, heavy, attackerAttributes);
+      if (windup > 0) {
+        runtime.windupMs = windup;
+        runtime.windupHeavy = heavy;
+        // 重击是独立技能冷却：普攻回合仍按 attackIntervalMs 继续。
+        runtime.cooldownMs = this.attackIntervalOf(attacker);
+        runtime.heavyCooldownMs = heavy
+          ? Math.max(
+              1,
+              Math.round(
+                attackerAttributes.heavyAttackCooldownMs ??
+                  DEFAULT_HEAVY_ATTACK_COOLDOWN_MS,
+              ),
+            )
+          : runtime.heavyCooldownMs;
+        if (attacker.identity.type === "enemy") {
+          runtime.aiState = "attack";
+        }
+        this.faceTarget(attacker);
+        this.publish({
+          type: "attack-windup-started",
+          attackerId: attacker.id,
+          targetId: target.id,
+          heavy,
+          durationMs: windup,
+          at: this.elapsedMs,
+        });
+        return;
+      }
+      // 无前摇：直接进入结算，冷却在结算前锁定。
+      runtime.cooldownMs = this.attackIntervalOf(attacker);
+      runtime.heavyCooldownMs = heavy
+        ? Math.max(
+            1,
+            Math.round(
+              attackerAttributes.heavyAttackCooldownMs ??
+                DEFAULT_HEAVY_ATTACK_COOLDOWN_MS,
+            ),
+          )
+        : runtime.heavyCooldownMs;
+    } else {
+      runtime.windupReady = false;
+    }
+
     const targetAttributes = this.attributesOf(target);
     const hitChance = clamp(
       BASE_HIT_CHANCE + ((attackerAttributes.accuracy ?? 0) - (targetAttributes.evasion ?? 0)) / 100,
@@ -1139,14 +1360,21 @@ export class GameSession implements GameSessionIntents {
       1,
     );
     const hit = this.random() < hitChance;
+    const heavyMultiplier = heavy
+      ? Math.max(1, attackerAttributes.heavyAttackMultiplier ?? DEFAULT_HEAVY_ATTACK_MULTIPLIER)
+      : 1;
     const damage = hit
       ? Math.max(
           1,
-          Math.round((attackerAttributes.attack ?? 0) - (targetAttributes.defense ?? 0)),
+          Math.round(
+            ((attackerAttributes.attack ?? 0) - (targetAttributes.defense ?? 0)) *
+              heavyMultiplier,
+          ),
         )
       : 0;
 
-    runtime.cooldownMs = this.attackIntervalOf(attacker);
+    // 攻击朝向 = 结算时面向目标（目标可能在前摇期间移动）。
+    this.faceTarget(attacker);
     if (attacker.identity.type === "enemy") {
       runtime.aiState = "attack";
     }
@@ -1163,6 +1391,25 @@ export class GameSession implements GameSessionIntents {
 
     if (hit) {
       targetRuntime.hp = Math.max(0, targetRuntime.hp - damage);
+      this.publishDamageDealt(attacker, target, {
+        amount: damage,
+        heavy,
+        at: this.elapsedMs,
+      });
+      this.publishHealthChange(target, "damage");
+    } else {
+      // 未命中只让 UI 播放 miss 表现，不进一等事件（没有结算事实可转译）。
+      this.events.push({
+        type: "attack",
+        at: this.elapsedMs,
+        attackerId: attacker.id,
+        targetId: target.id,
+        hit,
+        damage,
+        targetHp: targetRuntime.hp,
+        targetMaxHp: this.maxHpOf(target),
+      });
+      return;
     }
 
     this.events.push({
@@ -1181,6 +1428,55 @@ export class GameSession implements GameSessionIntents {
     }
   }
 
+  /**
+   * 广播命中事实（票 27 一等事件）。lethal 在这一击直接致死时为 true；
+   * 否则目标剩余生命交给 health-changed 表达。
+   */
+  private publishDamageDealt(
+    attacker: Entity,
+    target: Entity,
+    options: { amount: number; heavy: boolean; at: number },
+  ): void {
+    const targetRuntime = this.combat.get(target.id);
+    if (!targetRuntime) {
+      return;
+    }
+    const event: DamageDealtEvent = {
+      type: "damage-dealt",
+      attackerId: attacker.id,
+      targetId: target.id,
+      amount: options.amount,
+      targetHp: targetRuntime.hp,
+      targetMaxHp: this.maxHpOf(target),
+      heavy: options.heavy,
+      lethal: targetRuntime.hp <= 0,
+      at: options.at,
+    };
+    this.publish(event);
+  }
+
+  /** 广播生命变化（受伤/治疗）。重生回满不广播：读档/重生不是被转译的战斗事实。 */
+  private publishHealthChange(entity: Entity, cause: "damage" | "heal"): void {
+    const runtime = this.combat.get(entity.id);
+    if (!runtime) {
+      return;
+    }
+    const hp = runtime.hp;
+    const previousHp = this.lastPublishedHp.get(entity.id) ?? hp;
+    if (previousHp === hp) {
+      return;
+    }
+    this.lastPublishedHp.set(entity.id, hp);
+    this.publish({
+      type: "health-changed",
+      entityId: entity.id,
+      hp,
+      maxHp: this.maxHpOf(entity),
+      previousHp,
+      cause,
+    });
+  }
+
   private handleDeath(entity: Entity, killer: Entity): void {
     const runtime = this.combat.get(entity.id);
     if (!runtime) {
@@ -1189,6 +1485,10 @@ export class GameSession implements GameSessionIntents {
     runtime.hp = 0;
     runtime.alive = false;
     runtime.cooldownMs = 0;
+    runtime.heavyCooldownMs = 0;
+    runtime.windupMs = 0;
+    runtime.windupReady = false;
+    runtime.heavyStrike = false;
     runtime.targetId = null;
     this.movements.delete(entity.id);
 
@@ -1282,6 +1582,12 @@ export class GameSession implements GameSessionIntents {
         itemId: drop.itemId,
         quantity,
       });
+      this.publish({
+        type: "item-gained",
+        entityId: player.id,
+        itemId: drop.itemId,
+        quantity,
+      });
     }
   }
 
@@ -1351,6 +1657,7 @@ export class GameSession implements GameSessionIntents {
             aiState: runtime?.aiState ?? null,
             targetId: runtime?.targetId ?? null,
             attackCooldownMs: runtime?.cooldownMs ?? 0,
+            heavyCooldownMs: runtime?.heavyCooldownMs ?? 0,
           },
           container: {
             items: entity.container.items.map((item) => ({ ...item })),
@@ -1503,6 +1810,12 @@ export class GameSession implements GameSessionIntents {
       ) {
         throw new Error(`快照实体 ${entitySnapshot.id} 的攻击冷却必须是非负数`);
       }
+      if (
+        !Number.isFinite(entitySnapshot.combat.heavyCooldownMs) ||
+        entitySnapshot.combat.heavyCooldownMs < 0
+      ) {
+        throw new Error(`快照实体 ${entitySnapshot.id} 的 heavyCooldownMs 必须是非负数`);
+      }
       for (const item of entitySnapshot.container.items) {
         if (
           typeof item.instanceId !== "string" ||
@@ -1585,8 +1898,14 @@ export class GameSession implements GameSessionIntents {
       }
 
       runtime.hp = Math.min(entitySnapshot.combat.hp, this.maxHpOf(entity));
+      this.lastPublishedHp.set(entity.id, runtime.hp);
       runtime.alive = entitySnapshot.combat.alive;
       runtime.cooldownMs = entitySnapshot.combat.attackCooldownMs;
+      runtime.heavyCooldownMs = entitySnapshot.combat.heavyCooldownMs;
+      // 前摇是瞬态表现；存档不记录，读档后下一次 resolve 重新起手。
+      runtime.windupMs = 0;
+      runtime.windupReady = false;
+      runtime.heavyStrike = false;
       runtime.targetId = entitySnapshot.combat.targetId;
       runtime.aiState = entitySnapshot.combat.aiState;
       runtime.idleMs = 0;
