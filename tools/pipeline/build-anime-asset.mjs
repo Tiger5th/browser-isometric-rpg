@@ -454,12 +454,14 @@ async function main() {
       joints.push(...skin.joints);
       weights.push(...skin.weights);
 
-      // blink morph：眼睛顶点向中心压扁；其余顶点保持原位。
+      // blink morph：glTF 的 morph POSITION 是相对 base 的 delta（loader 会加回 base），
+      // 因此眼睛顶点写 target - base；其余顶点 delta 必须为 0，否则会被平移。
       if (part.part.startsWith("eye_")) {
         const centerY = part.center[1];
-        morphPositions.push(x, centerY + (y - centerY) * 0.12, z - 0.004);
+        const targetY = centerY + (y - centerY) * 0.12;
+        morphPositions.push(0, targetY - y, -0.004);
       } else {
-        morphPositions.push(x, y, z);
+        morphPositions.push(0, 0, 0);
       }
     }
     for (const index of geometry.indices) {

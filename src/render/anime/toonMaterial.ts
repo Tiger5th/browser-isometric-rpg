@@ -26,7 +26,9 @@ precision highp float;
 attribute vec3 position;
 attribute vec3 normal;
 attribute vec2 uv;
+#ifdef USE_VERTEX_COLOR
 attribute vec4 color;
+#endif
 
 uniform mat4 world;
 uniform mat4 viewProjection;
@@ -36,7 +38,9 @@ uniform mat4 viewProjection;
 varying vec2 vUV;
 varying vec3 vNormalW;
 varying vec3 vPositionW;
+#ifdef USE_VERTEX_COLOR
 varying vec4 vColor;
+#endif
 
 void main() {
   mat4 finalWorld = world;
@@ -46,7 +50,9 @@ void main() {
   vPositionW = worldPos.xyz;
   vNormalW = normalize(mat3(finalWorld) * normal);
   vUV = uv;
+#ifdef USE_VERTEX_COLOR
   vColor = color;
+#endif
   gl_Position = viewProjection * worldPos;
 }
 `;
@@ -57,7 +63,9 @@ precision highp float;
 varying vec2 vUV;
 varying vec3 vNormalW;
 varying vec3 vPositionW;
+#ifdef USE_VERTEX_COLOR
 varying vec4 vColor;
+#endif
 
 uniform sampler2D baseColorTexture;
 uniform vec3 lightDirection;
@@ -69,7 +77,13 @@ uniform float shadowFloor;
 uniform float rimStrength;
 
 void main() {
+#ifdef USE_VERTEX_COLOR
   vec3 base = texture2D(baseColorTexture, vUV).rgb * vColor.rgb;
+#else
+  // COLOR_0 是可选属性：缺失时 Babylon 会提供 generic attribute (0,0,0,1)，
+  // 若无条件相乘会把整个资产乘黑，因此无顶点色时回退为贴图原色。
+  vec3 base = texture2D(baseColorTexture, vUV).rgb;
+#endif
   vec3 normal = normalize(vNormalW);
   vec3 lightDir = normalize(lightDirection);
   float ndl = max(dot(normal, lightDir), 0.0);
@@ -95,6 +109,8 @@ void main() {
 `;
 
 export interface ToonMaterialOptions {
+  /** mesh 是否带 COLOR_0。缺省属性时不能乘 vColor（generic attribute 为 (0,0,0,1)）。 */
+  useVertexColors?: boolean;
   /** 主光方向（指向光源的世界空间单位向量）。 */
   lightDirection?: Vector3;
   lightColor?: Color3;
@@ -134,6 +150,7 @@ export function createToonMaterial(
   );
 
   material.backFaceCulling = true;
+  material.setDefine("USE_VERTEX_COLOR", options.useVertexColors ?? true);
   if (baseColorTexture) {
     material.setTexture("baseColorTexture", baseColorTexture);
   }

@@ -45,8 +45,9 @@ export const regionGateScenario: ScenarioDefinition = {
 
   async setup(context) {
     const gate = getLoadingGate();
-    const camera = enterRegionDemo(context.scene, REGION_VIEW_SPAN);
+    // 先淡入黑场并等完全覆盖，再做隐藏灰盒/拉远相机等场景变化，避免切镜穿帮。
     const maskInMs = await gate.maskIn(MASK_IN_MS);
+    const camera = enterRegionDemo(context.scene, REGION_VIEW_SPAN);
 
     state = {
       gate,

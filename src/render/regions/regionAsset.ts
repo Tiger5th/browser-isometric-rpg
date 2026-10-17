@@ -23,7 +23,10 @@ export const REGION_CHUNK_SUBDIVISIONS = 296;
 export const REGION_CHUNK_SIZE = 24;
 const REGION_COLUMNS = 5;
 
-/** 相机取景：让 120×48 的区域完整落在正交视野内。 */
+/** 区域世界宽度（5 列 × 24）。窄屏时相机需按 aspect 加大竖向 span。 */
+export const REGION_CONTENT_WIDTH = REGION_COLUMNS * REGION_CHUNK_SIZE;
+
+/** 相机取景：84 是宽屏下的竖向最小高度，窄屏由 enterRegionDemo 自动加大。 */
 export const REGION_VIEW_SPAN = 84;
 
 export interface RegionAssetStats {

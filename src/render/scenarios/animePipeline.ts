@@ -9,6 +9,8 @@ import type { AbstractEngine } from "@babylonjs/core/Engines/abstractEngine";
 import { SceneLoader } from "@babylonjs/core/Loading/sceneLoader";
 import { ColorCurves } from "@babylonjs/core/Materials/colorCurves";
 import { ImageProcessingConfiguration } from "@babylonjs/core/Materials/imageProcessingConfiguration";
+import type { Material } from "@babylonjs/core/Materials/material";
+import { MultiMaterial } from "@babylonjs/core/Materials/multiMaterial";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import { ShaderMaterial } from "@babylonjs/core/Materials/shaderMaterial";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
@@ -65,14 +67,22 @@ const PLACEHOLDER_URL = Object.values(PLACEHOLDER_ASSET_URLS)[0] ?? null;
 type CharacterSource = "vroid" | "placeholder";
 type AnimationSource = "gltf" | "procedural-fallback" | "none";
 
+interface MeshMaterialAssignment {
+  mesh: AbstractMesh;
+  /** toon 开时挂到 mesh 上的材质（多材质 mesh 为 MultiMaterial）。 */
+  toon: Material;
+  /** toon 关时挂到 mesh 上的扁平 Standard 材质。 */
+  standard: Material;
+}
+
 interface AnimePipelineState {
   container: AssetContainer | null;
   meshes: AbstractMesh[];
   skeletons: Skeleton[];
-  baseTexture: BaseTexture | null;
+  meshMaterials: MeshMaterialAssignment[];
+  /** 本场景创建、需要自己 dispose 的材质（container 不持有它们）。 */
+  ownedMaterials: Material[];
   fallbackTexture: BaseTexture | null;
-  toonMaterial: ShaderMaterial | null;
-  standardMaterial: StandardMaterial | null;
   animationGroups: AnimationGroup[];
   proceduralAnimations: Animation[];
   activeAnimation: string | null;
@@ -91,10 +101,9 @@ const state: AnimePipelineState = {
   container: null,
   meshes: [],
   skeletons: [],
-  baseTexture: null,
+  meshMaterials: [],
+  ownedMaterials: [],
   fallbackTexture: null,
-  toonMaterial: null,
-  standardMaterial: null,
   animationGroups: [],
   proceduralAnimations: [],
   activeAnimation: null,
@@ -163,20 +172,19 @@ async function fetchGlb(
   };
 }
 
-function extractBaseTexture(container: AssetContainer): BaseTexture | null {
-  for (const material of container.materials) {
-    if (material instanceof PBRMaterial && material.albedoTexture) {
-      return material.albedoTexture;
-    }
-    if (material instanceof StandardMaterial && material.diffuseTexture) {
-      return material.diffuseTexture;
-    }
-    const active = material.getActiveTextures();
-    if (active.length > 0) {
-      return active[0];
-    }
+/** 从单个材质取 baseColor 贴图，保留每个 mesh 自己的纹理。 */
+function baseTextureOf(material: Material | null): BaseTexture | null {
+  if (!material) {
+    return null;
   }
-  return null;
+  if (material instanceof PBRMaterial && material.albedoTexture) {
+    return material.albedoTexture;
+  }
+  if (material instanceof StandardMaterial && material.diffuseTexture) {
+    return material.diffuseTexture;
+  }
+  const active = material.getActiveTextures();
+  return active[0] ?? null;
 }
 
 function createWhiteFallbackTexture(scene: Scene): BaseTexture {
@@ -191,6 +199,33 @@ function createWhiteFallbackTexture(scene: Scene): BaseTexture {
   context.fillRect(0, 0, 2, 2);
   texture.update();
   return texture;
+}
+
+/** 所有无贴图材质共用一张白色兜底贴图。 */
+function ensureFallbackTexture(scene: Scene): BaseTexture {
+  if (!state.fallbackTexture) {
+    state.fallbackTexture = createWhiteFallbackTexture(scene);
+  }
+  return state.fallbackTexture;
+}
+
+function createMaterialPair(
+  scene: Scene,
+  nameSuffix: string,
+  texture: BaseTexture | null,
+  useVertexColors: boolean,
+): { toon: ShaderMaterial; standard: StandardMaterial } {
+  const toon = createToonMaterial(
+    scene,
+    `material_toon_${nameSuffix}`,
+    texture,
+    { useVertexColors },
+  );
+  const standard = new StandardMaterial(`material_flat_${nameSuffix}`, scene);
+  standard.diffuseColor = Color3.White();
+  standard.specularColor = Color3.Black();
+  standard.diffuseTexture = texture;
+  return { toon, standard };
 }
 
 /** 在缺少 glTF 动画时，用 Babylon 程序化骨骼动画模拟走/跑循环。 */
@@ -281,13 +316,20 @@ function installProceduralFallback(scene: Scene, skeleton: Skeleton | null): Ani
 }
 
 function refreshMaterials(): void {
-  for (const mesh of state.meshes) {
-    mesh.material = state.toonEnabled ? state.toonMaterial : state.standardMaterial;
+  for (const { mesh, toon, standard } of state.meshMaterials) {
+    mesh.material = state.toonEnabled ? toon : standard;
     mesh.renderOutline = state.toonEnabled && state.outlineEnabled;
   }
   if (state.pipeline) {
     state.pipeline.imageProcessingEnabled = state.gradingEnabled;
   }
+}
+
+/** 开关恢复默认值：按票 17 截图后重跑场景时不能继承上一轮的关断状态。 */
+function resetSwitches(): void {
+  state.toonEnabled = true;
+  state.outlineEnabled = true;
+  state.gradingEnabled = true;
 }
 
 function playAnimation(name: "walk" | "run"): void {
@@ -446,7 +488,9 @@ function sampleMotion(
         );
         resolve({
           rangeRad: values.length > 0 ? max - min : 0,
-          fps: elapsedMs > 0 ? (frames * 1000) / elapsedMs : 0,
+          // elapsedMs 只累计 frames-1 个帧间隔，帧率必须用实际间隔数计算，
+          // 否则会系统性高估约 1/N。
+          fps: frames > 1 && elapsedMs > 0 ? ((frames - 1) * 1000) / elapsedMs : 0,
           frames,
         });
       }
@@ -466,20 +510,23 @@ function disposeCharacter(): void {
   state.pipeline?.dispose();
   state.pipeline = null;
 
-  state.toonMaterial?.dispose();
-  state.toonMaterial = null;
-  state.standardMaterial?.dispose();
-  state.standardMaterial = null;
+  for (const material of state.ownedMaterials) {
+    material.dispose();
+  }
+  state.ownedMaterials = [];
+  state.meshMaterials = [];
 
   state.fallbackTexture?.dispose();
   state.fallbackTexture = null;
-  state.baseTexture = null;
 
   state.container?.dispose();
   state.container = null;
   state.meshes = [];
   state.skeletons = [];
   state.scene = null;
+
+  // dispose 后恢复默认开关，避免下一轮场景继承关断状态。
+  resetSwitches();
 }
 
 export const animePipelineScenario: ScenarioDefinition = {
@@ -489,7 +536,10 @@ export const animePipelineScenario: ScenarioDefinition = {
   interactive: true,
 
   async setup(context) {
-    const { scene } = context;    disposeCharacter();
+    const { scene } = context;
+    disposeCharacter();
+    // 强制回到默认开关状态（toon / outline / grading 全开）。
+    resetSwitches();
     configureRuntimeDecoders();
 
     state.scene = scene;
@@ -523,29 +573,59 @@ export const animePipelineScenario: ScenarioDefinition = {
     }
     state.skeletons = container.skeletons;
 
-    // 材质：复用 glTF 的 baseColor 贴图，替换成自定义 Toon / 扁平 Standard。
-    state.baseTexture = extractBaseTexture(container);
-    if (!state.baseTexture) {
-      state.fallbackTexture = createWhiteFallbackTexture(scene);
-      state.baseTexture = state.fallbackTexture;
-    }
-    state.toonMaterial = createToonMaterial(
-      scene,
-      "material_toon_anime_character",
-      state.baseTexture,
-    );
-    state.standardMaterial = new StandardMaterial(
-      "material_anime_flat_character",
-      scene,
-    );
-    state.standardMaterial.diffuseColor = Color3.White();
-    state.standardMaterial.specularColor = Color3.Black();
-    state.standardMaterial.diffuseTexture = state.baseTexture;
-
+    // 材质：每个 mesh（多材质时为每个 subMesh）保留自己的 baseColor 贴图，
+    // 在各自贴图上叠加 toon 逻辑；VRoid 的脸/发/身/衣不能统一换成同一张图。
     for (const mesh of state.meshes) {
+      const useVertexColors = mesh.isVerticesDataPresent("color");
+      const source = mesh.material;
+      let toon: Material;
+      let standard: Material;
+
+      if (source instanceof MultiMaterial) {
+        const toonMulti = new MultiMaterial(
+          `material_toon_multi_${mesh.name}`,
+          scene,
+        );
+        const standardMulti = new MultiMaterial(
+          `material_flat_multi_${mesh.name}`,
+          scene,
+        );
+        const toonSubs: Material[] = [];
+        const standardSubs: Material[] = [];
+        source.subMaterials.forEach((subMaterial, index) => {
+          const texture = baseTextureOf(subMaterial) ?? ensureFallbackTexture(scene);
+          const pair = createMaterialPair(
+            scene,
+            `${mesh.name}_${index}`,
+            texture,
+            useVertexColors,
+          );
+          toonSubs.push(pair.toon);
+          standardSubs.push(pair.standard);
+          state.ownedMaterials.push(pair.toon, pair.standard);
+        });
+        toonMulti.subMaterials = toonSubs;
+        standardMulti.subMaterials = standardSubs;
+        state.ownedMaterials.push(toonMulti, standardMulti);
+        toon = toonMulti;
+        standard = standardMulti;
+      } else {
+        const texture = baseTextureOf(source) ?? ensureFallbackTexture(scene);
+        const pair = createMaterialPair(
+          scene,
+          mesh.name,
+          texture,
+          useVertexColors,
+        );
+        state.ownedMaterials.push(pair.toon, pair.standard);
+        toon = pair.toon;
+        standard = pair.standard;
+      }
+
+      state.meshMaterials.push({ mesh, toon, standard });
       mesh.isPickable = false;
-      mesh.useVertexColors = true;
-      mesh.material = state.toonMaterial;
+      mesh.useVertexColors = useVertexColors;
+      mesh.material = toon;
       mesh.renderOutline = true;
       mesh.outlineWidth = OUTLINE_WIDTH;
       mesh.outlineColor = new Color3(0.05, 0.04, 0.08);
@@ -736,8 +816,8 @@ export const animePipelineScenario: ScenarioDefinition = {
         name: "toonMaterialActive",
         value:
           state.toonEnabled &&
-          state.toonMaterial !== null &&
-          state.meshes.every((mesh) => mesh.material === state.toonMaterial)
+          state.meshMaterials.length === state.meshes.length &&
+          state.meshMaterials.every(({ mesh, toon }) => mesh.material === toon)
             ? 1
             : 0,
         unit: "boolean",

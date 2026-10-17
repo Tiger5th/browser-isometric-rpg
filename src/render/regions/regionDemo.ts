@@ -5,6 +5,12 @@ import type { Scene } from "@babylonjs/core/scene";
 
 import { ISOMETRIC_ALPHA, ISOMETRIC_BETA, updateOrthographicFrustum } from "../camera";
 import { GREYBOX_REGION_ID } from "../greybox";
+import { REGION_CONTENT_WIDTH } from "./regionAsset";
+
+/** 区域四周留一点余量，避免最外侧地形贴边被裁。 */
+const REGION_VIEW_MARGIN = 1.04;
+/** 兜底 aspect：极端窄屏也不至于把 span 拉到无穷大。 */
+const MIN_ASPECT = 0.5;
 
 declare global {
   interface Window {
@@ -59,11 +65,16 @@ export function enterRegionDemo(scene: Scene, verticalSpan: number): RegionDemoC
   const engine = scene.getEngine();
   const aspect =
     engine.getRenderHeight() > 0 ? engine.getRenderWidth() / engine.getRenderHeight() : 1;
+  // 区域水平范围在等距投影下接近世界宽度；aspect 不足时固定竖向 span 会裁掉左右两侧。
+  const effectiveSpan = Math.max(
+    verticalSpan,
+    (REGION_CONTENT_WIDTH * REGION_VIEW_MARGIN) / Math.max(aspect, MIN_ASPECT),
+  );
 
   camera.setTarget(Vector3.Zero());
   camera.alpha = ISOMETRIC_ALPHA;
   camera.beta = ISOMETRIC_BETA;
-  updateOrthographicFrustum(camera, aspect, verticalSpan);
+  updateOrthographicFrustum(camera, aspect, effectiveSpan);
 
   return snapshot;
 }
