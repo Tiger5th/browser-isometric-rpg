@@ -2,12 +2,12 @@
   "schemaVersion": 1,
   "ticket": 35,
   "title": "第二区域「史莱姆巢穴」与跨区域联动 —— L4 冒烟 + L5 预算",
-  "capturedAt": "2026-10-17",
+  "capturedAt": "2026-10-18",
   "environment": {
     "driver": "ego-browser（Chromium，本机已登录环境）",
     "server": "vite dev（worktree 隔离端口）",
     "scenario": "p1-world",
-    "note": "区域 2 截图与流程断言均来自同一 space；相机绕四方向各截一张"
+    "note": "区域 2 截图与流程断言均来自同一 space；相机绕四方向各截一张。本报告的截图与流程断言在合入票 33（村庄聚点）后重跑过一次，全流程仍绿。"
   },
   "l4Flow": {
     "steps": [
@@ -36,7 +36,7 @@
       "artifacts/t35-den-south.png",
       "artifacts/t35-den-west.png"
     ],
-    "notes": "巢穴件（晶簇/茧/蛋）目前是细白条：贴图内容偏灰白、关键在于 UV 窗口已修正但几何体量偏细，仍需美术 agent 出更「实心」的贴图。不阻塞验收。"
+    "notes": "巢穴件（晶簇/茧/蛋）的 UV 窗口已按贴图实测内容包围盒修正；轮廓仍偏细白，是 c1 贴图本身偏灰白所致，换 c2 只需替换 assets/textures/prop_den_*.png。不阻塞验收。"
   },
   "regionEvidence": {
     "region1": {
@@ -50,7 +50,8 @@
       "meshedPartCount": 28,
       "colliderCount": 11,
       "exitCount": 1
-    }
+    },
+    "note": "合入票 33（老陶/铁七两名新 NPC）后区域 1 的 NPC 数变为 4；网格与碰撞数不变。"
   },
   "l5Budget": {
     "region1": {
