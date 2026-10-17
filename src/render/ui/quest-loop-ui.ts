@@ -31,6 +31,11 @@ export interface QuestLoopUiOptions {
    * 旧对话框面板不再渲染，避免两套 UI 叠加。
    */
   usePortraitDialogue?: boolean;
+  /**
+   * 重击技能（票 27）：对当前选中/最近敌人发起重击意图。
+   * HUD 只负责把冷却剩余显示成转圈，不持有任何逻辑状态。
+   */
+  onHeavyAttack?(): IntentResult | void;
   /** 手动存档。 */
   onSave?(): void;
   /** 手动读档。 */
@@ -534,6 +539,53 @@ export function createQuestLoopUi(options: QuestLoopUiOptions): QuestLoopUi {
       addSaveButton("读档", "load", options.onLoad);
       addSaveButton("删除存档", "clear-save", options.onClearSave);
       hud.append(row);
+    }
+
+    if (options.onHeavyAttack !== undefined) {
+      // 重击技能按钮：冷却转圈 + 剩余秒数。数据全部来自快照，
+      // 冷却状态由逻辑层的重击冷却推进，UI 不自行计时。
+      const heavyCooldownMs = Math.max(0, Math.round(player?.combat.heavyCooldownMs ?? 0));
+      const ready = heavyCooldownMs <= 0;
+      const skillRow = element(
+        "div",
+        "display:flex;align-items:center;gap:8px;margin-top:8px;",
+      );
+      const skillButton = button(
+        ready ? "重击 (1.5×)" : `重击 ${(heavyCooldownMs / 1000).toFixed(1)}s`,
+        "heavy-attack",
+        () => submit(() => options.onHeavyAttack?.()),
+      );
+      skillButton.dataset.testid = "heavy-attack-button";
+      skillButton.dataset.ready = ready ? "true" : "false";
+      skillButton.dataset.cooldownMs = String(heavyCooldownMs);
+      skillButton.disabled = !ready;
+      if (!ready) {
+        skillButton.style.opacity = "0.55";
+      }
+      skillButton.style.flex = "1";
+      skillButton.style.background = "#2a1f3d";
+      skillButton.style.borderColor = ready
+        ? "rgba(167,139,250,0.65)"
+        : "rgba(148,163,184,0.3)";
+      skillRow.append(skillButton);
+
+      // 冷却转圈：conic-gradient 覆盖层，按剩余比例遮住底部。
+      const dial = element(
+        "div",
+        [
+          "position:relative;width:26px;height:26px;border-radius:999px;flex:none",
+          "background:conic-gradient(#a78bfa 0turn, #a78bfa var(--ready-turn,0turn),",
+          "rgba(148,163,184,0.25) var(--ready-turn,0turn))",
+        ].join(" "),
+      );
+      dial.dataset.testid = "heavy-attack-dial";
+      dial.style.setProperty(
+        "--ready-turn",
+        `${(Math.min(1, heavyCooldownMs / 8000) * 1).toFixed(3)}turn`,
+      );
+      dial.style.opacity = ready ? "0.35" : "1";
+      skillRow.append(dial);
+      hud.append(skillRow);
     }
 
     if (options.onDebugKill !== undefined) {

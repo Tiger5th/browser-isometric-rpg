@@ -339,6 +339,7 @@ function migrateV1ToV2(save: SaveFile): SaveFile {
           aiState: null,
           targetId: null,
           attackCooldownMs: 0,
+          heavyCooldownMs: 0,
         },
         container: { items },
         claimedRewardIds: [],
@@ -357,12 +358,46 @@ function migrateV1ToV2(save: SaveFile): SaveFile {
   };
 }
 
+/**
+ * v3（票 27）：实体 combat 新增 heavyCooldownMs（重击独立冷却剩余）。
+ * 旧存档没有这个字段 → 统一补 0（读档后重击处于就绪态，与「存档时没放过重击」
+ * 的语义一致；已放过重击的 v3 存档本身带真实剩余）。
+ */
+function migrateV2ToV3(save: SaveFile): SaveFile {
+  const session = save.sections.session;
+  if (!isRecord(session) || !Array.isArray(session.entities)) {
+    throw new SaveMigrationError("v2 存档 sections.session.entities 必须是数组");
+  }
+  for (const [index, entity] of session.entities.entries()) {
+    if (!isRecord(entity)) {
+      throw new SaveMigrationError(`v2 存档 entities[${index}] 必须是对象`);
+    }
+    const combat = entity.combat;
+    if (combat === undefined) {
+      continue; // v1→v2 迁移已经保证 combat 存在；缺省时保持原样交给读档校验。
+    }
+    if (!isRecord(combat)) {
+      throw new SaveMigrationError(`v2 存档 entities[${index}].combat 必须是对象`);
+    }
+    combat.heavyCooldownMs = 0;
+  }
+  // 会话快照内层版本与存档外层版本同步抬升，readSessionSnapshot 才认。
+  session.version = 3;
+  return {
+    version: 3,
+    sections: { ...save.sections, session },
+  };
+}
+
 export function createSaveMigrationRegistry(
   currentVersion: number = SAVE_VERSION,
 ): SaveMigrationRegistry {
   const registry = new SaveMigrationRegistry(currentVersion);
   if (currentVersion >= 2) {
     registry.register(1, migrateV1ToV2);
+  }
+  if (currentVersion >= 3) {
+    registry.register(2, migrateV2ToV3);
   }
   return registry;
 }

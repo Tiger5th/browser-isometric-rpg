@@ -95,14 +95,15 @@ function memoryStorage(initial: SaveFile | null = null): SaveStorage & {
   };
 }
 
-describe("v1 → v2 迁移", () => {
+describe("v1 存档迁移（链式到当前版本 v3）", () => {
   it("把 world/player/quests 升级为一份完整 v2 会话快照", () => {
     const migrated = migrateSave(sampleV1Save());
 
-    expect(migrated.version).toBe(2);
+    // 默认注册表一路迁移到当前版本；v2→v3 只补 heavyCooldownMs。
+    expect(migrated.version).toBe(GAME_SESSION_SNAPSHOT_VERSION);
     const session = migrated.sections.session as GameSessionSnapshot;
     expect(session).toMatchObject({
-      version: 2,
+      version: GAME_SESSION_SNAPSHOT_VERSION,
       regionId: "region:green_hollow",
       elapsedMs: 4200,
       nextItemInstanceId: 1,
@@ -134,6 +135,7 @@ describe("v1 → v2 迁移", () => {
           aiState: null,
           targetId: null,
           attackCooldownMs: 0,
+          heavyCooldownMs: 0,
         },
         container: {
           items: [
@@ -174,11 +176,12 @@ describe("v1 → v2 迁移", () => {
   });
 
   it("迁移函数拿到的是副本，即使原地修改也不会污染输入", () => {
-    const registry = new SaveMigrationRegistry();
+    const registry = new SaveMigrationRegistry(3);
     registry.register(1, (save) => {
       save.sections.injectedByMigration = true;
       return { version: 2, sections: { ...save.sections } };
     });
+    registry.register(2, (save) => ({ version: 3, sections: save.sections }));
     const input = sampleV1Save();
 
     registry.migrate(input);
@@ -189,7 +192,7 @@ describe("v1 → v2 迁移", () => {
   it("旧存档经 JSON 往返后仍可迁移", () => {
     const roundTripped = parseSaveFile(JSON.stringify(sampleV1Save()));
 
-    expect(migrateSave(roundTripped).version).toBe(2);
+    expect(migrateSave(roundTripped).version).toBe(GAME_SESSION_SNAPSHOT_VERSION);
   });
 
   it("拒绝缺少玩家、非法背包与非法属性的 v1 存档", () => {
@@ -229,26 +232,32 @@ describe("v1 → v2 迁移", () => {
 });
 
 describe("迁移函数注册表", () => {
-  it("按顺序执行多级迁移链 v1 → v2 → v3", () => {
-    const registry = createSaveMigrationRegistry(3);
+  it("按顺序执行多级迁移链 v1 → v2 → v3 → v4", () => {
+    const registry = new SaveMigrationRegistry(4);
     const calls: number[] = [];
+    registry.register(1, (save) => {
+      calls.push(1);
+      return { version: 2, sections: save.sections };
+    });
     registry.register(2, (save) => {
       calls.push(2);
-      const session = save.sections.session as GameSessionSnapshot;
+      const world = save.sections.world as { elapsedMs: number };
       return {
         version: 3,
-        sections: {
-          ...save.sections,
-          session: { ...session, elapsedMs: session.elapsedMs + 1 },
-        },
+        sections: { ...save.sections, world: { ...world, elapsedMs: world.elapsedMs + 1 } },
       };
+    });
+    registry.register(3, (save) => {
+      calls.push(3);
+      return { version: 4, sections: save.sections };
     });
 
     const migrated = registry.migrate(sampleV1Save());
 
-    expect(calls).toEqual([2]);
-    expect(migrated.version).toBe(3);
-    expect((migrated.sections.session as GameSessionSnapshot).elapsedMs).toBe(4201);
+    expect(calls).toEqual([1, 2, 3]);
+    expect(migrated.version).toBe(4);
+    // v2→v3 那一段把 world.elapsedMs +1（4200 → 4201），v3→v4 不再改动。
+    expect((migrated.sections.world as { elapsedMs: number }).elapsedMs).toBe(4201);
   });
 
   it("缺失中间迁移函数时给出明确错误", () => {

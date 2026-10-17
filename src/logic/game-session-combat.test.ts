@@ -436,6 +436,7 @@ describe("GameSession 友好意图：死亡窗口", () => {
     );
 
     session.attack("enemy:brute", PLAYER_ID);
+    session.advance(300); // 敌人普攻前摇 300ms 后伤害落地
     const player = entityOf(session, PLAYER_ID);
     expect(player.combat.alive).toBe(false);
 
@@ -459,7 +460,7 @@ describe("GameSession 玩家死亡与重生", () => {
     expect(damagedSlimeHp).toBe(13);
 
     session.moveTo(PLAYER_ID, { x: 3, y: 0, z: 0 });
-    session.advance(600); // 敌人 6 伤害击杀 5 血玩家；重生延迟 500ms
+    session.advance(900); // 敌人前摇 300ms 后 6 伤害击杀 5 血玩家；重生延迟 500ms
 
     const events = session.drainEvents();
     expect(events).toEqual(
@@ -512,7 +513,7 @@ describe("GameSession 玩家死亡与重生", () => {
     session.addEntity(player);
     session.addEntity(enemy);
 
-    session.advance(200);
+    session.advance(500); // 前摇 300ms + 重生延迟 100ms
 
     const respawned = entityOf(session, PLAYER_ID);
     expect(respawned.combat.alive).toBe(true);
@@ -538,6 +539,7 @@ describe("GameSession 战斗快照", () => {
       aiState: "chase",
       targetId: PLAYER_ID,
       attackCooldownMs: 0,
+      heavyCooldownMs: 0,
     });
     expect(slime.attributes).toMatchObject({ maxHp: 24, attack: 6, defense: 1, xp: 10 });
 
