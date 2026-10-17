@@ -24,6 +24,7 @@ import type { Story } from "inkjs";
 import {
   continueDialogue,
   createDialogue,
+  restoreDialogue,
   snapshotDialogue,
   type DialogueSnapshot,
 } from "./dialogue";
@@ -54,6 +55,7 @@ export const DEFAULT_MOVE_SPEED = 5.5;
 /**
  * 快照版本。
  * v2（票 22）：实体快照补充属性/背包/修饰器/战斗状态，顶层新增 dialogue 与 quests。
+ * v2（票 23）：顶层补充 regionId / nextItemInstanceId / respawnAtMs，支持完整读档。
  */
 export const GAME_SESSION_SNAPSHOT_VERSION = 2;
 
@@ -183,7 +185,13 @@ export type CombatEvent =
 /** 可 JSON 序列化的完整游戏状态。 */
 export interface GameSessionSnapshot {
   version: number;
+  /** 已加载区域；会话尚未加载区域时为 null。 */
+  regionId: string | null;
   elapsedMs: number;
+  /** 下一个自动生成的物品实例序号；读档后继续保证实例 id 唯一。 */
+  nextItemInstanceId: number;
+  /** 玩家死亡后的重生时刻；无待重生时为 null。 */
+  respawnAtMs: number | null;
   entities: EntitySnapshot[];
   /** 无进行中的对话时为 null。 */
   dialogue: GameDialogueSnapshot | null;
@@ -243,6 +251,17 @@ function cloneVec3(value: Vec3): Vec3 {
 
 function cloneModifier(modifier: Modifier): Modifier {
   return { ...modifier, source: { ...modifier.source } };
+}
+
+function assertAttributesRecord(
+  attributes: Record<string, number>,
+  label: string,
+): void {
+  for (const [key, value] of Object.entries(attributes)) {
+    if (key.trim() === "" || !Number.isFinite(value)) {
+      throw new Error(`${label} 的属性 ${key || "(空)"} 必须是有限数值`);
+    }
+  }
 }
 
 function clamp(value: number, minimum: number, maximum: number): number {
@@ -1077,7 +1096,10 @@ export class GameSession implements GameSessionIntents {
 
     return {
       version: GAME_SESSION_SNAPSHOT_VERSION,
+      regionId: this.regionId,
       elapsedMs: this.elapsedMs,
+      nextItemInstanceId: this.nextItemInstanceId,
+      respawnAtMs: this.respawnAtMs,
       entities,
       dialogue:
         this.dialogue === null
@@ -1099,6 +1121,181 @@ export class GameSession implements GameSessionIntents {
   /** 快照的 JSON 表示（存档/测试共用）。 */
   serialize(): string {
     return JSON.stringify(this.snapshot());
+  }
+
+  /**
+   * 从快照完整恢复会话状态（读档）。
+   *
+   * 内容定义必须先准备好：`loadRegion()`（区域实体/任务/物品/敌人档案）与
+   * `registerDialogue()`（对话）之后再调用。恢复内容：
+   * - 实体：位置/朝向/标签/基础属性/修饰器/背包/已领奖励账本 + 移动意图；
+   * - 战斗：生命/存活/AI 状态/目标/冷却；
+   * - 顶层：游戏时钟、重生计时、物品实例序号、静默清空事件队列；
+   * - 对话：ink 执行状态（文本与选项与存档点一致，可继续选择）；
+   * - 任务：全部任务进度。
+   *
+   * 快照中的实体必须已存在于会话；会话里多出的内容实体保持默认状态
+   * （兼容旧版本存档迁移后只包含部分实体的情形）。
+   * 恢复不广播事件——读档不是一次游戏内状态转移。
+   */
+  restoreSnapshot(snapshot: GameSessionSnapshot): void {
+    if (snapshot.version !== GAME_SESSION_SNAPSHOT_VERSION) {
+      throw new Error(
+        `不支持的快照版本：${String(snapshot.version)}（当前 ${GAME_SESSION_SNAPSHOT_VERSION}）`,
+      );
+    }
+    if (!Number.isFinite(snapshot.elapsedMs) || snapshot.elapsedMs < 0) {
+      throw new Error("快照 elapsedMs 必须是非负有限数值");
+    }
+    if (snapshot.regionId !== null) {
+      if (typeof snapshot.regionId !== "string" || snapshot.regionId.trim() === "") {
+        throw new Error("快照 regionId 必须是非空字符串或 null");
+      }
+      if (this.regionId !== null && this.regionId !== snapshot.regionId) {
+        throw new Error(
+          `快照区域 ${snapshot.regionId} 与当前已加载区域 ${this.regionId} 不一致`,
+        );
+      }
+    }
+    if (
+      snapshot.respawnAtMs !== null &&
+      (!Number.isFinite(snapshot.respawnAtMs) || snapshot.respawnAtMs < 0)
+    ) {
+      throw new Error("快照 respawnAtMs 必须是非负有限数值或 null");
+    }
+    if (
+      !Number.isInteger(snapshot.nextItemInstanceId) ||
+      snapshot.nextItemInstanceId < 1
+    ) {
+      throw new Error("快照 nextItemInstanceId 必须是正整数");
+    }
+
+    // 先确定实体集合，再写入：失败时不会留下半恢复状态。
+    const seen = new Set<EntityId>();
+    for (const entitySnapshot of snapshot.entities) {
+      if (seen.has(entitySnapshot.id)) {
+        throw new Error(`快照包含重复实体：${entitySnapshot.id}`);
+      }
+      if (!this.entities.has(entitySnapshot.id)) {
+        throw new Error(`快照包含未知实体：${entitySnapshot.id}`);
+      }
+      seen.add(entitySnapshot.id);
+      assertFiniteVec3(entitySnapshot.position, `快照实体 ${entitySnapshot.id} 的位置`);
+      assertFiniteVec3(entitySnapshot.rotation, `快照实体 ${entitySnapshot.id} 的朝向`);
+      assertAttributesRecord(
+        entitySnapshot.baseAttributes,
+        `快照实体 ${entitySnapshot.id}`,
+      );
+      if (entitySnapshot.movement !== null) {
+        assertFiniteVec3(
+          entitySnapshot.movement.target,
+          `快照实体 ${entitySnapshot.id} 的移动目标`,
+        );
+        if (!Number.isFinite(entitySnapshot.movement.speed) || entitySnapshot.movement.speed <= 0) {
+          throw new Error(`快照实体 ${entitySnapshot.id} 的移动速度必须是正数`);
+        }
+      }
+      if (!Number.isFinite(entitySnapshot.combat.hp) || entitySnapshot.combat.hp < 0) {
+        throw new Error(`快照实体 ${entitySnapshot.id} 的生命值必须是非负数`);
+      }
+      if (typeof entitySnapshot.combat.alive !== "boolean") {
+        throw new Error(`快照实体 ${entitySnapshot.id} 的存活标记必须是布尔值`);
+      }
+      if (
+        !Number.isFinite(entitySnapshot.combat.attackCooldownMs) ||
+        entitySnapshot.combat.attackCooldownMs < 0
+      ) {
+        throw new Error(`快照实体 ${entitySnapshot.id} 的攻击冷却必须是非负数`);
+      }
+      for (const item of entitySnapshot.container.items) {
+        if (
+          typeof item.instanceId !== "string" ||
+          item.instanceId.trim() === "" ||
+          typeof item.templateId !== "string" ||
+          item.templateId.trim() === "" ||
+          !Number.isInteger(item.quantity) ||
+          item.quantity < 1
+        ) {
+          throw new Error(`快照实体 ${entitySnapshot.id} 的背包物品格式非法`);
+        }
+      }
+    }
+    for (const entitySnapshot of snapshot.entities) {
+      const targetId = entitySnapshot.combat.targetId;
+      if (targetId !== null && !this.entities.has(targetId)) {
+        throw new Error(
+          `快照实体 ${entitySnapshot.id} 的攻击目标未知：${targetId}`,
+        );
+      }
+    }
+
+    // 对话也先验证再写入。
+    let restoredDialogue: ActiveDialogue | null = null;
+    if (snapshot.dialogue !== null) {
+      const dialogueSnapshot = snapshot.dialogue;
+      if (!this.entities.has(dialogueSnapshot.npcId)) {
+        throw new Error(`对话快照引用未知 NPC：${dialogueSnapshot.npcId}`);
+      }
+      const compiled = this.dialogues.get(dialogueSnapshot.dialogueId);
+      if (compiled === undefined) {
+        throw new Error(`对话未注册：${dialogueSnapshot.dialogueId}`);
+      }
+      const story = createDialogue(compiled);
+      this.bindDialogueFunctions(story);
+      restoreDialogue(story, dialogueSnapshot.story);
+      restoredDialogue = {
+        npcId: dialogueSnapshot.npcId,
+        dialogueId: dialogueSnapshot.dialogueId,
+        story,
+        storySnapshot: snapshotDialogue(story),
+        text: dialogueSnapshot.text,
+        choices: [...dialogueSnapshot.choices],
+      };
+    }
+
+    // ---- 写入阶段（到此不再有可预期的验证失败）----
+    this.elapsedMs = snapshot.elapsedMs;
+    this.respawnAtMs = snapshot.respawnAtMs;
+    this.nextItemInstanceId = snapshot.nextItemInstanceId;
+
+    for (const entitySnapshot of snapshot.entities) {
+      const entity = this.entities.get(entitySnapshot.id);
+      const runtime = this.combat.get(entitySnapshot.id);
+      if (!entity || !runtime) {
+        throw new Error(`实体缺少运行时状态：${entitySnapshot.id}`);
+      }
+
+      entity.state.position = cloneVec3(entitySnapshot.position);
+      entity.state.rotation = cloneVec3(entitySnapshot.rotation);
+      entity.state.tags = [...entitySnapshot.tags];
+      entity.baseAttributes = { ...entitySnapshot.baseAttributes };
+      entity.modifiers = entitySnapshot.modifiers.map(cloneModifier);
+      entity.container.items = entitySnapshot.container.items.map((item) => ({
+        ...item,
+      }));
+      entity.claimedRewardIds = [...entitySnapshot.claimedRewardIds];
+
+      if (entitySnapshot.movement === null) {
+        this.movements.delete(entity.id);
+      } else {
+        this.movements.set(entity.id, {
+          target: cloneVec3(entitySnapshot.movement.target),
+          speed: entitySnapshot.movement.speed,
+        });
+      }
+
+      runtime.hp = Math.min(entitySnapshot.combat.hp, this.maxHpOf(entity));
+      runtime.alive = entitySnapshot.combat.alive;
+      runtime.cooldownMs = entitySnapshot.combat.attackCooldownMs;
+      runtime.targetId = entitySnapshot.combat.targetId;
+      runtime.aiState = entitySnapshot.combat.aiState;
+      runtime.idleMs = 0;
+      runtime.patrolIndex = 0;
+    }
+
+    this.dialogue = restoredDialogue;
+    this.questLog.restore(snapshot.quests);
+    this.events.length = 0;
   }
 
   // -------------------------------------------------------------------------

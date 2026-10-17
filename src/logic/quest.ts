@@ -10,6 +10,17 @@ import type { QuestDefinition, QuestObjectiveDefinition } from "./content/types"
 
 export type QuestStatus = "available" | "active" | "ready_to_turn_in" | "completed";
 
+const QUEST_STATUSES: readonly QuestStatus[] = [
+  "available",
+  "active",
+  "ready_to_turn_in",
+  "completed",
+];
+
+function isQuestStatus(value: unknown): value is QuestStatus {
+  return QUEST_STATUSES.includes(value as QuestStatus);
+}
+
 export interface QuestObjectiveSnapshot {
   id: string;
   type: QuestObjectiveDefinition["type"];
@@ -124,6 +135,53 @@ export class QuestLog {
     }
     progress.status = "completed";
     return true;
+  }
+
+  /**
+   * 从快照恢复任务进度（读档）。
+   * 快照中未出现的任务重置为 available/0；未知任务、重复任务或进度越界显式报错。
+   */
+  restore(snapshots: readonly QuestSnapshot[]): void {
+    for (const progress of this.quests.values()) {
+      progress.status = "available";
+      progress.current = progress.definition.objectives.map(() => 0);
+    }
+
+    const seen = new Set<string>();
+    for (const snapshot of snapshots) {
+      const progress = this.quests.get(snapshot.id);
+      if (progress === undefined) {
+        throw new Error(`快照包含未知任务：${snapshot.id}`);
+      }
+      if (seen.has(snapshot.id)) {
+        throw new Error(`快照包含重复任务：${snapshot.id}`);
+      }
+      seen.add(snapshot.id);
+
+      if (!isQuestStatus(snapshot.status)) {
+        throw new Error(`任务 ${snapshot.id} 的状态非法：${String(snapshot.status)}`);
+      }
+      if (snapshot.objectives.length !== progress.definition.objectives.length) {
+        throw new Error(
+          `任务 ${snapshot.id} 的目标数量与内容定义不一致（快照 ${snapshot.objectives.length}，定义 ${progress.definition.objectives.length}）`,
+        );
+      }
+
+      progress.status = snapshot.status;
+      progress.current = snapshot.objectives.map((objective, index) => {
+        const required = objectiveRequired(progress.definition.objectives[index]);
+        if (
+          !Number.isInteger(objective.current) ||
+          objective.current < 0 ||
+          objective.current > required
+        ) {
+          throw new Error(
+            `任务 ${snapshot.id} 的目标 ${objective.id} 进度非法：${String(objective.current)}`,
+          );
+        }
+        return objective.current;
+      });
+    }
   }
 
   /** 全量任务快照；每次返回新对象，调用方无法修改内部进度。 */

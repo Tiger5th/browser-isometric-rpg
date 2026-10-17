@@ -39,6 +39,7 @@ import {
   type GameSessionSnapshot,
 } from "../../logic/game-session";
 import type { Metric } from "../../logic/report";
+import { GameSaveService } from "../../logic/save";
 import { DEFAULT_CAMERA_VERTICAL_SPAN } from "../camera";
 import {
   createCharacterMaterial,
@@ -50,6 +51,7 @@ import {
   setCameraSpan,
   setGreyboxEnabled,
 } from "../navmesh-scene";
+import { IndexedDbSaveStorage } from "../persistence/indexed-db-save-storage";
 import { createQuestLoopUi, type QuestLoopUi } from "../ui/quest-loop-ui";
 
 const SCENARIO_NAME = "dialogue-quest";
@@ -74,6 +76,8 @@ interface DialogueQuestState {
   meshes: Map<string, Mesh>;
   deadEnemies: Set<string>;
   ui: QuestLoopUi;
+  saveService: GameSaveService;
+  saveAvailable: boolean;
   observer: Observer<Scene> | null;
   detachPointer: () => void;
 }
@@ -88,6 +92,15 @@ export interface DialogueQuestDebugApi {
   /** 发起攻击；伤害/死亡结算仍由票 21 的战斗逻辑完成。 */
   attackEnemy(enemyId: string): void;
   getPlayer(): EntitySnapshot | null;
+  /** 手动存档到 IndexedDB。 */
+  save(): Promise<{ version: number; elapsedMs: number } | null>;
+  /** 从 IndexedDB 读档并重建场景；返回是否成功恢复。 */
+  load(): Promise<boolean>;
+  /** 删除 IndexedDB 存档。 */
+  clearSave(): Promise<void>;
+  hasSave(): Promise<boolean>;
+  /** 渲染层重建后实体网格的世界坐标（验证读档后的视觉位置）。 */
+  getMeshPosition(entityId: string): { x: number; y: number; z: number } | null;
 }
 
 declare global {
@@ -118,6 +131,86 @@ function entityIdOf(mesh: AbstractMesh | null): string | null {
     node = node.parent as AbstractMesh | null;
   }
   return null;
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+/** 把快照里的实体位置/存活状态同步到已创建的网格（读档后重建场景）。 */
+function syncSceneToSnapshot(
+  state: DialogueQuestState,
+  snapshot: GameSessionSnapshot,
+): void {
+  state.deadEnemies.clear();
+  for (const entity of snapshot.entities) {
+    const mesh = state.meshes.get(entity.id);
+    if (mesh === undefined) {
+      continue;
+    }
+    if (entity.identity.type === "enemy" && !entity.combat.alive) {
+      state.deadEnemies.add(entity.id);
+      mesh.setEnabled(false);
+      continue;
+    }
+    mesh.setEnabled(true);
+    if (entity.identity.type === "enemy") {
+      mesh.position.set(entity.position.x, 0.45, entity.position.z);
+    } else {
+      mesh.position.set(entity.position.x, entity.position.y, entity.position.z);
+      mesh.rotation.y = entity.rotation.y;
+    }
+  }
+}
+
+async function saveToStorage(
+  state: DialogueQuestState,
+): Promise<{ version: number; elapsedMs: number } | null> {
+  try {
+    const snapshot = state.session.snapshot();
+    const file = await state.saveService.save(snapshot);
+    state.saveAvailable = true;
+    state.ui.setSaveStatus(`已存档 · v${file.version} · ${snapshot.elapsedMs}ms`, "ok");
+    return { version: file.version, elapsedMs: snapshot.elapsedMs };
+  } catch (error) {
+    state.ui.setSaveStatus(`存档失败：${errorMessage(error)}`, "error");
+    return null;
+  }
+}
+
+async function loadFromStorage(state: DialogueQuestState): Promise<boolean> {
+  try {
+    const snapshot = await state.saveService.load();
+    if (snapshot === null) {
+      state.saveAvailable = false;
+      state.ui.setSaveStatus("无存档：先点「存档」再刷新页面", "idle");
+      return false;
+    }
+    state.session.restoreSnapshot(snapshot);
+    const restored = state.session.snapshot();
+    syncSceneToSnapshot(state, restored);
+    state.saveAvailable = true;
+    state.ui.update(restored);
+    state.ui.setSaveStatus(
+      `已从存档恢复 · v${snapshot.version} · ${snapshot.elapsedMs}ms`,
+      "ok",
+    );
+    return true;
+  } catch (error) {
+    state.saveAvailable = false;
+    state.ui.setSaveStatus(`读档失败：${errorMessage(error)}`, "error");
+    return false;
+  }
+}
+
+async function clearStoredSave(state: DialogueQuestState): Promise<void> {
+  try {
+    await state.saveService.clear();
+    state.saveAvailable = false;
+    state.ui.setSaveStatus("存档已删除", "idle");
+  } catch (error) {
+    state.ui.setSaveStatus(`删除存档失败：${errorMessage(error)}`, "error");
+  }
 }
 
 function groundPoint(scene: Scene): Vector3 | null {
@@ -204,6 +297,17 @@ function installDebugApi(state: DialogueQuestState): void {
     chooseDialogueOption: (index) => state.session.chooseDialogueOption(index),
     attackEnemy,
     getPlayer: () => playerSnapshot(state.session),
+    save: () => saveToStorage(state),
+    load: () => loadFromStorage(state),
+    clearSave: () => clearStoredSave(state),
+    hasSave: () => state.saveService.hasSave(),
+    getMeshPosition: (entityId) => {
+      const mesh = state.meshes.get(entityId);
+      if (mesh === undefined) {
+        return null;
+      }
+      return { x: mesh.position.x, y: mesh.position.y, z: mesh.position.z };
+    },
   };
 }
 
@@ -253,7 +357,13 @@ export const dialogueQuestScenario: ScenarioDefinition = {
       deadEnemies: new Set<string>(),
       observer: null,
       detachPointer: () => undefined,
-      ui: { update: () => undefined, dispose: () => undefined },
+      ui: {
+        update: () => undefined,
+        setSaveStatus: () => undefined,
+        dispose: () => undefined,
+      },
+      saveService: new GameSaveService(new IndexedDbSaveStorage()),
+      saveAvailable: false,
     };
     states.set(context, state);
 
@@ -277,6 +387,15 @@ export const dialogueQuestScenario: ScenarioDefinition = {
       bundle: CONTENT_BUNDLE,
       onChoose: (index) => session.chooseDialogueOption(index),
       onDebugKill: killNextEnemy,
+      onSave: () => {
+        void saveToStorage(state);
+      },
+      onLoad: () => {
+        void loadFromStorage(state);
+      },
+      onClearSave: () => {
+        void clearStoredSave(state);
+      },
     });
 
     // 点击 NPC = 对话；点击其他实体 = 走过去；点击地面 = 移动。
@@ -347,6 +466,17 @@ export const dialogueQuestScenario: ScenarioDefinition = {
     }
     installDebugApi(state);
 
+    // 刷新/重开页面后自动从存档恢复；无存档则保持新游戏。
+    try {
+      if (await state.saveService.hasSave()) {
+        await loadFromStorage(state);
+      } else {
+        state.ui.setSaveStatus("无存档：点击「存档」创建", "idle");
+      }
+    } catch (error) {
+      state.ui.setSaveStatus(`存档不可用：${errorMessage(error)}`, "error");
+    }
+
     await nextFrame();
   },
 
@@ -387,6 +517,12 @@ export const dialogueQuestScenario: ScenarioDefinition = {
       {
         name: "dialogue.open",
         value: snapshot.dialogue === null ? 0 : 1,
+        unit: "boolean",
+      },
+      {
+        // 只报告：交互式场景可能在 measure 后才手动存档。
+        name: "save.available",
+        value: state.saveAvailable ? 1 : 0,
         unit: "boolean",
       },
     ];
