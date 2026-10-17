@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "subject": "程序化后备生成器 + glTF-Transform 管线（Blender 不可用时的替代验证）",
+  "script": "tools/pipeline/build-test-asset.mjs",
+  "runs": 2,
+  "sha256": [
+    "3f35796ca3d9e7348add5db9e3fbd6b0cf1ffe33b4c3e1ca23334f2c7662082a",
+    "3f35796ca3d9e7348add5db9e3fbd6b0cf1ffe33b4c3e1ca23334f2c7662082a"
+  ],
+  "byteIdentical": true,
+  "bytes": 592736,
+  "pipelineBuildDeterminism": {
+    "status": "passed",
+    "runs": 2,
+    "assetsByteIdentical": true,
+    "sha256": {
+      "character_test_lod0.glb": "3f35796ca3d9e7348add5db9e3fbd6b0cf1ffe33b4c3e1ca23334f2c7662082a",
+      "character_test_meshopt.glb": "831d05f0bf8b0b3f959f30abbff241c3a12d5a23f30c8685c9338bfafb3228e5",
+      "character_test_draco.glb": "b21f92d1b3acdf6994e4efa22d4058e698a03894d86e460c0baa60e7b92aa4a8",
+      "character_test_ktx2.glb": "b233e00a049040c4cf269111d583b2537be56d1bee0a339166ef272fc06f0bf2",
+      "character_test_lod1.glb": "90df975629c05cbf3bb25e2d954e445f1fa2c3a663234adf989cc230e0711d0e",
+      "character_test_lod2.glb": "4aa725af73e6798efc877fcc01b870b597ad8f676818dd4ba19d80bc7e985c39",
+      "character_test_meshopt_ktx2.glb": "6c7808b2cfff4075d9769b59ba881efcb1032ce1778e74bac05e76f2c00d8482"
+    }
+  },
+  "blender": {
+    "available": false,
+    "status": "blocked",
+    "script": "tools/pipeline/blender/export_test_asset.py",
+    "reproScript": "tools/pipeline/blender/check_reproducibility.sh",
+    "note": "Blender 导出可重复性未实测；脚本与两次运行比对入口已就绪，待有 Blender 的环境执行。"
+  }
+}

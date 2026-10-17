@@ -1,0 +1,1245 @@
+{
+  "schemaVersion": 1,
+  "harness": "P0Harness",
+  "scenario": "asset-pipeline",
+  "environment": {
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "renderBackend": "webgl2",
+    "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+    "capturedAt": "2026-10-17T04:59:09.308Z",
+    "devicePixelRatio": 2,
+    "hardwareConcurrency": 10
+  },
+  "runCount": 5,
+  "loadsPerVariantPerRun": 5,
+  "summary": {
+    "baselineLoadFirstMs": {
+      "values": [
+        9.9,
+        5.3,
+        4.1,
+        4.3,
+        3.7
+      ],
+      "median": 4.3,
+      "min": 3.7,
+      "max": 9.9
+    },
+    "baselineLoadMedianMs": {
+      "values": [
+        6.5,
+        4.5,
+        4.7,
+        4.3,
+        4.4
+      ],
+      "median": 4.5,
+      "min": 4.3,
+      "max": 6.5
+    },
+    "meshoptLoadFirstMs": {
+      "values": [
+        21.9,
+        4.7,
+        6.2,
+        5.3,
+        6.3
+      ],
+      "median": 6.2,
+      "min": 4.7,
+      "max": 21.9
+    },
+    "meshoptLoadMedianMs": {
+      "values": [
+        5.8,
+        4.8,
+        4.9,
+        4.6,
+        6.3
+      ],
+      "median": 4.9,
+      "min": 4.6,
+      "max": 6.3
+    },
+    "dracoLoadFirstMs": {
+      "values": [
+        18.9,
+        4.7,
+        4,
+        8.1,
+        9.1
+      ],
+      "median": 8.1,
+      "min": 4,
+      "max": 18.9
+    },
+    "dracoLoadMedianMs": {
+      "values": [
+        4.7,
+        4.7,
+        5.1,
+        4.3,
+        5.1
+      ],
+      "median": 4.7,
+      "min": 4.3,
+      "max": 5.1
+    },
+    "ktx2LoadMs": {
+      "values": [
+        147.9,
+        6,
+        6.6,
+        6.8,
+        6.3
+      ],
+      "median": 6.6,
+      "min": 6,
+      "max": 147.9
+    },
+    "ktx2LoadOk": {
+      "values": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "median": 1,
+      "min": 1,
+      "max": 1
+    },
+    "ktx2TextureFormat": {
+      "values": [
+        37492,
+        37492,
+        37492,
+        37492,
+        37492
+      ],
+      "median": 37492,
+      "min": 37492,
+      "max": 37492
+    },
+    "productionLoadMs": {
+      "values": [
+        10.9,
+        5.8,
+        5.6,
+        5,
+        4.9
+      ],
+      "median": 5.6,
+      "min": 4.9,
+      "max": 10.9
+    },
+    "productionLoadOk": {
+      "values": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "median": 1,
+      "min": 1,
+      "max": 1
+    },
+    "productionBytes": {
+      "values": [
+        132620,
+        132620,
+        132620,
+        132620,
+        132620
+      ],
+      "median": 132620,
+      "min": 132620,
+      "max": 132620
+    },
+    "productionTriangleCount": {
+      "values": [
+        11488,
+        11488,
+        11488,
+        11488,
+        11488
+      ],
+      "median": 11488,
+      "min": 11488,
+      "max": 11488
+    },
+    "productionTextureFormat": {
+      "values": [
+        37492,
+        37492,
+        37492,
+        37492,
+        37492
+      ],
+      "median": 37492,
+      "min": 37492,
+      "max": 37492
+    },
+    "meshoptBytes": {
+      "values": [
+        200660,
+        200660,
+        200660,
+        200660,
+        200660
+      ],
+      "median": 200660,
+      "min": 200660,
+      "max": 200660
+    },
+    "dracoBytes": {
+      "values": [
+        298924,
+        298924,
+        298924,
+        298924,
+        298924
+      ],
+      "median": 298924,
+      "min": 298924,
+      "max": 298924
+    },
+    "meshoptGeometryBytes": {
+      "values": [
+        67001,
+        67001,
+        67001,
+        67001,
+        67001
+      ],
+      "median": 67001,
+      "min": 67001,
+      "max": 67001
+    },
+    "dracoGeometryBytes": {
+      "values": [
+        167438,
+        167438,
+        167438,
+        167438,
+        167438
+      ],
+      "median": 167438,
+      "min": 167438,
+      "max": 167438
+    }
+  },
+  "runs": [
+    {
+      "schemaVersion": 1,
+      "harness": "P0Harness",
+      "scenario": "asset-pipeline",
+      "status": "passed",
+      "startedAt": "2026-10-17T04:59:08.317Z",
+      "finishedAt": "2026-10-17T04:59:08.708Z",
+      "durationMs": 391,
+      "environment": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+        "renderBackend": "webgl2",
+        "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+        "capturedAt": "2026-10-17T04:59:08.708Z",
+        "devicePixelRatio": 2,
+        "hardwareConcurrency": 10
+      },
+      "metrics": [
+        {
+          "name": "sourceKindBlender",
+          "value": 0,
+          "unit": "boolean"
+        },
+        {
+          "name": "sourceTriangles",
+          "value": 11488,
+          "unit": "triangles"
+        },
+        {
+          "name": "baselineBytes",
+          "value": 592736,
+          "unit": "bytes"
+        },
+        {
+          "name": "baselineFetchMs",
+          "value": 3.8,
+          "unit": "ms"
+        },
+        {
+          "name": "baselineLoadFirstMs",
+          "value": 9.9,
+          "unit": "ms"
+        },
+        {
+          "name": "baselineLoadMedianMs",
+          "value": 6.5,
+          "unit": "ms"
+        },
+        {
+          "name": "meshoptBytes",
+          "value": 200660,
+          "unit": "bytes"
+        },
+        {
+          "name": "meshoptGeometryBytes",
+          "value": 67001,
+          "unit": "bytes"
+        },
+        {
+          "name": "meshoptLoadFirstMs",
+          "value": 21.9,
+          "unit": "ms"
+        },
+        {
+          "name": "meshoptLoadMedianMs",
+          "value": 5.8,
+          "unit": "ms"
+        },
+        {
+          "name": "dracoBytes",
+          "value": 298924,
+          "unit": "bytes"
+        },
+        {
+          "name": "dracoGeometryBytes",
+          "value": 167438,
+          "unit": "bytes"
+        },
+        {
+          "name": "dracoLoadFirstMs",
+          "value": 18.9,
+          "unit": "ms"
+        },
+        {
+          "name": "dracoLoadMedianMs",
+          "value": 4.7,
+          "unit": "ms"
+        },
+        {
+          "name": "triangleCount",
+          "value": 11488,
+          "unit": "triangles"
+        },
+        {
+          "name": "meshCount",
+          "value": 2,
+          "unit": "meshes"
+        },
+        {
+          "name": "boneCount",
+          "value": 7,
+          "unit": "bones",
+          "threshold": 7,
+          "comparison": "gte",
+          "passed": true
+        },
+        {
+          "name": "morphTargetCount",
+          "value": 1,
+          "unit": "targets",
+          "threshold": 1,
+          "comparison": "gte",
+          "passed": true
+        },
+        {
+          "name": "skinnedMeshCount",
+          "value": 1,
+          "unit": "meshes",
+          "threshold": 1,
+          "comparison": "gte",
+          "passed": true
+        },
+        {
+          "name": "animationCount",
+          "value": 1,
+          "unit": "animations",
+          "threshold": 1,
+          "comparison": "gte",
+          "passed": true
+        },
+        {
+          "name": "ktx2LoadOk",
+          "value": 1,
+          "unit": "boolean",
+          "threshold": 1,
+          "comparison": "eq",
+          "passed": true
+        },
+        {
+          "name": "ktx2TextureCount",
+          "value": 1,
+          "unit": "textures"
+        },
+        {
+          "name": "ktx2TextureFormat",
+          "value": 37492,
+          "unit": "format"
+        },
+        {
+          "name": "ktx2LoadMs",
+          "value": 147.9,
+          "unit": "ms"
+        },
+        {
+          "name": "ktx2Bytes",
+          "value": 524580,
+          "unit": "bytes"
+        },
+        {
+          "name": "productionLoadOk",
+          "value": 1,
+          "unit": "boolean",
+          "threshold": 1,
+          "comparison": "eq",
+          "passed": true
+        },
+        {
+          "name": "productionLoadMs",
+          "value": 10.9,
+          "unit": "ms"
+        },
+        {
+          "name": "productionBytes",
+          "value": 132620,
+          "unit": "bytes"
+        },
+        {
+          "name": "productionTriangleCount",
+          "value": 11488,
+          "unit": "triangles"
+        },
+        {
+          "name": "productionTextureFormat",
+          "value": 37492,
+          "unit": "format"
+        },
+        {
+          "name": "lod0Triangles",
+          "value": 11488,
+          "unit": "triangles"
+        },
+        {
+          "name": "lod1Triangles",
+          "value": 5744,
+          "unit": "triangles"
+        },
+        {
+          "name": "lod2Triangles",
+          "value": 2296,
+          "unit": "triangles"
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "harness": "P0Harness",
+      "scenario": "asset-pipeline",
+      "status": "passed",
+      "startedAt": "2026-10-17T04:59:08.710Z",
+      "finishedAt": "2026-10-17T04:59:08.858Z",
+      "durationMs": 148,
+      "environment": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+        "renderBackend": "webgl2",
+        "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+        "capturedAt": "2026-10-17T04:59:08.858Z",
+        "devicePixelRatio": 2,
+        "hardwareConcurrency": 10
+      },
+      "metrics": [
+        {
+          "name": "sourceKindBlender",
+          "value": 0,
+          "unit": "boolean"
+        },
+        {
+          "name": "sourceTriangles",
+          "value": 11488,
+          "unit": "triangles"
+        },
+        {
+          "name": "baselineBytes",
+          "value": 592736,
+          "unit": "bytes"
+        },
+        {
+          "name": "baselineFetchMs",
+          "value": 1.1,
+          "unit": "ms"
+        },
+        {
+          "name": "baselineLoadFirstMs",
+          "value": 5.3,
+          "unit": "ms"
+        },
+        {
+          "name": "baselineLoadMedianMs",
+          "value": 4.5,
+          "unit": "ms"
+        },
+        {
+          "name": "meshoptBytes",
+          "value": 200660,
+          "unit": "bytes"
+        },
+        {
+          "name": "meshoptGeometryBytes",
+          "value": 67001,
+          "unit": "bytes"
+        },
+        {
+          "name": "meshoptLoadFirstMs",
+          "value": 4.7,
+          "unit": "ms"
+        },
+        {
+          "name": "meshoptLoadMedianMs",
+          "value": 4.8,
+          "unit": "ms"
+        },
+        {
+          "name": "dracoBytes",
+          "value": 298924,
+          "unit": "bytes"
+        },
+        {
+          "name": "dracoGeometryBytes",
+          "value": 167438,
+          "unit": "bytes"
+        },
+        {
+          "name": "dracoLoadFirstMs",
+          "value": 4.7,
+          "unit": "ms"
+        },
+        {
+          "name": "dracoLoadMedianMs",
+          "value": 4.7,
+          "unit": "ms"
+        },
+        {
+          "name": "triangleCount",
+          "value": 11488,
+          "unit": "triangles"
+        },
+        {
+          "name": "meshCount",
+          "value": 2,
+          "unit": "meshes"
+        },
+        {
+          "name": "boneCount",
+          "value": 7,
+          "unit": "bones",
+          "threshold": 7,
+          "comparison": "gte",
+          "passed": true
+        },
+        {
+          "name": "morphTargetCount",
+          "value": 1,
+          "unit": "targets",
+          "threshold": 1,
+          "comparison": "gte",
+          "passed": true
+        },
+        {
+          "name": "skinnedMeshCount",
+          "value": 1,
+          "unit": "meshes",
+          "threshold": 1,
+          "comparison": "gte",
+          "passed": true
+        },
+        {
+          "name": "animationCount",
+          "value": 1,
+          "unit": "animations",
+          "threshold": 1,
+          "comparison": "gte",
+          "passed": true
+        },
+        {
+          "name": "ktx2LoadOk",
+          "value": 1,
+          "unit": "boolean",
+          "threshold": 1,
+          "comparison": "eq",
+          "passed": true
+        },
+        {
+          "name": "ktx2TextureCount",
+          "value": 1,
+          "unit": "textures"
+        },
+        {
+          "name": "ktx2TextureFormat",
+          "value": 37492,
+          "unit": "format"
+        },
+        {
+          "name": "ktx2LoadMs",
+          "value": 6,
+          "unit": "ms"
+        },
+        {
+          "name": "ktx2Bytes",
+          "value": 524580,
+          "unit": "bytes"
+        },
+        {
+          "name": "productionLoadOk",
+          "value": 1,
+          "unit": "boolean",
+          "threshold": 1,
+          "comparison": "eq",
+          "passed": true
+        },
+        {
+          "name": "productionLoadMs",
+          "value": 5.8,
+          "unit": "ms"
+        },
+        {
+          "name": "productionBytes",
+          "value": 132620,
+          "unit": "bytes"
+        },
+        {
+          "name": "productionTriangleCount",
+          "value": 11488,
+          "unit": "triangles"
+        },
+        {
+          "name": "productionTextureFormat",
+          "value": 37492,
+          "unit": "format"
+        },
+        {
+          "name": "lod0Triangles",
+          "value": 11488,
+          "unit": "triangles"
+        },
+        {
+          "name": "lod1Triangles",
+          "value": 5744,
+          "unit": "triangles"
+        },
+        {
+          "name": "lod2Triangles",
+          "value": 2296,
+          "unit": "triangles"
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "harness": "P0Harness",
+      "scenario": "asset-pipeline",
+      "status": "passed",
+      "startedAt": "2026-10-17T04:59:08.859Z",
+      "finishedAt": "2026-10-17T04:59:09.008Z",
+      "durationMs": 149,
+      "environment": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+        "renderBackend": "webgl2",
+        "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+        "capturedAt": "2026-10-17T04:59:09.008Z",
+        "devicePixelRatio": 2,
+        "hardwareConcurrency": 10
+      },
+      "metrics": [
+        {
+          "name": "sourceKindBlender",
+          "value": 0,
+          "unit": "boolean"
+        },
+        {
+          "name": "sourceTriangles",
+          "value": 11488,
+          "unit": "triangles"
+        },
+        {
+          "name": "baselineBytes",
+          "value": 592736,
+          "unit": "bytes"
+        },
+        {
+          "name": "baselineFetchMs",
+          "value": 1.3,
+          "unit": "ms"
+        },
+        {
+          "name": "baselineLoadFirstMs",
+          "value": 4.1,
+          "unit": "ms"
+        },
+        {
+          "name": "baselineLoadMedianMs",
+          "value": 4.7,
+          "unit": "ms"
+        },
+        {
+          "name": "meshoptBytes",
+          "value": 200660,
+          "unit": "bytes"
+        },
+        {
+          "name": "meshoptGeometryBytes",
+          "value": 67001,
+          "unit": "bytes"
+        },
+        {
+          "name": "meshoptLoadFirstMs",
+          "value": 6.2,
+          "unit": "ms"
+        },
+        {
+          "name": "meshoptLoadMedianMs",
+          "value": 4.9,
+          "unit": "ms"
+        },
+        {
+          "name": "dracoBytes",
+          "value": 298924,
+          "unit": "bytes"
+        },
+        {
+          "name": "dracoGeometryBytes",
+          "value": 167438,
+          "unit": "bytes"
+        },
+        {
+          "name": "dracoLoadFirstMs",
+          "value": 4,
+          "unit": "ms"
+        },
+        {
+          "name": "dracoLoadMedianMs",
+          "value": 5.1,
+          "unit": "ms"
+        },
+        {
+          "name": "triangleCount",
+          "value": 11488,
+          "unit": "triangles"
+        },
+        {
+          "name": "meshCount",
+          "value": 2,
+          "unit": "meshes"
+        },
+        {
+          "name": "boneCount",
+          "value": 7,
+          "unit": "bones",
+          "threshold": 7,
+          "comparison": "gte",
+          "passed": true
+        },
+        {
+          "name": "morphTargetCount",
+          "value": 1,
+          "unit": "targets",
+          "threshold": 1,
+          "comparison": "gte",
+          "passed": true
+        },
+        {
+          "name": "skinnedMeshCount",
+          "value": 1,
+          "unit": "meshes",
+          "threshold": 1,
+          "comparison": "gte",
+          "passed": true
+        },
+        {
+          "name": "animationCount",
+          "value": 1,
+          "unit": "animations",
+          "threshold": 1,
+          "comparison": "gte",
+          "passed": true
+        },
+        {
+          "name": "ktx2LoadOk",
+          "value": 1,
+          "unit": "boolean",
+          "threshold": 1,
+          "comparison": "eq",
+          "passed": true
+        },
+        {
+          "name": "ktx2TextureCount",
+          "value": 1,
+          "unit": "textures"
+        },
+        {
+          "name": "ktx2TextureFormat",
+          "value": 37492,
+          "unit": "format"
+        },
+        {
+          "name": "ktx2LoadMs",
+          "value": 6.6,
+          "unit": "ms"
+        },
+        {
+          "name": "ktx2Bytes",
+          "value": 524580,
+          "unit": "bytes"
+        },
+        {
+          "name": "productionLoadOk",
+          "value": 1,
+          "unit": "boolean",
+          "threshold": 1,
+          "comparison": "eq",
+          "passed": true
+        },
+        {
+          "name": "productionLoadMs",
+          "value": 5.6,
+          "unit": "ms"
+        },
+        {
+          "name": "productionBytes",
+          "value": 132620,
+          "unit": "bytes"
+        },
+        {
+          "name": "productionTriangleCount",
+          "value": 11488,
+          "unit": "triangles"
+        },
+        {
+          "name": "productionTextureFormat",
+          "value": 37492,
+          "unit": "format"
+        },
+        {
+          "name": "lod0Triangles",
+          "value": 11488,
+          "unit": "triangles"
+        },
+        {
+          "name": "lod1Triangles",
+          "value": 5744,
+          "unit": "triangles"
+        },
+        {
+          "name": "lod2Triangles",
+          "value": 2296,
+          "unit": "triangles"
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "harness": "P0Harness",
+      "scenario": "asset-pipeline",
+      "status": "passed",
+      "startedAt": "2026-10-17T04:59:09.011Z",
+      "finishedAt": "2026-10-17T04:59:09.158Z",
+      "durationMs": 147,
+      "environment": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+        "renderBackend": "webgl2",
+        "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+        "capturedAt": "2026-10-17T04:59:09.158Z",
+        "devicePixelRatio": 2,
+        "hardwareConcurrency": 10
+      },
+      "metrics": [
+        {
+          "name": "sourceKindBlender",
+          "value": 0,
+          "unit": "boolean"
+        },
+        {
+          "name": "sourceTriangles",
+          "value": 11488,
+          "unit": "triangles"
+        },
+        {
+          "name": "baselineBytes",
+          "value": 592736,
+          "unit": "bytes"
+        },
+        {
+          "name": "baselineFetchMs",
+          "value": 1.3,
+          "unit": "ms"
+        },
+        {
+          "name": "baselineLoadFirstMs",
+          "value": 4.3,
+          "unit": "ms"
+        },
+        {
+          "name": "baselineLoadMedianMs",
+          "value": 4.3,
+          "unit": "ms"
+        },
+        {
+          "name": "meshoptBytes",
+          "value": 200660,
+          "unit": "bytes"
+        },
+        {
+          "name": "meshoptGeometryBytes",
+          "value": 67001,
+          "unit": "bytes"
+        },
+        {
+          "name": "meshoptLoadFirstMs",
+          "value": 5.3,
+          "unit": "ms"
+        },
+        {
+          "name": "meshoptLoadMedianMs",
+          "value": 4.6,
+          "unit": "ms"
+        },
+        {
+          "name": "dracoBytes",
+          "value": 298924,
+          "unit": "bytes"
+        },
+        {
+          "name": "dracoGeometryBytes",
+          "value": 167438,
+          "unit": "bytes"
+        },
+        {
+          "name": "dracoLoadFirstMs",
+          "value": 8.1,
+          "unit": "ms"
+        },
+        {
+          "name": "dracoLoadMedianMs",
+          "value": 4.3,
+          "unit": "ms"
+        },
+        {
+          "name": "triangleCount",
+          "value": 11488,
+          "unit": "triangles"
+        },
+        {
+          "name": "meshCount",
+          "value": 2,
+          "unit": "meshes"
+        },
+        {
+          "name": "boneCount",
+          "value": 7,
+          "unit": "bones",
+          "threshold": 7,
+          "comparison": "gte",
+          "passed": true
+        },
+        {
+          "name": "morphTargetCount",
+          "value": 1,
+          "unit": "targets",
+          "threshold": 1,
+          "comparison": "gte",
+          "passed": true
+        },
+        {
+          "name": "skinnedMeshCount",
+          "value": 1,
+          "unit": "meshes",
+          "threshold": 1,
+          "comparison": "gte",
+          "passed": true
+        },
+        {
+          "name": "animationCount",
+          "value": 1,
+          "unit": "animations",
+          "threshold": 1,
+          "comparison": "gte",
+          "passed": true
+        },
+        {
+          "name": "ktx2LoadOk",
+          "value": 1,
+          "unit": "boolean",
+          "threshold": 1,
+          "comparison": "eq",
+          "passed": true
+        },
+        {
+          "name": "ktx2TextureCount",
+          "value": 1,
+          "unit": "textures"
+        },
+        {
+          "name": "ktx2TextureFormat",
+          "value": 37492,
+          "unit": "format"
+        },
+        {
+          "name": "ktx2LoadMs",
+          "value": 6.8,
+          "unit": "ms"
+        },
+        {
+          "name": "ktx2Bytes",
+          "value": 524580,
+          "unit": "bytes"
+        },
+        {
+          "name": "productionLoadOk",
+          "value": 1,
+          "unit": "boolean",
+          "threshold": 1,
+          "comparison": "eq",
+          "passed": true
+        },
+        {
+          "name": "productionLoadMs",
+          "value": 5,
+          "unit": "ms"
+        },
+        {
+          "name": "productionBytes",
+          "value": 132620,
+          "unit": "bytes"
+        },
+        {
+          "name": "productionTriangleCount",
+          "value": 11488,
+          "unit": "triangles"
+        },
+        {
+          "name": "productionTextureFormat",
+          "value": 37492,
+          "unit": "format"
+        },
+        {
+          "name": "lod0Triangles",
+          "value": 11488,
+          "unit": "triangles"
+        },
+        {
+          "name": "lod1Triangles",
+          "value": 5744,
+          "unit": "triangles"
+        },
+        {
+          "name": "lod2Triangles",
+          "value": 2296,
+          "unit": "triangles"
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "harness": "P0Harness",
+      "scenario": "asset-pipeline",
+      "status": "passed",
+      "startedAt": "2026-10-17T04:59:09.160Z",
+      "finishedAt": "2026-10-17T04:59:09.308Z",
+      "durationMs": 148,
+      "environment": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+        "renderBackend": "webgl2",
+        "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+        "capturedAt": "2026-10-17T04:59:09.308Z",
+        "devicePixelRatio": 2,
+        "hardwareConcurrency": 10
+      },
+      "metrics": [
+        {
+          "name": "sourceKindBlender",
+          "value": 0,
+          "unit": "boolean"
+        },
+        {
+          "name": "sourceTriangles",
+          "value": 11488,
+          "unit": "triangles"
+        },
+        {
+          "name": "baselineBytes",
+          "value": 592736,
+          "unit": "bytes"
+        },
+        {
+          "name": "baselineFetchMs",
+          "value": 1.3,
+          "unit": "ms"
+        },
+        {
+          "name": "baselineLoadFirstMs",
+          "value": 3.7,
+          "unit": "ms"
+        },
+        {
+          "name": "baselineLoadMedianMs",
+          "value": 4.4,
+          "unit": "ms"
+        },
+        {
+          "name": "meshoptBytes",
+          "value": 200660,
+          "unit": "bytes"
+        },
+        {
+          "name": "meshoptGeometryBytes",
+          "value": 67001,
+          "unit": "bytes"
+        },
+        {
+          "name": "meshoptLoadFirstMs",
+          "value": 6.3,
+          "unit": "ms"
+        },
+        {
+          "name": "meshoptLoadMedianMs",
+          "value": 6.3,
+          "unit": "ms"
+        },
+        {
+          "name": "dracoBytes",
+          "value": 298924,
+          "unit": "bytes"
+        },
+        {
+          "name": "dracoGeometryBytes",
+          "value": 167438,
+          "unit": "bytes"
+        },
+        {
+          "name": "dracoLoadFirstMs",
+          "value": 9.1,
+          "unit": "ms"
+        },
+        {
+          "name": "dracoLoadMedianMs",
+          "value": 5.1,
+          "unit": "ms"
+        },
+        {
+          "name": "triangleCount",
+          "value": 11488,
+          "unit": "triangles"
+        },
+        {
+          "name": "meshCount",
+          "value": 2,
+          "unit": "meshes"
+        },
+        {
+          "name": "boneCount",
+          "value": 7,
+          "unit": "bones",
+          "threshold": 7,
+          "comparison": "gte",
+          "passed": true
+        },
+        {
+          "name": "morphTargetCount",
+          "value": 1,
+          "unit": "targets",
+          "threshold": 1,
+          "comparison": "gte",
+          "passed": true
+        },
+        {
+          "name": "skinnedMeshCount",
+          "value": 1,
+          "unit": "meshes",
+          "threshold": 1,
+          "comparison": "gte",
+          "passed": true
+        },
+        {
+          "name": "animationCount",
+          "value": 1,
+          "unit": "animations",
+          "threshold": 1,
+          "comparison": "gte",
+          "passed": true
+        },
+        {
+          "name": "ktx2LoadOk",
+          "value": 1,
+          "unit": "boolean",
+          "threshold": 1,
+          "comparison": "eq",
+          "passed": true
+        },
+        {
+          "name": "ktx2TextureCount",
+          "value": 1,
+          "unit": "textures"
+        },
+        {
+          "name": "ktx2TextureFormat",
+          "value": 37492,
+          "unit": "format"
+        },
+        {
+          "name": "ktx2LoadMs",
+          "value": 6.3,
+          "unit": "ms"
+        },
+        {
+          "name": "ktx2Bytes",
+          "value": 524580,
+          "unit": "bytes"
+        },
+        {
+          "name": "productionLoadOk",
+          "value": 1,
+          "unit": "boolean",
+          "threshold": 1,
+          "comparison": "eq",
+          "passed": true
+        },
+        {
+          "name": "productionLoadMs",
+          "value": 4.9,
+          "unit": "ms"
+        },
+        {
+          "name": "productionBytes",
+          "value": 132620,
+          "unit": "bytes"
+        },
+        {
+          "name": "productionTriangleCount",
+          "value": 11488,
+          "unit": "triangles"
+        },
+        {
+          "name": "productionTextureFormat",
+          "value": 37492,
+          "unit": "format"
+        },
+        {
+          "name": "lod0Triangles",
+          "value": 11488,
+          "unit": "triangles"
+        },
+        {
+          "name": "lod1Triangles",
+          "value": 5744,
+          "unit": "triangles"
+        },
+        {
+          "name": "lod2Triangles",
+          "value": 2296,
+          "unit": "triangles"
+        }
+      ]
+    }
+  ]
+}

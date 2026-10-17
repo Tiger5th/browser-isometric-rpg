@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-17T04:53:03.602Z",
+  "environment": {
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "hardwareConcurrency": 10,
+    "adapter": {
+      "vendor": "apple",
+      "architecture": "metal-3",
+      "device": "",
+      "description": ""
+    }
+  },
+  "check": "WebGPUEngine + KHR_texture_basisu (ETC1S) + scene.whenReadyAsync",
+  "runs": [
+    {
+      "ok": true,
+      "backend": "webgpu",
+      "loadMs": 165.29999995231628,
+      "textureCount": 1,
+      "texturesReady": true,
+      "textureFormat": 5,
+      "caps": {
+        "astc": false,
+        "bc": false,
+        "etc2": false
+      },
+      "adapterInfo": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": ""
+      }
+    },
+    {
+      "ok": true,
+      "backend": "webgpu",
+      "loadMs": 29.5,
+      "textureCount": 1,
+      "texturesReady": true,
+      "textureFormat": 5,
+      "caps": {
+        "astc": false,
+        "bc": false,
+        "etc2": false
+      },
+      "adapterInfo": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": ""
+      }
+    },
+    {
+      "ok": true,
+      "backend": "webgpu",
+      "loadMs": 25.700000047683716,
+      "textureCount": 1,
+      "texturesReady": true,
+      "textureFormat": 5,
+      "caps": {
+        "astc": false,
+        "bc": false,
+        "etc2": false
+      },
+      "adapterInfo": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": ""
+      }
+    }
+  ],
+  "status": "passed",
+  "notes": [
+    "本机浏览器为 Chromium（ego-browser），WebGPU 后端可用；不代表 Safari。",
+    "textureFormat=5 对应 Babylon Constants.TEXTUREFORMAT_RGBA，即本次 WebGPU 路径转码为 RGBA8。",
+    "首次 run 包含 KTX2 转码器初始化；后续 run 为热路径。"
+  ]
+}

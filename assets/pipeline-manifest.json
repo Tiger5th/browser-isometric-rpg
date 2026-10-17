@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-17T04:59:28.898Z",
+  "sourceKind": "procedural-fallback",
+  "source": {
+    "file": "character_test_lod0.glb",
+    "triangles": 11488,
+    "path": "/Users/joule/Desktop/code/game kaifa/.claude/worktrees/agent-a3dc6eec502545a32/assets/character_test_lod0.glb",
+    "totalBytes": 592736,
+    "jsonBytes": 3740,
+    "imageBytes": 127967,
+    "geometryBytes": 461000,
+    "decodedGeometryBytes": null,
+    "extensionsUsed": [],
+    "extensionsRequired": [],
+    "stats": {
+      "triangles": 11488,
+      "vertices": 5756,
+      "meshes": 1,
+      "primitives": 1,
+      "materials": 1,
+      "textures": [
+        {
+          "name": "texture_test_character_base",
+          "mimeType": "image/png",
+          "size": [
+            1024,
+            1024
+          ]
+        }
+      ],
+      "skins": 1,
+      "bones": 7,
+      "animations": [
+        {
+          "name": "anim_test_character_idle",
+          "channels": 2
+        }
+      ],
+      "morphTargets": 1
+    },
+    "sha256": "3f35796ca3d9e7348add5db9e3fbd6b0cf1ffe33b4c3e1ca23334f2c7662082a"
+  },
+  "variants": {
+    "meshopt": {
+      "file": "character_test_meshopt.glb",
+      "bytes": 200660,
+      "geometryBytes": 67001,
+      "triangles": 11488
+    },
+    "draco": {
+      "file": "character_test_draco.glb",
+      "bytes": 298924,
+      "geometryBytes": 167438,
+      "triangles": 11488
+    },
+    "ktx2": {
+      "file": "character_test_ktx2.glb",
+      "bytes": 524580,
+      "geometryBytes": 461000,
+      "triangles": 11488
+    },
+    "production": {
+      "file": "character_test_meshopt_ktx2.glb",
+      "bytes": 132620,
+      "geometryBytes": 67001,
+      "triangles": 11488
+    }
+  },
+  "lod": [
+    {
+      "level": 0,
+      "file": "character_test_lod0.glb",
+      "bytes": 592736,
+      "triangles": 11488
+    },
+    {
+      "level": 1,
+      "file": "character_test_lod1.glb",
+      "bytes": 327740,
+      "triangles": 5744
+    },
+    {
+      "level": 2,
+      "file": "character_test_lod2.glb",
+      "bytes": 210500,
+      "triangles": 2296
+    }
+  ],
+  "ktx2": {
+    "status": "ok"
+  }
+}

@@ -1,4 +1,5 @@
 import type { P0Harness } from "../harness";
+import { assetPipelineScenario } from "./assetPipeline";
 import { helloScenario } from "./hello";
 
 /**
@@ -7,4 +8,5 @@ import { helloScenario } from "./hello";
  */
 export function registerBuiltinScenarios(harness: P0Harness): void {
   harness.registerScenario(helloScenario);
+  harness.registerScenario(assetPipelineScenario);
 }
