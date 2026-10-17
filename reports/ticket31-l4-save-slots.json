@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "ticket": "31-save-system-v2",
+  "layer": "L4-ego-browser",
+  "generatedAt": "2026-10-17T22:33:00.000Z",
+  "scenario": "p1-world",
+  "status": "passed",
+  "environment": {
+    "url": "http://localhost:5199/?scenario=p1-world&harness=1",
+    "viewport": { "width": 1438, "height": 780, "devicePixelRatio": 2 },
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/154.0.0.0",
+    "renderBackend": "webgl2",
+    "gpuRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5)"
+  },
+  "artifacts": [
+    "artifacts/ticket-31-save-slots/slot-panel.png",
+    "artifacts/ticket-31-save-slots/slot-panel-written.png"
+  ],
+  "checks": [
+    {
+      "name": "选槽面板挂载并列出四个槽位（auto 在前，空槽显示「空」）",
+      "passed": true,
+      "observed": ["自动存档 · Lv.1", "存档 1 · Lv.1", "存档 2 · Lv.1", "存档 3 / 空"]
+    },
+    {
+      "name": "槽位元数据展示：等级、游戏时长、存档时间",
+      "passed": true,
+      "observed": "自动存档 · Lv.1 / 游玩 00:00 · 2026-10-17 22:32；存档 1 · Lv.1 / 游玩 00:05 · 2026-10-17 22:31"
+    },
+    {
+      "name": "写入 slot-2 后列表刷新出新档",
+      "passed": true,
+      "observed": "已写入 存档 2 · Lv.1；列表 [auto:1, slot-1:1, slot-2:1, slot-3:null]"
+    },
+    {
+      "name": "读 slot-1 成功并把等级/经验/世界状态灌回会话",
+      "passed": true,
+      "observed": "已读取 存档 1 · Lv.1 · 游玩 5s；快照 { playerLevel: 1, cumulativeXp: 0, elapsedMs: 6813, worldState: {} }"
+    },
+    {
+      "name": "删除 slot-2 只清空该槽，其余槽不受影响",
+      "passed": true,
+      "observed": "状态行「存档 2 已删除」；auto/slot-1 仍有档"
+    },
+    {
+      "name": "刷新页面后自动档恢复",
+      "passed": true,
+      "observed": "状态行「已从存档恢复 · v3 · 0ms」；四个槽位数据仍在"
+    },
+    {
+      "name": "auto 槽不提供删除按钮（自动存档策略管理）",
+      "passed": true,
+      "observed": "auto 行只有 读/写 两个按钮，手动槽有 读/写/删"
+    }
+  ],
+  "defectsFoundAndFixed": [
+    {
+      "name": "选槽面板行容器未挂进 DOM，导致刷新后列表始终为空",
+      "fix": "src/render/ui/save-slot-panel.ts —— panel.append(header, body) 前先 body.append(list)",
+      "foundBy": "L4 冒烟（DOM 里 [data-testid^=save-slot-] 命中 0 个）"
+    },
+    {
+      "name": "面板在写盘 Promise 结算前就刷新列表，读到旧数据导致「写完仍是空槽」",
+      "fix": "SaveSlotPanelOptions 的 onLoad/onSave/onDelete 改为可返回 Promise，面板 await 后再 refresh",
+      "foundBy": "L4 冒烟（写 slot-1 后列表仍显示空）"
+    }
+  ],
+  "notes": [
+    "票 31 未改任何 content JSON，content:lint 结果与基线一致（12 文件 + 1 对话通过）。",
+    "选槽面板当前挂在 HUD；票 32 的主菜单可直接复用 P1WorldDebug.listSlots()/saveToSlot()/loadFromSlot()/deleteSlot() 这组调试接口作为数据源。"
+  ]
+}

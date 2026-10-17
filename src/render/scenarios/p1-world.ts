@@ -64,6 +64,10 @@ import {
 import { summarizeFrameTimes } from "../../logic/perf";
 import type { Metric } from "../../logic/report";
 import { GameSaveService } from "../../logic/save";
+import { GameSaveSlotService, type SaveSlotId } from "../../logic/save-slots";
+import { GameSaveAutoSaver } from "../../logic/save-autosave";
+import { slotLabel } from "../../logic/save-slot-view";
+import { createSaveSlotPanel, type SaveSlotPanel } from "../ui/save-slot-panel";
 import {
   DEFAULT_CAMERA_VERTICAL_SPAN,
   cameraVerticalSpan,
@@ -206,6 +210,11 @@ interface P1WorldState {
   pipeline: DefaultRenderingPipeline;
   ui: QuestLoopUi;
   saveService: GameSaveService;
+  /** 票 31：多槽服务（auto + slot-1..3）与自动存档策略。 */
+  slotService: GameSaveSlotService;
+  autoSaver: GameSaveAutoSaver;
+  unsubscribeSessionEvents: () => void;
+  saveSlotPanel: SaveSlotPanel | null;
   saveAvailable: boolean;
   navigation: GreenHollowNavigation;
   /** 点击移动经 navmesh 拆出的剩余路点；空表示没有排队中的路径。 */
@@ -277,6 +286,18 @@ export interface P1WorldDebugApi {
   load(): Promise<boolean>;
   clearSave(): Promise<void>;
   hasSave(): Promise<boolean>;
+  /** 票 31：四个槽位（含空槽）与展示用元数据。 */
+  listSlots(): Promise<Array<{
+    slotId: SaveSlotId;
+    label: string;
+    meta: { slotId: SaveSlotId; savedAtMs: number; playTimeMs: number; playerLevel: number } | null;
+    snapshot: GameSessionSnapshot | null;
+  }>>;
+  saveToSlot(slotId: SaveSlotId): Promise<boolean>;
+  loadFromSlot(slotId: SaveSlotId): Promise<boolean>;
+  deleteSlot(slotId: SaveSlotId): Promise<void>;
+  /** 票 31：手动触发一次「区域切换」自动存档路径。 */
+  saveToAuto(): Promise<void>;
   getMeshPosition(entityId: string): { x: number; y: number; z: number } | null;
   /** 票 27：重击意图（1.5 倍伤害、8 秒冷却）。 */
   heavyAttackEnemy(enemyId: string): IntentResult;
@@ -884,6 +905,76 @@ async function clearStoredSave(state: P1WorldState): Promise<void> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// 票 31：多槽读写删 + 选槽面板
+// ---------------------------------------------------------------------------
+
+/** 把某个槽的快照灌回当前会话（含视觉与死亡实体同步）。 */
+async function restoreSlot(state: P1WorldState, slotId: SaveSlotId): Promise<boolean> {
+  try {
+    const contents = await state.slotService.readSlot(slotId);
+    if (contents === null) {
+      state.ui.setSaveStatus(`${slotLabel(slotId)} 是空槽`, "idle");
+      return false;
+    }
+    state.session.restoreSnapshot(contents.snapshot);
+    clearWaypoints(state);
+    state.deadEnemies.clear();
+    for (const entity of contents.snapshot.entities) {
+      if (entity.identity.type === "enemy" && !entity.combat.alive) {
+        state.deadEnemies.add(entity.id);
+      }
+    }
+    syncVisualToSnapshot(state, state.session.snapshot());
+    state.saveAvailable = true;
+    state.ui.setSaveStatus(
+      `已读取 ${slotLabel(slotId)} · Lv.${contents.meta.playerLevel} · 游玩 ${Math.round(
+        contents.meta.playTimeMs / 1000,
+      )}s`,
+      "ok",
+    );
+    return true;
+  } catch (error) {
+    state.ui.setSaveStatus(`读档失败：${errorMessage(error)}`, "error");
+    return false;
+  }
+}
+
+async function writeSlot(state: P1WorldState, slotId: SaveSlotId): Promise<boolean> {
+  try {
+    const meta = await state.slotService.writeSlot(slotId, state.session.snapshot());
+    state.saveAvailable = true;
+    state.ui.setSaveStatus(
+      `已写入 ${slotLabel(slotId)} · Lv.${meta.playerLevel}`,
+      "ok",
+    );
+    return true;
+  } catch (error) {
+    state.ui.setSaveStatus(`存档失败：${errorMessage(error)}`, "error");
+    return false;
+  }
+}
+
+async function deleteSlot(state: P1WorldState, slotId: SaveSlotId): Promise<void> {
+  try {
+    await state.slotService.deleteSlot(slotId);
+    state.ui.setSaveStatus(`${slotLabel(slotId)} 已删除`, "idle");
+  } catch (error) {
+    state.ui.setSaveStatus(`删除失败：${errorMessage(error)}`, "error");
+  }
+}
+
+/** 选槽面板的数据源：四个槽位（含空槽）+ 展示用元数据。 */
+async function slotEntries(state: P1WorldState) {
+  const entries = await state.slotService.listSlots();
+  return entries.map((entry) => ({
+    slotId: entry.slotId,
+    label: slotLabel(entry.slotId),
+    meta: entry.meta,
+    snapshot: entry.snapshot,
+  }));
+}
+
 function groundPoint(scene: Scene): Vector3 | null {
   const camera = scene.activeCamera;
   if (!camera) {
@@ -1027,6 +1118,11 @@ function installDebugApi(scene: Scene, state: P1WorldState): void {
     load: () => loadFromStorage(state),
     clearSave: () => clearStoredSave(state),
     hasSave: () => state.saveService.hasSave(),
+    listSlots: () => slotEntries(state),
+    saveToSlot: (slotId) => writeSlot(state, slotId),
+    loadFromSlot: (slotId) => restoreSlot(state, slotId),
+    deleteSlot: (slotId) => deleteSlot(state, slotId),
+    saveToAuto: () => state.autoSaver.notifyRegionChanged(),
     getMeshPosition: (entityId) => {
       const visual = state.visuals.get(entityId);
       if (!visual) {
@@ -1379,6 +1475,12 @@ export const p1WorldScenario: ScenarioDefinition = {
     );
 
     const keyRatios = environment.keyStats.map((stats) => stats.transparentRatio);
+    // 自动存档器在 state 构造期间就要拿到 slotService（闭包里晚调用即可），
+    // 用 holder 打破这处循环引用。
+    const holder: { state: P1WorldState } = {
+      state: undefined as unknown as P1WorldState,
+    };
+
     const state: P1WorldState = {
       root,
       session,
@@ -1401,6 +1503,17 @@ export const p1WorldScenario: ScenarioDefinition = {
         dispose: () => undefined,
       },
       saveService: new GameSaveService(new IndexedDbSaveStorage()),
+      slotService: new GameSaveSlotService(new IndexedDbSaveStorage()),
+      autoSaver: new GameSaveAutoSaver({
+        getSnapshot: () => session.snapshot(),
+        writeAutoSlot: (slotId, snap) => holder.state.slotService.writeSlot(slotId, snap),
+        onError: (error) => {
+          // 自动存档失败不打断游戏，只在 HUD 状态行提示一次。
+          holder.state.ui.setSaveStatus(`自动存档失败：${errorMessage(error)}`, "error");
+        },
+      }),
+      unsubscribeSessionEvents: () => undefined,
+      saveSlotPanel: null,
       saveAvailable: false,
       navigation,
       waypoints: [],
@@ -1442,6 +1555,7 @@ export const p1WorldScenario: ScenarioDefinition = {
       hitReacts: new Map(),
     };
     states.set(context, state);
+    holder.state = state;
 
     // 票 27：反馈层与音效。音效预加载失败不阻断场景（视觉反馈仍可用）。
     state.audio = new CombatAudio();
@@ -1517,6 +1631,34 @@ export const p1WorldScenario: ScenarioDefinition = {
       onClearSave: () => {
         void clearStoredSave(state);
       },
+    });
+
+    // 票 31：会话事件 → 自动存档（任务状态变化 / 获得重要物品），
+    // plus 区域切换与卸载兜底。
+    state.unsubscribeSessionEvents = session.subscribe((event) => {
+      void state.autoSaver.handleEvent(event);
+    });
+    state.autoSaver.attachBeforeUnload((handler) => {
+      window.addEventListener("beforeunload", handler);
+      return () => window.removeEventListener("beforeunload", handler);
+    });
+    // 场景构建完成 = 区域已就绪，写一次自动槽作为初始进度点。
+    await state.autoSaver.notifyRegionChanged();
+
+    // 选槽面板：票 31 挂在 HUD，票 32 的主菜单复用同一数据源。
+    state.saveSlotPanel = createSaveSlotPanel({
+      mount: document.body,
+      refresh: () => slotEntries(state),
+      onLoad: async (slotId) => {
+        await restoreSlot(state, slotId);
+      },
+      onSave: async (slotId) => {
+        await writeSlot(state, slotId);
+      },
+      onDelete: async (slotId) => {
+        await deleteSlot(state, slotId);
+      },
+      setStatus: (text, kind) => state.ui.setSaveStatus(text, kind),
     });
 
     state.dialogueUi = createDialogueUi({
@@ -2164,6 +2306,11 @@ export const p1WorldScenario: ScenarioDefinition = {
     }
     state.ui.dispose();
     state.dialogueUi.dispose();
+
+    // 票 31：先摘掉卸载兜底与事件订阅，避免场景销毁过程中再写一次盘。
+    state.autoSaver.detachBeforeUnload();
+    state.unsubscribeSessionEvents();
+    state.saveSlotPanel?.dispose();
 
     state.feedback.dispose();
     state.audio.dispose();
