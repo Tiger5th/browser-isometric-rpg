@@ -48,6 +48,7 @@
 - **20 号票已完成**（359dc3e：content schema v1（JSON Schema 2020-12 + 引用完整性 + ink 任务标签）与 P1 最小内容集（1 区域/2 NPC/3 个同模板敌人/4 物品/1 任务）；L2 `npm run content:lint` 可运行、负向测试 12 例；GameSession.loadRegion 从内容实例化实体；全量 61/61、build 通过；格式合同见 content/README.md；分支 worktree-agent-a6d3077c444a13262，待合入 p1-integration）。
 - **21 号票已完成**（bdfb182：GameSession 战斗闭环——attack 意图 + 回合冷却、修饰器后属性参与命中/伤害、敌人 idle→patrol→chase→attack→dead 状态机、击杀经验/掉落入背包、玩家死亡延迟重生（出生点/满血/活敌重置）；快照 v2 新增 attributes/combat/container；L1 80/80、build 与 content:lint 通过；combat-loop 场景 ego-browser 冒烟 passed；分支 worktree-agent-a3ffe0543360b177d，待合入 p1-integration）。
 - **22 号票已完成**（4ba7d2d：GameSession 内置对话状态（inkjs 复用、ink 状态可序列化进快照）、任务状态机（可接→进行中→可交→完成）、offer/turnin 标签驱动接取与交付、enemy-killed 事件推进击杀目标、奖励物品入背包 + 修饰器生效；对话经 `EXTERNAL questStatus` 只读查询按任务状态分支；新增 dialogue-quest HUD 场景（HUD 显示目标/进度/背包，ego-browser 冒烟走通全闭环）；与票 21 合流后，会话内击杀经 `onEnemyKilled` 直接推进任务，外部战斗可用 `GameSession.emitCombatEvent({ type: "enemy-killed", enemyId, enemyTemplateId })`；分支 worktree-agent-aa910623c14a0d8dc，合并 781a8c8 已含 p1-integration）。
+- **23 号票已完成**（872e7a3：存读档闭环——`GameSession.restoreSnapshot()` 完整恢复实体/属性/战斗/任务/背包/奖励账本/对话 ink 状态/时钟/重生计时；存档 `{version:2, sections:{session:GameSessionSnapshot}}` 持久化到 IndexedDB，逻辑层经 `SaveStorage` 适配器注入、IndexedDB 实现留在 render 层；P0 迁移链接入正式版本号并演练 v1→v2（含负向测试）；dialogue-quest HUD 增加存档/读档/删除存档按钮，刷新后自动读档并重建网格与 HUD；L1 116/116、build 与 content:lint 通过；L4 ego-browser 刷新读档 17/17 断言通过（reports/p1-save-load-smoke.json、artifacts/p1-save-load-after-reload.png）；分支 worktree-agent-a84034340c700e539）。
 
 ## Fog
 
