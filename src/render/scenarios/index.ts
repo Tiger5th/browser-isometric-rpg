@@ -1,4 +1,5 @@
 import type { P0Harness } from "../harness";
+import { assetPipelineScenario } from "./assetPipeline";
 import { charactersScenario } from "./characters";
 import { crowdHotSwapScenario } from "./crowd-hot-swap";
 import { crowdNavScenario } from "./crowd-nav";
@@ -13,4 +14,5 @@ export function registerBuiltinScenarios(harness: P0Harness): void {
   harness.registerScenario(charactersScenario);
   harness.registerScenario(crowdNavScenario);
   harness.registerScenario(crowdHotSwapScenario);
+  harness.registerScenario(assetPipelineScenario);
 }

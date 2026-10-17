@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-17T04:55:00.000Z",
+  "asset": {
+    "source": "assets/character_test_ktx2.glb",
+    "productionCombination": "assets/character_test_meshopt_ktx2.glb",
+    "encoding": "KTX-Software 4.4.2 etc1s (ETC1S + mipmaps)",
+    "pngBytes": 127967,
+    "ktx2Bytes": 59853,
+    "textureByteRatio": 0.4677,
+    "note": "贴图字节降至 PNG 的 46.8%；维度保持 1024×1024。"
+  },
+  "tested": {
+    "chromiumWebgl2": {
+      "status": "passed",
+      "browser": "ego-browser Chromium 154 (macOS arm64)",
+      "backend": "webgl2 (ANGLE Metal Renderer: Apple M5)",
+      "harnessScenario": "asset-pipeline",
+      "textureCount": 1,
+      "texturesReady": true,
+      "textureFormat": 37492,
+      "textureFormatLabel": "TEXTUREFORMAT_COMPRESSED_RGB8_ETC2",
+      "loadMsCold": 147.9,
+      "loadMsWarmMedian": 6.6,
+      "productionVariantLoadOk": true,
+      "productionVariantTextureFormat": 37492,
+      "productionVariantLoadMsMedian": 5.6,
+      "evidence": "reports/p0-asset-pipeline.json, reports/asset-pipeline-browser-runs.json"
+    },
+    "chromiumWebgpu": {
+      "status": "passed",
+      "browser": "ego-browser Chromium 154 (macOS arm64)",
+      "backend": "webgpu",
+      "adapter": {
+        "vendor": "apple",
+        "architecture": "metal-3"
+      },
+      "textureCount": 1,
+      "texturesReady": true,
+      "textureFormat": 5,
+      "textureFormatLabel": "TEXTUREFORMAT_RGBA (uncompressed)",
+      "loadMsCold": 165.3,
+      "loadMsWarm": [29.5, 25.7],
+      "evidence": "reports/webgpu-ktx2.json"
+    },
+    "safari": {
+      "status": "not-tested",
+      "reason": "本机自动化环境为 ego-browser（Chromium），未启用 Safari 自动化；无法在本机实测 Safari/移动端 WebGPU。",
+      "explicitSafariStatementInBabylonDocs": false,
+      "fallback": "PNG"
+    }
+  },
+  "officialBabylonDocs": {
+    "url": "https://doc.babylonjs.com/features/featuresDeepDive/materials/using/ktx2Compression",
+    "title": "KTX2 Compressed Textures | Babylon.js Documentation",
+    "retrievedAt": "2026-10-17",
+    "quotes": [
+      "The KTX2 format is also used in the glTF world by means of the KHR_texture_basisu extension: this extension simply enables you to use .ktx2 files for the images used by your .gltf/.glb files and is supported by Babylon.js.",
+      "Depending on the universal representation of the data in the .ktx2 file and the compressed formats supported by the target device, the right module is used for the transcoding."
+    ],
+    "interpretation": "Babylon 官方声明 KTX2/KHR_texture_basisu 受支持，并按目标设备能力选择转码格式；该页未给出 Safari 版本或 WebGPU 的逐项兼容矩阵，因此 Safari 记为「未实测」。"
+  },
+  "fallbackPlan": {
+    "trigger": [
+      "目标 Safari/移动端设备加载 KTX2 失败或纹理未就绪",
+      "KTX2 解码器（WASM/Worker）不可用"
+    ],
+    "asset": "assets/character_test_lod0.glb（内嵌 PNG baseColor）",
+    "pipeline": "tools/pipeline/build-assets.mjs --skip-ktx2 或保留源 GLB；直接替换纹理引用即可，无需改模型",
+    "runtime": "Babylon glTF loader 对 PNG 贴图无需额外解码器"
+  },
+  "conclusion": "KTX2 在 Chromium WebGL2 路径通过（ETC2 GPU 压缩）且生产组合（meshopt + KTX2）132620 B、正常加载；Chromium WebGPU 路径也通过，但当前 Babylon 转码为 RGBA8，显存收益需在 WebGPU 路径单独确认。Safari 未实测，按预注册预案保留 PNG 回退。"
+}
