@@ -25,6 +25,7 @@ import { ShaderMaterial } from "@babylonjs/core/Materials/shaderMaterial";
 import type { BaseTexture } from "@babylonjs/core/Materials/Textures/baseTexture";
 import { ImageProcessingConfiguration } from "@babylonjs/core/Materials/imageProcessingConfiguration";
 import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
+import type { AssetContainer } from "@babylonjs/core/assetContainer";
 import { Matrix, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import type { Mesh } from "@babylonjs/core/Meshes/mesh";
@@ -115,6 +116,10 @@ import {
   createSlimeEnemy,
   createSpriteEnemy,
   loadPlayerCharacter,
+  loadNpcCharacterBase,
+  npcCharacterFromBase,
+  TARGET_CHARACTER_HEIGHT_M,
+  type NpcCharacter,
   type PlayerCharacter,
   type ProceduralCharacter,
 } from "../presentation/character-visuals";
@@ -275,6 +280,8 @@ interface EntityVisual {
   mesh: AbstractMesh;
   targetY: number;
   procedural: ProceduralCharacter | null;
+  /** 票 37 验收修复：NPC 的 glb 角色（程序化回落时为 null）。 */
+  character: NpcCharacter | null;
   /** 受击闪白要还原的原始 tint（敌人/NPC 才有）。 */
   baseTint: Color3 | null;
 }
@@ -289,6 +296,12 @@ interface P1WorldState {
   whiteTexture: BaseTexture;
   /** 当前区域的可视部分（票 35）：环境网格 + 硬碰撞体 + navmesh。 */
   runtime: RegionRuntime;
+  /**
+   * 票 37 验收修复：NPC 建模用的 glb 容器（玩家已装载的那一份）。
+   * NPC 走 instantiateModelsToScene 克隆它，因此 10MB 的 VRoid
+   * 只下载/解析一次；为 null（没加载出玩家）时 NPC 回落程序化角色。
+   */
+  npcCharacterBase: AssetContainer | null;
   /** 边界景观环带 + 渐暗雾（票 28）。 */
   landscape: LandscapeVisuals;
   /** 区域切换进行中（黑场期间为 true，输入意图被忽略）。 */
@@ -519,6 +532,47 @@ interface P1WorldDebugApi {
   };
   /** 相机跟随是否已收敛到玩家（误差 <0.5m）。 */
   isCameraOnPlayer(tolerance?: number): boolean;
+  /**
+   * L5 预算：采样 durationMs 内的 draw call 与帧率。
+   *
+   * NPC 接真实 glb 后网格数涨了不少（每位 NPC 21 个网格），
+   * DRAW_CALL_BUDGET=350 是否还成立只能靠这里量。
+   */
+  sampleBudget(durationMs?: number): Promise<{
+    drawCallsAverage: number;
+    drawCallsMax: number;
+    fpsAverage: number;
+    fpsMin: number;
+    samples: number;
+  }>;
+  /**
+   * 票 37 验收修复：NPC 建模证据（L4 冒烟用）。
+   * `kind: "glb"` 且 `heightM` 接近玩家 = NPC 用了真实模型且身高已归一化。
+   */
+  getNpcModelEvidence(): {
+    modelKind: "glb" | "procedural-fallback";
+    baseAvailable: boolean;
+    /**
+     * 实际渲染出来的高度（m）。
+     *
+     * 注意与 targetHeightM 的差异：归一化按**完整模型**的包围盒定标，
+     * 预算裁剪关掉的小部件（脸/眼）不再参与可见包围盒，因此可见高度会略小
+     * （实测 1.427 vs 1.7）。NPC 与玩家用同一条裁剪与归一化路径，
+     * 因此彼此之间是严格一致的（heightDeltaFromPlayer == 0）——
+     * 这才是「NPC 与玩家并排等高」这条验收要求的判据。
+     */
+    playerHeightM: number;
+    targetHeightM: number;
+    npcs: Array<{
+      id: string;
+      kind: "glb" | "procedural-fallback";
+      meshCount: number;
+      heightM: number;
+      /** 与玩家身高的差（米）：归一化后应当 <0.05。 */
+      heightDeltaFromPlayer: number;
+      tintPrimary: string;
+    }>;
+  };
   /** 显式触发一次区域切换（x/z 缺省用玩家当前逻辑位置）。 */
   tryTravel(x?: number, z?: number): Promise<string | null>;
   /** 传送到指定区域（按该区域某个出口的坐标触发，L4 双向冒烟用）。 */
@@ -884,10 +938,55 @@ function createProjectileMaterial(scene: Scene): ShaderMaterial {
   });
 }
 
+/**
+ * 量一个角色节点的世界高度（米）：按包围盒，可含父节点缩放。
+ *
+ * L4 冒烟用来断言「NPC 身高接近玩家」——这是「身高归一化真的生效了」
+ * 的唯一硬证据（截图只能看出来，量出来的数字能断言）。
+ */
+function measureNodeHeight(root: TransformNode, meshes: readonly AbstractMesh[]): number {
+  const withVertices = meshes.filter((mesh) => mesh.getTotalVertices() > 0);
+  if (withVertices.length === 0) {
+    return 0;
+  }
+  // 从**层级根节点**量，而不是 mesh[0]（多网格资产的 mesh[0] 往往是个
+  // 几厘米的叶子部件，量出来会把整个角色说成 1.7m 的巨物）。
+  // getHierarchyBoundingVectors(true) 已含缩放，返回的即是世界高度；
+  // 再乘 root.scaling 会重复算一次（实测玩家量成 9.8m）。
+  const bounds = root.getHierarchyBoundingVectors(true);
+  const height = bounds.max.y - bounds.min.y;
+  return Number.isFinite(height) ? height : 0;
+}
+
+/**
+ * 视觉件上所有可改 tint 的 toon 材质。
+ *
+ * 程序化角色是单材质，glb NPC 是每网格一份 toon（不同部件不同材质名），
+ * 受击闪白必须遍历全部，否则只有身体闪、头发脸不闪。
+ */
+function tintMaterialsOf(visual: EntityVisual): ShaderMaterial[] {
+  const materials: Material[] = [];
+  if (visual.procedural !== null) {
+    materials.push(visual.procedural.material);
+  }
+  if (visual.character !== null) {
+    materials.push(...visual.character.materials);
+  }
+  return materials.filter((material): material is ShaderMaterial =>
+    material instanceof ShaderMaterial,
+  );
+}
+
+/** NPC glb 角色的视觉原点高度（米）：脚底离原点的高度，与玩家 targetY 同值。 */
+const NPC_GLTF_TARGET_Y = 0.55;
+
 function createEntityVisual(
   scene: Scene,
   root: TransformNode,
-  state: Pick<P1WorldState, "whiteTexture" | "materials" | "enemySprites">,
+  state: Pick<
+    P1WorldState,
+    "whiteTexture" | "materials" | "enemySprites" | "npcCharacterBase"
+  >,
   entity: EntitySnapshot,
 ): EntityVisual {
   const id = entity.id;
@@ -899,23 +998,40 @@ function createEntityVisual(
   if (entity.identity.type === "npc") {
     // 票 29：3D tint 取自角色色板卡主色，与立绘/对话框同源。
     const palette = paletteOf(id);
-    const procedural = createProceduralNpc(
-      scene,
-      root,
-      `${id}.`,
-      Color3.FromHexString(palette.primary),
-      state.whiteTexture,
-    );
-    state.materials.push(procedural.material);
-    procedural.mesh.metadata = { entityId: id };
-    visual = {
-      node: procedural.mesh,
-      mesh: procedural.mesh,
-      targetY: 0.55,
-      procedural,
-      // 票 27：基础色调（受击闪白等反馈要恢复到它），同源取色板卡主色。
-      baseTint: Color3.FromHexString(palette.primary),
-    };
+    const tint = Color3.FromHexString(palette.primary);
+    // 票 37 验收修复：NPC 接真实建模（不再全是程序化胶囊球）。
+    // 路径：克隆玩家已装载的那份 glb（同一模型、同一套 toon/描边管线），
+    // 按色板卡主色区分个体，加载后统一缩放到 TARGET_CHARACTER_HEIGHT_M。
+    // 克隆失败/无玩家容器时回落到程序化角色（场景不至于起不来）。
+    const npcCharacter = npcCharacterFromBase(scene, state.npcCharacterBase, `${id}.`, tint);
+    if (npcCharacter !== null) {
+      npcCharacter.rootNode.parent = root;
+      npcCharacter.rootNode.metadata = { entityId: id };
+      for (const mesh of npcCharacter.meshes) {
+        mesh.metadata = { entityId: id };
+      }
+      visual = {
+        node: npcCharacter.rootNode,
+        mesh: npcCharacter.meshes[0] ?? npcCharacter.rootNode,
+        targetY: NPC_GLTF_TARGET_Y,
+        procedural: null,
+        character: npcCharacter,
+        // 票 27：基础色调（受击闪白等反馈要恢复到它），同源取色板卡主色。
+        baseTint: tint,
+      };
+    } else {
+      const procedural = createProceduralNpc(scene, root, `${id}.`, tint, state.whiteTexture);
+      state.materials.push(procedural.material);
+      procedural.mesh.metadata = { entityId: id };
+      visual = {
+        node: procedural.mesh,
+        mesh: procedural.mesh,
+        targetY: 0.55,
+        procedural,
+        character: null,
+        baseTint: tint,
+      };
+    }
   } else {
     // 票 36：冲锋型/吐弹型走各自的独立精灵贴图；史莱姆仍是程序化球体。
     const spriteKind = ENEMY_SPRITE_KINDS.get(entity.identity.templateId);
@@ -930,6 +1046,7 @@ function createEntityVisual(
         mesh: procedural.mesh,
         targetY: spriteKind === "ranged-kite" ? 0.71 : 0.74,
         procedural,
+        character: null,
         baseTint: null,
       };
     } else {
@@ -948,6 +1065,7 @@ function createEntityVisual(
         mesh: procedural.mesh,
         targetY: 0.45,
         procedural,
+        character: null,
         baseTint: Color3.FromHexString(tint),
       };
     }
@@ -2014,9 +2132,9 @@ function installDebugApi(scene: Scene, state: P1WorldState): void {
         return;
       }
       // 受击闪白：临时把 tint 拉到接近白色，160ms 后还原。
-      const material = visual.procedural?.material;
-      if (material !== undefined && material instanceof ShaderMaterial) {
-        const toon = material;
+      // NPC 现在是 glb 多网格（票 37 验收），闪白要落到它的**每一个** toon
+      // 材质上；程序化回落路径只有一个材质，两条路都覆盖。
+      for (const toon of tintMaterialsOf(visual)) {
         toon.setColor3("tintColor", Color3.White());
         window.setTimeout(() => {
           toon.setColor3("tintColor", visual.baseTint ?? Color3.White());
@@ -2370,6 +2488,61 @@ function installDebugApi(scene: Scene, state: P1WorldState): void {
         ) <= tolerance
       );
     },
+    getNpcModelEvidence: () => {
+      const playerHeight = measureNodeHeight(state.player.rootNode, state.player.meshes);
+      const npcs = state.session
+        .snapshot()
+        .entities.filter((entity) => entity.identity.type === "npc")
+        .map((entity) => {
+          const visual = state.visuals.get(entity.id);
+          const character = visual?.character ?? null;
+          const heightM =
+            character !== null
+              ? measureNodeHeight(character.rootNode, character.meshes)
+              : measureNodeHeight(
+                  visual?.node ?? state.root,
+                  visual !== undefined ? [visual.mesh] : [],
+                );
+          return {
+            id: entity.id,
+            kind: (character !== null ? "glb" : "procedural-fallback") as "glb" | "procedural-fallback",
+            meshCount: character !== null ? character.visibleMeshCount : 1,
+            heightM: round(heightM, 3),
+            heightDeltaFromPlayer: round(Math.abs(heightM - playerHeight), 3),
+            tintPrimary:
+              visual?.baseTint?.toHexString() ?? paletteOf(entity.id).primary,
+          };
+        });
+      const kinds = new Set(npcs.map((entry) => entry.kind));
+      return {
+        modelKind: kinds.size === 1 && kinds.has("glb") ? "glb" : "procedural-fallback",
+        baseAvailable: state.npcCharacterBase !== null,
+        playerHeightM: round(playerHeight, 3),
+        targetHeightM: TARGET_CHARACTER_HEIGHT_M,
+        npcs,
+      };
+    },
+    sampleBudget: async (durationMs = 4_000) => {
+      const samples = await collectFrames(scene, state, durationMs);
+      // 前几帧是预热（shader 编译/动态分辨率收敛），不算进平均。
+      const warm = samples.slice(6);
+      if (warm.length === 0) {
+        return { drawCallsAverage: 0, drawCallsMax: 0, fpsAverage: 0, fpsMin: 0, samples: 0 };
+      }
+      const drawCalls = warm.map((frame) => frame.drawCalls);
+      const total = warm.reduce((sum, frame) => sum + frame.dtMs, 0);
+      const maxMs = warm.reduce((max, frame) => Math.max(max, frame.dtMs), 0);
+      return {
+        drawCallsAverage: round(
+          drawCalls.reduce((sum, value) => sum + value, 0) / drawCalls.length,
+          2,
+        ),
+        drawCallsMax: Math.max(...drawCalls),
+        fpsAverage: round(total > 0 ? (1_000 * warm.length) / total : 0, 2),
+        fpsMin: maxMs > 0 ? round(1_000 / maxMs, 2) : 0,
+        samples: warm.length,
+      };
+    },
     blink: (holdMs = 500) => state.player.triggerBlink(holdMs),
     getEnemyAiEvidence: () => {
       const snapshot = state.session.snapshot();
@@ -2658,6 +2831,17 @@ function installDebugApi(scene: Scene, state: P1WorldState): void {
       colliderCount: state.environmentMetrics.colliderCount,
       landscapeMeshCount: state.landscape.meshes.length,
       drawCalls: state.lastDrawCalls,
+      /** L5 预算诊断：场景里的可渲染网格数与活动材质数（NPC glb 化后看这个）。 */
+      meshStats: {
+        totalMeshes: scene.meshes.filter((m) => m.isEnabled() && m.getTotalVertices() > 0).length,
+        npcMeshes: [...state.visuals.values()].reduce(
+          (sum, v) => sum + (v.character?.visibleMeshCount ?? 0),
+          0,
+        ),
+        outlineMeshes: scene.meshes.filter((m) => m.renderOutline).length,
+        activeMaterials: scene.materials.length,
+        renderingGroup1: scene.meshes.filter((m) => m.isEnabled() && m.renderingGroupId === 1).length,
+      },
     }),
   };
 }
@@ -2796,6 +2980,22 @@ export const p1WorldScenario: ScenarioDefinition = {
       player.rootNode.parent = root;
     }
 
+    // 票 37 验收修复：NPC 的 glb 克隆源（同 URL，另装一份不入场景的容器）。
+    // 玩家容器已被 parent 到场景根上，层级校验会让 Babylon 拒绝克隆，
+    // 因此必须用独立容器。失败不阻断场景：NPC 回落到程序化角色。
+    let npcCharacterBase: AssetContainer | null = null;
+    try {
+      npcCharacterBase = await loadNpcCharacterBase(
+        scene,
+        playerCharacterUrl,
+        playerCharacterUrl === REAL_CHARACTER_URL
+          ? "character_vroid_lod0.glb"
+          : "character_anime_placeholder.glb",
+      );
+    } catch (error) {
+      console.warn(`NPC 角色资产加载失败，NPC 回落程序化：${errorMessage(error)}`);
+    }
+
     const materials: Material[] = [];
     const visuals = new Map<string, EntityVisual>();
     visuals.set(PLAYER_ID, {
@@ -2803,6 +3003,7 @@ export const p1WorldScenario: ScenarioDefinition = {
       mesh: player.meshes[0],
       targetY: 0.55,
       procedural: null,
+      character: null,
       baseTint: null,
     });
 
@@ -2813,7 +3014,12 @@ export const p1WorldScenario: ScenarioDefinition = {
       }
       visuals.set(
         entity.id,
-        createEntityVisual(scene, root, { whiteTexture, materials, enemySprites }, entity),
+        createEntityVisual(
+          scene,
+          root,
+          { whiteTexture, materials, enemySprites, npcCharacterBase },
+          entity,
+        ),
       );
     }
 
@@ -2871,6 +3077,7 @@ export const p1WorldScenario: ScenarioDefinition = {
       player,
       whiteTexture,
       runtime,
+      npcCharacterBase,
       landscape,
       traveling: false,
       keyLight,
@@ -2937,9 +3144,17 @@ export const p1WorldScenario: ScenarioDefinition = {
         initialSnapshot.entities.find((entity) => entity.id === PLAYER_ID)?.position.z ?? 0,
       ),
       portalVisuals: new Map(),
+      // 占位实现：state 构造期间（NPC glb 解析要几秒）自动存档器可能回调
+      // closeDialoguePresentation，这里必须给全套方法，否则「自动存档不可用」
+      // 会把整个存档链路悄悄掐掉。真正的 UI 在下面替换。
       dialogueUi: {
         update: () => undefined,
         setSaveStatus: () => undefined,
+        closeDialogue: () => undefined,
+        updateDialogue: () => undefined,
+        setBubble: () => undefined,
+        isOpen: () => false,
+        activeSpeakerId: () => null,
         dispose: () => undefined,
       } as unknown as DialogueUi,
       tradeUi: {
@@ -3026,6 +3241,10 @@ export const p1WorldScenario: ScenarioDefinition = {
     });
     states.set(context, state);
     holder.state = state;
+
+    // 票 37 验收修复：建当前区域的出口视觉标记（洞口几何/地面圈/头顶标记）。
+    // 不走 loadRegionVisuals（那是切区路径），这里直接建一次初始区域的。
+    rebuildPortalVisuals(state, scene);
 
     // 票 27：反馈层与音效。音效预加载失败不阻断场景（视觉反馈仍可用）。
     state.audio = new CombatAudio();
@@ -3513,6 +3732,15 @@ export const p1WorldScenario: ScenarioDefinition = {
         if (resolved.z !== player.rootNode.position.z) {
           player.rootNode.position.z = resolved.z;
         }
+      }
+
+      // NPC 走/停：巡逻采样给出 moving，驱动 glb 的 walk 动画组
+      // （票 37 验收：NPC 接真实建模后要有走路动作，站着就播待机）。
+      for (const [npcId, visual] of state.visuals) {
+        if (visual.character === null) {
+          continue;
+        }
+        visual.character.setMoving(state.session.patrolSampleOf(npcId)?.moving ?? false);
       }
 
       // NPC 待机演出：呼吸摆动 + 偶尔踱步（只动视觉节点）。
@@ -4006,6 +4234,7 @@ export const p1WorldScenario: ScenarioDefinition = {
     }
     for (const visual of state.visuals.values()) {
       visual.procedural?.dispose();
+      visual.character?.dispose();
     }
     for (const material of state.materials) {
       material.dispose();
@@ -4285,6 +4514,7 @@ function rebuildEntityVisuals(
     const visual = state.visuals.get(id);
     if (visual !== undefined) {
       visual.procedural?.dispose();
+      visual.character?.dispose();
       visual.node.dispose(false, true);
     }
     state.visuals.delete(id);

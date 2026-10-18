@@ -50,7 +50,8 @@ describe("区域出口的视觉标记", () => {
   it("巢穴出口的零件都落在出口坐标附近（不会画到别处）", () => {
     const parts = portalPartsFor("exit:cave_mouth", { x: 0, z: 19 });
     for (const part of parts) {
-      expect(Math.abs(part.offset.x - 0)).toBeLessThanOrEqual(2.2);
+      // 门框总宽 5m，所以左右岩壁最远落在 ±2.5m。
+      expect(Math.abs(part.offset.x - 0)).toBeLessThanOrEqual(2.5);
       expect(Math.abs(part.offset.z - 19)).toBeLessThanOrEqual(0.01);
     }
   });

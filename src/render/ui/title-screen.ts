@@ -507,20 +507,28 @@ export function createTitleScreen(options: TitleScreenOptions): TitleScreen {
     }
   };
 
+  const maskIn = async (): Promise<void> => {
+    await getLoadingGate().maskIn(300);
+  };
+
   const transitionOut = async (): Promise<number> => {
     const gate = getLoadingGate();
     const startedAt = performance.now();
+    // 场景已就绪：淡出黑场收尾。
+    await gate.maskOut(420);
+    root.dataset.transitioning = "false";
+    return performance.now() - startedAt;
+  };
+
+  /** 标题层让位：黑场拉满 + 摘掉标题（场景在遮罩下重建）。 */
+  const hideTitle = async (): Promise<void> => {
     // 先黑场：场景在遮罩下重建，转场不会被看到。
-    await gate.maskIn(300);
+    await maskIn();
     // 标题层此刻就该让位（否则标题会盖在黑场之上，玩家看到的是静止标题）。
     // 门控在 debugState().visible 上，L4 冒烟据此判定「已进入游戏」。
     root.dataset.visible = "false";
     root.dataset.transitioning = "true";
     showError(null);
-    // 场景就绪后再淡出黑场。
-    await gate.maskOut(420);
-    root.dataset.transitioning = "false";
-    return performance.now() - startedAt;
   };
 
   const run = async (action: () => void | Promise<void> | undefined): Promise<void> => {
@@ -529,10 +537,20 @@ export function createTitleScreen(options: TitleScreenOptions): TitleScreen {
     }
     busy = true;
     showError(null);
+    // 顺序很重要（票 37 验收）：**先把标题摘掉，再建场景**。
+    // 场景重建（NPC 会多解析一份 10MB 的 VRoid）可能要好几秒；之前是
+    // 「先建场景再淡出」，于是标题层会盖在已经跑起来的游戏上好几秒——
+    // 表现为「进游戏了但画面还是标题」，还挡住操作。
+    const hidePromise = hideTitle();
     try {
       await action();
+      await hidePromise;
       await transitionOut();
     } catch (error) {
+      // 场景没起来时必须把黑场摘掉，否则玩家卡在一片黑里（连报错都看不到）。
+      await getLoadingGate().maskOut(0);
+      root.dataset.visible = "true";
+      root.dataset.transitioning = "false";
       showError(error instanceof Error ? error.message : String(error));
     } finally {
       busy = false;

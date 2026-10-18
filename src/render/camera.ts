@@ -147,7 +147,17 @@ export function snapCameraFollow(
   state.z = target.z;
 }
 
-/** 把跟随状态写进相机 target（保持 alpha/beta/radius 不变，只平移视野）。 */
+/**
+ * 把跟随状态写进相机 target（保持 alpha/beta/radius 不变，只平移视野）。
+ *
+ * 直接写 `camera.target` 而不是 `setTarget()`：后者在 ArcRotateCamera 里
+ * 会按新焦点的位置反解 alpha/beta 并重建 `_targetHost`，在正交 + 自定义
+ * alpha/beta 下会把视角拽偏（实测「相机不跟」，且复位后打架）。
+ * 直接赋值就是文档里「平移焦点」的那条路。
+ */
 export function applyCameraFollow(camera: ArcRotateCamera, state: CameraFollowState): void {
-  camera.setTarget(new Vector3(state.x, 0, state.z));
+  camera.target.set(state.x, 0, state.z);
+  // 焦点变了就要重算视锥/包围，交给下一帧的相机更新即可；
+  // 但 ArcRotateCamera 缓存了 _targetHost 的旧值，这里清一下避免抖动。
+  (camera as unknown as { _targetBoundingSphere?: unknown })._targetBoundingSphere = null;
 }

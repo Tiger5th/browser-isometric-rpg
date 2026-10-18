@@ -18,6 +18,7 @@
  * （draw call 预算敏感，见 DRAW_CALL_BUDGET）。
  */
 
+import { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTexture";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
@@ -26,13 +27,13 @@ import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import type { Scene } from "@babylonjs/core/scene";
 
 /** 洞口门框的总宽（米）：比路宽，给「这是个洞」的体量感。 */
-export const PORTAL_WIDTH = 4.2;
+export const PORTAL_WIDTH = 5;
 /** 洞口门框的总高（米）。 */
-export const PORTAL_HEIGHT = 3.4;
+export const PORTAL_HEIGHT = 3.2;
 /** 岩檐厚度（米）。 */
-export const PORTAL_LINTEL = 0.7;
-/** 岩壁厚度（米）。 */
-export const PORTAL_PILLAR = 0.85;
+export const PORTAL_LINTEL = 0.6;
+/** 岩壁厚度（米）：做薄一点，避免在等距视角下糊成一整块挡板。 */
+export const PORTAL_PILLAR = 0.55;
 /** 地面提示圈半径（米）：略大于 EXIT_TRIGGER_RADIUS（1.6），玩家站进去就该触发。 */
 export const PORTAL_GROUND_RING_RADIUS = 2.1;
 /** 头顶标记离地高度（米）。 */
@@ -99,7 +100,7 @@ export function portalPartsFor(
       id: `${exitId}.marker`,
       kind: "marker",
       offset: { x: position.x, y: PORTAL_MARKER_HEIGHT, z: position.z },
-      size: { width: 1.5, height: 0.62, depth: 0.24 },
+      size: { width: 1.9, height: 0.95, depth: 0.24 },
     },
     {
       id: `${exitId}.pulse`,
@@ -123,17 +124,62 @@ export interface PortalVisual {
   phase: number;
 }
 
-function material(scene: Scene, name: string, hex: string, alpha: number, emissive: boolean): StandardMaterial {
+/**
+ * 扁平自发光材质。
+ *
+ * 洞口走 disableLighting（和 landscape-ring 的远景同一套）：场景只有一盏
+ * DirectionalLight，纯 StandardMaterial 的背光面会渲染成纯黑（实测洞口
+ * 是一坨黑块，还把站在后面的玩家糊住）。远处/标记类构件不需要真实光照。
+ */
+function material(scene: Scene, name: string, hex: string, alpha: number): StandardMaterial {
   const value = Color3.FromHexString(hex);
   const mat = new StandardMaterial(name, scene);
   mat.diffuseColor = value;
   mat.specularColor = Color3.Black();
-  mat.emissiveColor = emissive ? value.scale(0.8) : Color3.Black();
+  mat.emissiveColor = value;
+  mat.disableLighting = true;
   mat.alpha = alpha;
-  if (alpha < 1) {
-    mat.disableLighting = true;
-  }
   return mat;
+}
+
+/**
+ * 头顶标记的贴图：名字 + 朝下箭头。
+ *
+ * 原来是一块纯色板子（远看是一根黄条），不告诉玩家「这是什么」。
+ * DynamicTexture 现画，2D canvas 上写中文 + ▼，零新资产。
+ */
+function markerTexture(scene: Scene, name: string, label: string): DynamicTexture {
+  const width = 256;
+  const height = 128;
+  const texture = new DynamicTexture(name, { width, height }, scene, true);
+  const ctx = texture.getContext() as CanvasRenderingContext2D;
+  ctx.clearRect(0, 0, width, height);
+  // 圆角底板
+  ctx.fillStyle = "rgba(15, 23, 42, 0.78)";
+  ctx.strokeStyle = "#fbbf24";
+  ctx.lineWidth = 5;
+  const radius = 26;
+  ctx.beginPath();
+  ctx.roundRect(8, 8, width - 16, height - 16, radius);
+  ctx.fill();
+  ctx.stroke();
+  // 箭头（朝下，指向洞口）
+  ctx.fillStyle = "#fbbf24";
+  ctx.beginPath();
+  ctx.moveTo(width / 2, height - 30);
+  ctx.lineTo(width / 2 - 22, height - 60);
+  ctx.lineTo(width / 2 + 22, height - 60);
+  ctx.closePath();
+  ctx.fill();
+  // 名字
+  ctx.fillStyle = "#fde68a";
+  ctx.font = "bold 42px ui-sans-serif, system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(label, width / 2, 46);
+  texture.update();
+  texture.hasAlpha = true;
+  return texture;
 }
 
 /**
@@ -152,9 +198,13 @@ export function createPortalVisual(
   const node = new TransformNode(`portal.${exitId}`, scene);
   node.parent = root;
 
-  const rock = material(scene, `portal.${exitId}.rock`, "#6d6357", 1, false);
-  const glow = material(scene, `portal.${exitId}.glow`, "#7dd3fc", 0.55, true);
-  const marker = material(scene, `portal.${exitId}.marker`, "#fde68a", 1, true);
+  const rock = material(scene, `portal.${exitId}.rock`, "#5b5346", 1);
+  const glow = material(scene, `portal.${exitId}.glow`, "#7dd3fc", 0.45);
+  const markerMat = material(scene, `portal.${exitId}.marker`, "#fde68a", 1);
+  const markerTex = markerTexture(scene, `portal.${exitId}.marker.texture`, portalLabelFor(exitId));
+  markerMat.diffuseTexture = markerTex;
+  markerMat.emissiveTexture = markerTex;
+  const marker = markerMat;
 
   const meshes: Mesh[] = [];
   let pulse: Mesh | null = null;
@@ -197,6 +247,8 @@ export function createPortalVisual(
           scene,
         );
         mesh.material = rock;
+        // 门框是「立着的岩壁」，底面不该被看到；反向背面剔除省一半三角。
+        mesh.flipFaces(!(part.offset.x < position.x));
         break;
     }
     mesh.position.set(part.offset.x, part.offset.y, part.offset.z);
