@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  APPROACH_REISSUE_INTERVAL_MS,
+  APPROACH_TIMEOUT_MS,
   DEFAULT_DIALOGUE_RANGE,
   DEFAULT_NPC_INTERACT_RANGE,
   activateBubble,
   createInteractionState,
   interactionTarget,
+  npcHoldFor,
   requestMove,
   selectNpc,
   setInteractionPhase,
@@ -230,5 +233,134 @@ describe("交互状态不可变性", () => {
     updateInteraction(state, table, index());
 
     expect(JSON.stringify(table)).toBe(before);
+  });
+});
+
+/**
+ * 票 37 验收修复：点击移动中的 NPC 追不上。
+ *
+ * 复现：点击时 target 是**点击瞬间**算的固定点，approaching 阶段永不重发。
+ * NPC 停在下一次巡逻路上，玩家停在离 NPC 1.5m 的死点上，
+ * 状态机永远停在 approaching（实测：气泡不出现）。
+ */
+describe("靠近移动中的 NPC（票 37 验收）", () => {
+  /** 玩家已停在一个离 NPC 4m 的点上，NPC 还在原地不动。 */
+  function stalledPositions(player: Vec3, npc: Vec3 = NPC_POSITION): Map<string, Vec3> {
+    return new Map<string, Vec3>([[NPC_ID, npc], ["player", player]]);
+  }
+
+  it("玩家到位但距离仍超交互范围时，按节流重发朝 NPC 当前位置的接近", () => {
+    const state = createInteractionState();
+    selectNpc(state, NPC_ID, index(), farPlayer(), NPC_POSITION);
+    expect(state.phase).toBe("approaching");
+
+    // 首帧消耗节流窗口。
+    updateInteraction(state, stalledPositions(farPlayer()), index(), "player", 1_000);
+    // 玩家停在离 NPC 4m 处（moveTo 完成），距离没变。
+    const stuck = updateInteraction(
+      state,
+      stalledPositions(position(NPC_POSITION.x, NPC_POSITION.z - 4)),
+      index(),
+      "player",
+      600,
+    );
+
+    expect(stuck.kind).toBe("approach");
+    if (stuck.kind !== "approach") {
+      return;
+    }
+    expect(stuck.npcId).toBe(NPC_ID);
+    // 重发的目标点必须朝 NPC 的**当前**位置算，且落在对话距离上。
+    const targetDistance = Math.hypot(
+      stuck.target.x - NPC_POSITION.x,
+      stuck.target.z - NPC_POSITION.z,
+    );
+    expect(targetDistance).toBeCloseTo(DEFAULT_DIALOGUE_RANGE, 6);
+  });
+
+  it("重发按 APPROACH_REISSUE_INTERVAL_MS 节流，不会每帧刷路径", () => {
+    const state = createInteractionState();
+    selectNpc(state, NPC_ID, index(), farPlayer(), NPC_POSITION);
+    const far = stalledPositions(position(NPC_POSITION.x, NPC_POSITION.z - 4));
+
+    // 刚进 approaching：节流窗口已装填。
+    expect(updateInteraction(state, far, index(), "player", 100).kind).toBe("none");
+    // 窗口内再次推进仍然无动作。
+    expect(updateInteraction(state, far, index(), "player", 100).kind).toBe("none");
+    // 累计超过窗口才重发一条。
+    expect(
+      updateInteraction(state, far, index(), "player", APPROACH_REISSUE_INTERVAL_MS).kind,
+    ).toBe("approach");
+  });
+
+  it("NPC 移动后重发的目标跟着 NPC 走（不是点击瞬间的死点）", () => {
+    const state = createInteractionState();
+    const movedNpc = { x: NPC_POSITION.x, y: 0, z: NPC_POSITION.z };
+    selectNpc(state, NPC_ID, index(), farPlayer(), movedNpc);
+    const startPlayer = position(NPC_POSITION.x, NPC_POSITION.z - 4);
+    updateInteraction(state, stalledPositions(startPlayer, movedNpc), index(), "player", 1_000);
+
+    // NPC 巡逻到了别处（玩家原地不动）。
+    const npcNow = { x: NPC_POSITION.x, y: 0, z: NPC_POSITION.z + 6 };
+    // 玩家在 NPC 正南 4m 处（+z 方向，重发的目标因此是 NPC.z + 1.5）。
+    const playerNow = position(npcNow.x, npcNow.z + 4);
+    const reissued = updateInteraction(
+      state,
+      stalledPositions(playerNow, npcNow),
+      index(),
+      "player",
+      APPROACH_REISSUE_INTERVAL_MS,
+    );
+
+    expect(reissued.kind).toBe("approach");
+    if (reissued.kind !== "approach") {
+      return;
+    }
+    expect(reissued.target.z).toBeCloseTo(npcNow.z + DEFAULT_DIALOGUE_RANGE, 6);
+    expect(reissued.target.x).toBeCloseTo(npcNow.x, 6);
+  });
+
+  it("接近超时后放弃这次交互并回到空闲（不再无限重发）", () => {
+    const state = createInteractionState();
+    selectNpc(state, NPC_ID, index(), farPlayer(), NPC_POSITION);
+    const far = stalledPositions(position(NPC_POSITION.x, NPC_POSITION.z - 9));
+
+    let last: string = state.phase;
+    for (let elapsed = 0; elapsed < APPROACH_TIMEOUT_MS; elapsed += 500) {
+      last = updateInteraction(state, far, index(), "player", 500).kind;
+    }
+    expect(state.phase).toBe("idle");
+    expect(state.npcId).toBeNull();
+    expect(last).toBe("none");
+  });
+
+  it("NPC 冻结请求覆盖 approaching 与 ready（对话开始本来就冻结）", () => {
+    const state = createInteractionState();
+
+    selectNpc(state, NPC_ID, index(), farPlayer(), NPC_POSITION);
+    expect(npcHoldFor(state)).toEqual({ npcId: NPC_ID, active: true });
+
+    selectNpc(state, NPC_ID, index(), nearPlayer(), NPC_POSITION);
+    expect(npcHoldFor(state)).toEqual({ npcId: NPC_ID, active: true });
+
+    activateBubble(state, positions(nearPlayer()), index());
+    // 对话阶段由会话自己的对话冻结负责，不重复要求。
+    expect(npcHoldFor(state)).toBeNull();
+  });
+
+  it("接近超时/放弃后释放 NPC 冻结", () => {
+    const state = createInteractionState();
+    selectNpc(state, NPC_ID, index(), farPlayer(), NPC_POSITION);
+    expect(npcHoldFor(state)).not.toBeNull();
+
+    updateInteraction(
+      state,
+      stalledPositions(farPlayer()),
+      index(),
+      "player",
+      APPROACH_TIMEOUT_MS,
+    );
+
+    expect(npcHoldFor(state)).toBeNull();
   });
 });

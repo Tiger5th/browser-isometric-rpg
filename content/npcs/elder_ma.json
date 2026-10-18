@@ -22,20 +22,20 @@
   "patrol": {
     "waypoints": [
       { "x": 6, "y": 0, "z": 4 },
-      { "x": 4, "y": 0, "z": 2 },
-      { "x": 7, "y": 0, "z": 1 }
+      { "x": 5, "y": 0, "z": 3 },
+      { "x": 7, "y": 0, "z": 2 }
     ],
-    "dwellMs": 2600
+    "dwellMs": 4500
   },
   "reanchors": [
     {
       "questId": "quest:cull_slimes",
       "waypoints": [
         { "x": 9, "y": 0, "z": -2 },
-        { "x": 7, "y": 0, "z": -4 },
-        { "x": 9, "y": 0, "z": -5 }
+        { "x": 8, "y": 0, "z": -4 },
+        { "x": 9, "y": 0, "z": -4 }
       ],
-      "dwellMs": 2600
+      "dwellMs": 4500
     }
   ]
 }

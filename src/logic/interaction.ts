@@ -24,6 +24,25 @@ export const DEFAULT_NPC_INTERACT_RANGE = 2;
 
 export type InteractionPhase = "idle" | "approaching" | "ready" | "talking";
 
+/**
+ * 靠近中重新发路线的节流（毫秒）。
+ *
+ * 诊断（票 37 验收）：点击移动中的 NPC 时 target 是**点击瞬间**算出的固定点，
+ * NPC 一边走玩家一边朝死点跑，追不上也永远出不了气泡。修法是每
+ * APPROACH_REISSUE_INTERVAL_MS 重新朝 NPC 的**当前**位置发一次路——
+ * 节流是为了不每帧重算 navmesh 路径。
+ */
+export const APPROACH_REISSUE_INTERVAL_MS = 1_500;
+
+/**
+ * 靠近阶段的超时（毫秒）：从点下 NPC 起超过这么久还没进入交互范围，
+ * 就放弃这次交互并释放 NPC 巡逻冻结。
+ *
+ * 这是「NPC 停下等玩家」机制的兜底闸门：没有它，一次卡住的寻路
+ * （目标点落在障碍上、玩家被顶开）会把 NPC 永久冻在原地。
+ */
+export const APPROACH_TIMEOUT_MS = 6_000;
+
 /** 气泡按钮内容：普通「对话」或可接任务的感叹号。 */
 export type InteractionBubble = "talk" | "quest";
 
@@ -47,10 +66,43 @@ export interface InteractionState {
   phase: InteractionPhase;
   npcId: string | null;
   bubble: InteractionBubble | null;
+  /** 距下次允许重发 approach 的剩余毫秒（节流）。 */
+  approachCooldownMs: number;
+  /** 本次交互已持续的毫秒（靠近超时用）。 */
+  elapsedMs: number;
 }
 
 export function createInteractionState(): InteractionState {
-  return { phase: "idle", npcId: null, bubble: null };
+  return {
+    phase: "idle",
+    npcId: null,
+    bubble: null,
+    approachCooldownMs: 0,
+    elapsedMs: 0,
+  };
+}
+
+/**
+ * 当前是否应当冻结该 NPC 的巡逻。
+ *
+ * 诊断（票 37 验收）：NPC 一边巡逻一边「等你」，玩家永远追不上；
+ * ready 阶段 NPC 走出 2m 还会把气泡直接 reset 掉（气泡刚出现就消失）。
+ * 因此对话开始前的**整个 approaching + ready 阶段**都让 NPC 停下，
+ * 复用对话冻结走的那条 setPatrolPaused 通路（逻辑层一个真相源）。
+ *
+ * ready 阶段不设超时：气泡在界面上挂着，NPC 就该等着。
+ * approaching 阶段受 APPROACH_TIMEOUT_MS 约束（见 tickApproachTimeout）。
+ */
+export function npcHoldFor(
+  state: InteractionState,
+): { npcId: string; active: true } | null {
+  if (state.npcId === null) {
+    return null;
+  }
+  if (state.phase === "approaching" || state.phase === "ready") {
+    return { npcId: state.npcId, active: true };
+  }
+  return null;
 }
 
 function horizontalDistance(a: Vec3, b: Vec3): number {
@@ -82,6 +134,33 @@ function reset(state: InteractionState): void {
   state.phase = "idle";
   state.npcId = null;
   state.bubble = null;
+  state.approachCooldownMs = 0;
+  state.elapsedMs = 0;
+}
+
+/** 进入 approaching 时重装节流与计时（selectNpc / activateBubble 共用）。 */
+function enterApproaching(state: InteractionState): void {
+  state.phase = "approaching";
+  state.bubble = null;
+  state.approachCooldownMs = APPROACH_REISSUE_INTERVAL_MS;
+  state.elapsedMs = 0;
+}
+
+/**
+ * 推进计时（靠近超时 / 重发节流）。只在非 idle 阶段累计。
+ * 返回是否发生了状态变化（超时会让调用方解冻 NPC）。
+ */
+function tickTimers(state: InteractionState, deltaMs: number): boolean {
+  if (state.phase === "idle" || deltaMs <= 0) {
+    return false;
+  }
+  state.approachCooldownMs = Math.max(0, state.approachCooldownMs - deltaMs);
+  state.elapsedMs += deltaMs;
+  if (state.phase === "approaching" && state.elapsedMs >= APPROACH_TIMEOUT_MS) {
+    reset(state);
+    return true;
+  }
+  return false;
 }
 
 /**
@@ -111,9 +190,8 @@ export function selectNpc(
     return { kind: "arrived", npcId };
   }
 
-  state.phase = "approaching";
   state.npcId = npcId;
-  state.bubble = null;
+  enterApproaching(state);
   return { kind: "approach", npcId, target: interactionTarget(npcPosition, playerPosition) };
 }
 
@@ -126,8 +204,15 @@ export function updateInteraction(
   positions: ReadonlyMap<string, Vec3>,
   interactables: InteractableIndex,
   playerId = "player",
+  deltaMs = 0,
 ): InteractionAction {
   if (state.phase === "idle" || state.npcId === null) {
+    return { kind: "none" };
+  }
+  // 超时先于一切距离判定：这次交互已经放弃，不再重发路。
+  tickTimers(state, deltaMs);
+  // tickTimers 可能把阶段 reset 回 idle（TS 不知道，重新读一次）。
+  if ((state.phase as InteractionPhase) === "idle" || state.npcId === null) {
     return { kind: "none" };
   }
   const npcPosition = positions.get(state.npcId);
@@ -146,6 +231,17 @@ export function updateInteraction(
       state.phase = "ready";
       state.bubble = bubbleFor(info);
       return { kind: "arrived", npcId: state.npcId };
+    }
+    // 还在范围外：按节流重发一条朝 NPC **当前**位置的路。
+    // 玩家可能早就走到位了（movement 已结束），NPC 也在冻结下不动，
+    // 不重发就会永远卡在 approaching（诊断：点击移动中的 NPC 追不上）。
+    if (state.approachCooldownMs === 0) {
+      state.approachCooldownMs = APPROACH_REISSUE_INTERVAL_MS;
+      return {
+        kind: "approach",
+        npcId: state.npcId,
+        target: interactionTarget(npcPosition, playerPosition),
+      };
     }
     return { kind: "none" };
   }
@@ -197,8 +293,7 @@ export function activateBubble(
     return { kind: "start-dialogue", npcId: state.npcId };
   }
 
-  state.phase = "approaching";
-  state.bubble = null;
+  enterApproaching(state);
   return {
     kind: "approach",
     npcId: state.npcId,
@@ -225,4 +320,6 @@ export function setInteractionPhase(target: InteractionState, source: Interactio
   target.phase = source.phase;
   target.npcId = source.npcId;
   target.bubble = source.bubble;
+  target.approachCooldownMs = source.approachCooldownMs;
+  target.elapsedMs = source.elapsedMs;
 }

@@ -12,6 +12,7 @@
     "defense": 3
   },
   "tags": ["npc", "watcher"],
+  "dialogueId": "scout_lin",
   "paletteId": "character_palette:scout_lin",
   "portrait": {
     "image": "assets/portraits/scout_lin.png",
@@ -20,9 +21,9 @@
   "patrol": {
     "waypoints": [
       { "x": -6, "y": 0, "z": 3 },
-      { "x": -8, "y": 0, "z": 6 },
-      { "x": -9, "y": 0, "z": -2 }
+      { "x": -8, "y": 0, "z": 4 },
+      { "x": -6, "y": 0, "z": 2 }
     ],
-    "dwellMs": 2400
+    "dwellMs": 6000
   }
 }

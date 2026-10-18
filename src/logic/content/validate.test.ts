@@ -79,6 +79,8 @@ function dialogueInputs(): DialogueInput[] {
     // 商人与铁匠的对话没有任务标签，但文件必须登记（否则 NPC 的 dialogueId 会断引用）。
     { id: "merchant_bo", file: "content/dialogues/merchant_bo.ink", questTags: [] },
     { id: "smith_qi", file: "content/dialogues/smith_qi.ink", questTags: [] },
+    // 林斥候的洞口指引对话同样没有任务标签，但必须有 dialogueId 才可交互。
+    { id: "scout_lin", file: "content/dialogues/scout_lin.ink", questTags: [] },
   ];
 }
 

@@ -34,6 +34,7 @@ import { DefaultRenderingPipeline } from "@babylonjs/core/PostProcesses/RenderPi
 import { Scene } from "@babylonjs/core/scene";
 import elderMaCompiled from "../../../content/dialogues/elder_ma.ink?ink";
 import merchantBoCompiled from "../../../content/dialogues/merchant_bo.ink?ink";
+import scoutLinCompiled from "../../../content/dialogues/scout_lin.ink?ink";
 import smithQiCompiled from "../../../content/dialogues/smith_qi.ink?ink";
 import levelCurveData from "../../../content/level-curves/standard.json";
 import {
@@ -1742,6 +1743,9 @@ async function slotEntries(state: P1WorldState) {
 function startNewGame(state: P1WorldState): { playerLevel: number; elapsedMs: number } {
   const fresh = new GameSession();
   fresh.registerDialogue("elder_ma", elderMaCompiled);
+  fresh.registerDialogue("merchant_bo", merchantBoCompiled);
+  fresh.registerDialogue("scout_lin", scoutLinCompiled);
+  fresh.registerDialogue("smith_qi", smithQiCompiled);
   fresh.loadRegion(CONTENT_BUNDLE, GREEN_HOLLOW_REGION_ID);
   const snapshot = fresh.snapshot();
 
@@ -2549,6 +2553,7 @@ export const p1WorldScenario: ScenarioDefinition = {
     const session = new GameSession();
     session.registerDialogue("elder_ma", elderMaCompiled);
     session.registerDialogue("merchant_bo", merchantBoCompiled);
+    session.registerDialogue("scout_lin", scoutLinCompiled);
     session.registerDialogue("smith_qi", smithQiCompiled);
     // 票 36：把票 28 的硬碰撞清单交给逻辑层，冲锋挡停与投射物撞墙都用它，
     // navmesh 也从同一份 collider 生成（colliderObstacleSpecs）——单一数据源。
