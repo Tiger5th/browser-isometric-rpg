@@ -20,6 +20,7 @@ import {
   NPC_BREATH_AMPLITUDE,
   NPC_PACE_MAX_INTERVAL_MS,
   NPC_PACE_MIN_INTERVAL_MS,
+  NPC_PACE_PLAYER_DISABLE_RADIUS,
   NPC_PACE_RADIUS,
   PASSABLE_KINDS,
   buildPropColliders,
@@ -512,5 +513,80 @@ describe("布局常量与碰撞的关系（不变量）", () => {
       // 灌木不进入碰撞列表，但每个区域都要有。
       expect(counts.get("bush") ?? 0).toBeGreaterThan(0);
     }
+  });
+});
+
+/**
+ * 票 37 验收修复：玩家靠近 NPC 时禁用踱步。
+ *
+ * 诊断：巡逻（content 的 patrol）+ 踱步（表现层）两个真相源叠加，
+ * NPC 在玩家面前每隔几秒挪一步。巡逻本身已有对话冻结，靠近时站定最自然。
+ */
+describe("踱步的近距离抑制", () => {
+  const home = { x: 0, z: 0 };
+  /** 冷却为 0（到点可踱步）+ 恒定随机：给出一个确定的踱步点。 */
+  const readyState = (): NpcIdleState => ({
+    yaw: 0,
+    paceCooldownMs: 0,
+    random: constantRandom(0.25),
+  });
+
+  it("玩家在 NPC_PACE_PLAYER_DISABLE_RADIUS 内时不触发踱步", () => {
+    const state = readyState();
+
+    const { sample, next } = sampleNpcIdle(
+      state,
+      0,
+      16,
+      home,
+      GREEN_HOLLOW_BOUNDS,
+      { x: 0, z: NPC_PACE_PLAYER_DISABLE_RADIUS - 0.1 },
+    );
+
+    expect(sample.paceTarget).toBeNull();
+    // 冷却不重新装填：玩家一走开，下一帧就能踱步（不必干等 4–9 秒）。
+    expect(next.paceCooldownMs).toBe(0);
+  });
+
+  it("玩家退到半径外时踱步立即恢复（不需要干等一个冷却周期）", () => {
+    const state = readyState();
+
+    const { sample } = sampleNpcIdle(
+      state,
+      0,
+      16,
+      home,
+      GREEN_HOLLOW_BOUNDS,
+      { x: NPC_PACE_PLAYER_DISABLE_RADIUS + 1, z: 0 },
+    );
+
+    expect(sample.paceTarget).not.toBeNull();
+  });
+
+  it("不传玩家位置时行为不变（老调用方兼容）", () => {
+    const state = readyState();
+    expect(sampleNpcIdle(state, 0, 16, home).sample.paceTarget).not.toBeNull();
+  });
+
+  it("抑制半径与 NPC 交互范围同量级（不是「贴脸才站定」）", () => {
+    expect(NPC_PACE_PLAYER_DISABLE_RADIUS).toBeGreaterThanOrEqual(3);
+  });
+
+  it("冷却未归零时抑制不改变任何东西（叠加安全）", () => {
+    const state: NpcIdleState = {
+      yaw: 0,
+      paceCooldownMs: 2_000,
+      random: constantRandom(0.25),
+    };
+    const { sample, next } = sampleNpcIdle(
+      state,
+      0,
+      16,
+      home,
+      GREEN_HOLLOW_BOUNDS,
+      { x: 0, z: 0 },
+    );
+    expect(sample.paceTarget).toBeNull();
+    expect(next.paceCooldownMs).toBe(1_984);
   });
 });

@@ -658,6 +658,14 @@ export const NPC_PACE_MIN_INTERVAL_MS = 4_000;
 export const NPC_PACE_MAX_INTERVAL_MS = 9_000;
 /** 单次踱步的最大位移（米）。 */
 export const NPC_PACE_RADIUS = 1.2;
+/**
+ * 玩家靠近到该距离内时**禁用踱步**（票 37 验收修复）。
+ *
+ * 诊断：巡逻（逻辑层，content 的 patrol）与踱步（表现层）叠加成两个
+ * 真相源，NPC 在玩家面前每隔几秒就挪一步，看起来「躁动」而不是待机。
+ * 巡逻本身已有对话冻结 + 交互期冻结，所以近距离直接站定最自然。
+ */
+export const NPC_PACE_PLAYER_DISABLE_RADIUS = 3;
 
 export interface NpcIdleSample {
   /** 呼吸引起的身体倾斜（绕 X 轴，弧度）。 */
@@ -689,6 +697,7 @@ export function sampleNpcIdle(
   deltaMs: number,
   home: { x: number; z: number },
   bounds: { minX: number; maxX: number; minZ: number; maxZ: number } = GREEN_HOLLOW_BOUNDS,
+  playerPosition: { x: number; z: number } | null = null,
 ): { sample: NpcIdleSample; next: NpcIdleState } {
   const phase = (elapsedMs % NPC_BREATH_PERIOD_MS) / NPC_BREATH_PERIOD_MS;
   const sway = Math.sin(phase * Math.PI * 2) * NPC_BREATH_AMPLITUDE;
@@ -702,7 +711,14 @@ export function sampleNpcIdle(
   let paceTarget: { x: number; z: number } | null = null;
   let faceYaw: number | null = null;
 
-  if (next.paceCooldownMs === 0) {
+  // 玩家在附近：站定（只保留呼吸摆动）。冷却照常递减，玩家走开后
+  // 不需要重新等一个完整周期就能恢复踱步。
+  const playerNear =
+    playerPosition !== null &&
+    Math.hypot(playerPosition.x - home.x, playerPosition.z - home.z) <
+      NPC_PACE_PLAYER_DISABLE_RADIUS;
+
+  if (next.paceCooldownMs === 0 && !playerNear) {
     const angle = state.random() * Math.PI * 2;
     const distance = NPC_PACE_RADIUS * (0.35 + state.random() * 0.65);
     paceTarget = clampPaceTarget(

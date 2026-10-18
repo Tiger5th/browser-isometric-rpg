@@ -3516,15 +3516,21 @@ export const p1WorldScenario: ScenarioDefinition = {
       }
 
       // NPC 待机演出：呼吸摆动 + 偶尔踱步（只动视觉节点）。
+      // 玩家靠近时禁用踱步（NPC_PACE_PLAYER_DISABLE_RADIUS，票 37 验收）：
+      // 巡逻与踱步两个真相源叠加会让 NPC 在你面前每几秒挪一步。
+      const playerForIdle = playerSnapshot(session);
       for (const [npcId, controller] of state.npcIdle) {
         const npc = snapshot.entities.find((entity) => entity.id === npcId);
         if (!npc) {
           continue;
         }
-        controller.update(deltaMs, {
-          x: npc.position.x,
-          z: npc.position.z,
-        });
+        controller.update(
+          deltaMs,
+          { x: npc.position.x, z: npc.position.z },
+          playerForIdle === null
+            ? null
+            : { x: playerForIdle.position.x, z: playerForIdle.position.z },
+        );
       }
 
       // 灌木进入反馈（code-review #31：灌木列表在切区时缓存进 regionContext，

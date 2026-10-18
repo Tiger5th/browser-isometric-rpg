@@ -19,6 +19,7 @@ import {
   NPC_BREATH_PERIOD_MS,
   NPC_PACE_MAX_INTERVAL_MS,
   NPC_PACE_MIN_INTERVAL_MS,
+  NPC_PACE_PLAYER_DISABLE_RADIUS,
   sampleNpcIdle,
   type NpcIdleState,
 } from "./world-physics";
@@ -53,6 +54,8 @@ export class NpcIdleController {
   private breathMs = 0;
   /** 对话中暂停演出（避免对话时角色还在乱动）。 */
   private paused = false;
+  /** 上一帧玩家是否落在踱步抑制半径内（供 evidence 读取）。 */
+  private playerWithinRadius = false;
   private disposed = false;
 
   constructor(config: NpcIdleConfig) {
@@ -77,10 +80,25 @@ export class NpcIdleController {
   }
 
   /**
+   * 玩家是否在抑制半径内（踱步已被 sampleNpcIdle 抑制）。
+   * L4 冒烟断言用：玩家贴脸时 npcPacingCount 应该为 0。
+   */
+  get playerNearby(): boolean {
+    return this.playerWithinRadius;
+  }
+
+  /**
    * 每帧调用。deltaMs 为帧间隔；position 是会话当前的权威位置，
    * 踱步只在该位置附近做小偏移，不改变逻辑事实。
+   *
+   * playerPosition 传玩家位置时，玩家靠近到 NPC_PACE_PLAYER_DISABLE_RADIUS
+   * 内禁用踱步（票 37 验收：NPC 不在玩家面前乱挪）。
    */
-  update(deltaMs: number, position: { x: number; z: number }): void {
+  update(
+    deltaMs: number,
+    position: { x: number; z: number },
+    playerPosition: { x: number; z: number } | null = null,
+  ): void {
     if (this.paused || this.disposed) {
       return;
     }
@@ -93,8 +111,13 @@ export class NpcIdleController {
       deltaMs,
       this.home,
       this.bounds,
+      playerPosition,
     );
     this.state = next;
+    this.playerWithinRadius =
+      playerPosition !== null &&
+      Math.hypot(playerPosition.x - this.home.x, playerPosition.z - this.home.z) <
+        NPC_PACE_PLAYER_DISABLE_RADIUS;
 
     if (sample.paceTarget !== null) {
       this.paceTarget = sample.paceTarget;
