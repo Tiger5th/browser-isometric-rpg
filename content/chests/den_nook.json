@@ -1,0 +1,11 @@
+{
+  "id": "chest:den_nook",
+  "displayName": "巢穴角落的破箱",
+  "regionId": "region:slime_den",
+  "position": { "x": -8, "y": 0, "z": 6 },
+  "rotation": { "x": 0, "y": 2.4, "z": 0 },
+  "loot": [
+    { "itemId": "item:slime_core", "quantity": 2 },
+    { "itemId": "item:healing_herb", "quantity": 2 }
+  ]
+}

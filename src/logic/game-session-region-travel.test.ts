@@ -368,3 +368,20 @@ describe("区域联动（票 35）：路口触发区域切换", () => {
     expect(items).toContain("item:slime_core");
   });
 });
+describe("跨区探索内容（票 37：区域 2 也要有宝箱）", () => {
+  it("巢穴里有本区域的宝箱，翠谷的宝箱在巢穴里打不开", () => {
+    const session = sessionInHollow();
+    const hollowChestId = BUNDLE.chests![0].id;
+    // 翠谷宝箱先在翠谷能开（用只读断言确认内容表已按区过滤）。
+    expect(session.chestDefinitions().map((chest) => chest.id)).toContain(hollowChestId);
+
+    session.tryTravelToRegion(BUNDLE, CAVE_MOUTH);
+
+    const denChests = session.chestDefinitions();
+    expect(denChests.map((chest) => chest.id)).toContain("chest:den_nook");
+    expect(denChests.map((chest) => chest.id)).toContain("chest:den_ledger");
+    // 翠谷的宝箱不该跟着泄漏到巢穴。
+    expect(denChests.map((chest) => chest.id)).not.toContain(hollowChestId);
+    expect(denChests.every((chest) => chest.regionId === "region:slime_den")).toBe(true);
+  });
+});

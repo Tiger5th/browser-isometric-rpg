@@ -10,6 +10,9 @@ import denCullData from "../../../content/quests/den_cull.json";
 import chestHollowStoneData from "../../../content/chests/hollow_stone.json";
 import chestMarketCrateData from "../../../content/chests/market_crate.json";
 import chestPondShoreData from "../../../content/chests/pond_shore.json";
+// 巢穴的两个宝箱（票 37 区域 2 探索回报）。
+import chestDenNookData from "../../../content/chests/den_nook.json";
+import chestDenLedgerData from "../../../content/chests/den_ledger.json";
 import collectSetGlowMossData from "../../../content/collect-sets/glow_moss.json";
 import collectibleGlowMossAData from "../../../content/collectibles/glow_moss_a.json";
 import collectibleGlowMossBData from "../../../content/collectibles/glow_moss_b.json";
@@ -79,7 +82,14 @@ export const SAMPLE_CONTENT_BUNDLE = {
   quests: [cullSlimesData, denCullData],
   levelCurves: [levelCurveData],
   // 票 37：探索内容（宝箱 3 + 萤光草 8 + 全收集奖励集）。
-  chests: [chestHollowStoneData, chestMarketCrateData, chestPondShoreData],
+  // 翠谷 3 个 + 巢穴 2 个（票据 37：区域 2 也要有探索回报）。
+  chests: [
+    chestHollowStoneData,
+    chestMarketCrateData,
+    chestPondShoreData,
+    chestDenNookData,
+    chestDenLedgerData,
+  ],
   collectibles: [
     collectibleGlowMossAData,
     collectibleGlowMossBData,
