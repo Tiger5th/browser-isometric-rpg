@@ -76,3 +76,78 @@ export function createIsometricCamera(scene: Scene, verticalSpan = 20): ArcRotat
 
   return camera;
 }
+
+/* ------------------------------------------------------------------ */
+/* 相机跟随（票 37 验收修复）                                          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * 每帧跟随的插值系数（1 = 瞬移，0 = 不动）。
+ *
+ * 正交相机下 target 移动 = 平移视野：0.08 在 60fps 下约 0.3s 收敛到 95%，
+ * 玩家跑出画面前相机已经跟上，又不会像硬跟随那样晕。
+ */
+export const CAMERA_FOLLOW_LERP = 0.08;
+
+/**
+ * 相机跟随状态：当前 target（世界坐标）与阻尼。
+ *
+ * 为什么不直接每帧 `camera.setTarget(player)`：ArcRotateCamera 会把
+ * `setTarget` 当成「换焦点」的重建式操作（重算 alpha/beta 的反解），
+ * 在正交 + 自定义 alpha/beta 下会把玩家拖到与旋转语义打架的机位。
+ * 直接写 `camera.target` 才是「保持机位、平移视野」。
+ */
+export interface CameraFollowState {
+  /** 当前相机 target（世界坐标）。 */
+  x: number;
+  z: number;
+}
+
+export function createCameraFollow(x = 0, z = 0): CameraFollowState {
+  return { x, z };
+}
+
+/**
+ * 推进跟随：把 target 向目标点阻尼插值一步。
+ *
+ * 返回是否发生了变化（没变就不必回写相机，省掉每帧的脏标记）。
+ * 目标点为 null 时保持不动（玩家死亡/读档中）。
+ */
+export function advanceCameraFollow(
+  state: CameraFollowState,
+  target: { x: number; z: number } | null,
+  lerp = CAMERA_FOLLOW_LERP,
+): boolean {
+  if (target === null || !Number.isFinite(target.x) || !Number.isFinite(target.z)) {
+    return false;
+  }
+  const nx = state.x + (target.x - state.x) * lerp;
+  const nz = state.z + (target.z - state.z) * lerp;
+  if (Math.abs(nx - state.x) < 1e-5 && Math.abs(nz - state.z) < 1e-5) {
+    state.x = nx;
+    state.z = nz;
+    return false;
+  }
+  state.x = nx;
+  state.z = nz;
+  return true;
+}
+
+/**
+ * 把跟随状态**立刻**对齐目标（传送/切区/读档后用）。
+ *
+ * 跟着瞬移走：玩家 teleportTo 到区域另一端后，相机必须直接在那儿，
+ * 不然会看到一段十几秒的「长镜头飞过去」。
+ */
+export function snapCameraFollow(
+  state: CameraFollowState,
+  target: { x: number; z: number },
+): void {
+  state.x = target.x;
+  state.z = target.z;
+}
+
+/** 把跟随状态写进相机 target（保持 alpha/beta/radius 不变，只平移视野）。 */
+export function applyCameraFollow(camera: ArcRotateCamera, state: CameraFollowState): void {
+  camera.setTarget(new Vector3(state.x, 0, state.z));
+}

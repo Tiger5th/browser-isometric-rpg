@@ -200,12 +200,15 @@ export const GROUND_PATCHES: readonly GroundPatch[] = [
     tileSize: 4,
   },
   {
+    // 通往南边巢穴洞口（exit:cave_mouth @ 0,19）的土路：票 37 验收修复——
+    // 原先止于 z≈15，玩家看不见路也不确定南边有去处。
+    // x 从 2 收到 -0.4 让路面中心对齐 x≈1.2，覆盖到出口触发半径之内。
     id: "ground.dirt.south",
     texture: "dirt-path",
-    x: 2,
-    z: 8.5,
+    x: -0.4,
+    z: 11.5,
     width: 3.2,
-    depth: 13,
+    depth: 16.5,
     y: 0.009,
     tileSize: 4,
   },

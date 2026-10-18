@@ -334,7 +334,7 @@ describe("靠近移动中的 NPC（票 37 验收）", () => {
     expect(last).toBe("none");
   });
 
-  it("NPC 冻结请求覆盖 approaching 与 ready（对话开始本来就冻结）", () => {
+  it("NPC 冻结请求覆盖 approaching、ready 与 talking（全程不让对方乱跑）", () => {
     const state = createInteractionState();
 
     selectNpc(state, NPC_ID, index(), farPlayer(), NPC_POSITION);
@@ -344,8 +344,9 @@ describe("靠近移动中的 NPC（票 37 验收）", () => {
     expect(npcHoldFor(state)).toEqual({ npcId: NPC_ID, active: true });
 
     activateBubble(state, positions(nearPlayer()), index());
-    // 对话阶段由会话自己的对话冻结负责，不重复要求。
-    expect(npcHoldFor(state)).toBeNull();
+    // talking 也算冻结中：会话对话冻结与这里是同一条 setNpcPaused 通路，
+    // 保持幂等即可（不清零才不至于把对话中的 NPC 提前放跑）。
+    expect(npcHoldFor(state)).toEqual({ npcId: NPC_ID, active: true });
   });
 
   it("接近超时/放弃后释放 NPC 冻结", () => {

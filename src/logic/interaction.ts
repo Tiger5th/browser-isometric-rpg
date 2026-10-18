@@ -91,7 +91,10 @@ export function createInteractionState(): InteractionState {
  * 复用对话冻结走的那条 setPatrolPaused 通路（逻辑层一个真相源）。
  *
  * ready 阶段不设超时：气泡在界面上挂着，NPC 就该等着。
- * approaching 阶段受 APPROACH_TIMEOUT_MS 约束（见 tickApproachTimeout）。
+ * approaching 阶段受 APPROACH_TIMEOUT_MS 约束（见 tickTimers）。
+ *
+ * talking 也算「冻结中」：对话开始时 GameSession 自己已经 setNpcPaused(true)，
+ * 这里返回同一个 id 让调用方保持幂等（不清零就不会误把对话中的 NPC 放跑）。
  */
 export function npcHoldFor(
   state: InteractionState,
@@ -99,7 +102,11 @@ export function npcHoldFor(
   if (state.npcId === null) {
     return null;
   }
-  if (state.phase === "approaching" || state.phase === "ready") {
+  if (
+    state.phase === "approaching" ||
+    state.phase === "ready" ||
+    state.phase === "talking"
+  ) {
     return { npcId: state.npcId, active: true };
   }
   return null;

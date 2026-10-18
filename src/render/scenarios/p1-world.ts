@@ -54,6 +54,7 @@ import {
   activateBubble,
   createInteractionState,
   interactionTarget,
+  npcHoldFor,
   requestMove,
   selectNpc,
   setInteractionPhase,
@@ -72,8 +73,13 @@ import { slotLabel } from "../../logic/save-slot-view";
 import { createSaveSlotPanel, type SaveSlotPanel } from "../ui/save-slot-panel";
 import {
   DEFAULT_CAMERA_VERTICAL_SPAN,
+  advanceCameraFollow,
+  applyCameraFollow,
   cameraVerticalSpan,
+  createCameraFollow,
+  snapCameraFollow,
   updateOrthographicFrustum,
+  type CameraFollowState,
 } from "../camera";
 import type { ScenarioContext, ScenarioDefinition } from "../harness";
 import { setCameraSpan, setGreyboxEnabled } from "../navmesh-scene";
@@ -142,6 +148,7 @@ import {
   validateSlimeDenLayout,
 } from "../presentation/slime-den-layout";
 import {
+  EXIT_TRIGGER_RADIUS,
   findTriggeredExit,
   type RegionLinkageExit,
 } from "../../logic/region-linkage";
@@ -161,6 +168,16 @@ import {
   type LandscapeVisuals,
 } from "../presentation/landscape-ring";
 import { NpcIdleController } from "../presentation/npc-idle";
+import {
+  projectWorldToCss,
+  projectionViewportOf,
+} from "../presentation/screen-projection";
+import {
+  advancePortalVisual,
+  createPortalVisual,
+  portalLabelFor,
+  type PortalVisual,
+} from "../presentation/portal-visuals";
 import {
   bushesOf,
   planEntityVisualRebuild,
@@ -212,6 +229,8 @@ const PLAYER_ID = "entity:player";
  */
 const PLAYER_MODEL_YAW_OFFSET = 0;
 const CAMERA_VERTICAL_SPAN = 30;
+/** 气泡锚点高出 NPC 视觉原点的高度（米）：在模型头顶之上留一点空隙。 */
+const NPC_BUBBLE_HEAD_OFFSET_M = 0.6;
 /**
  * 本场景的出厂等距预设（票 37）：几何沿用 camera.ts 的等距常量，
  * 可视高度沿用场景自己的 30m（p1-world 比 P0 灰盒看得更远）。
@@ -331,6 +350,8 @@ interface P1WorldState {
   previousHardwareScaling: number;
   /** 两段式对话交互状态（纯逻辑，见 src/logic/interaction.ts）。 */
   interaction: InteractionState;
+  /** 当前被交互冻结的 NPC（approaching/ready）；null = 无。 */
+  heldNpcId: string | null;
   /** galgame 立绘 + 气泡 UI（纯 DOM）。 */
   dialogueUi: DialogueUi;
   /** 票 33：商人交易面板（纯 DOM，独立于 quest-loop-ui）。 */
@@ -382,6 +403,16 @@ interface P1WorldState {
   cameraDragLastY: number;
   /** 票 37：解除拖拽与快捷键绑定的清理函数。 */
   detachCameraInput: () => void;
+  /**
+   * 票 37 验收修复：相机跟随。正交相机下 target 平移 = 视野平移，
+   * alpha/beta/radius（缩放/旋转/复位）与震屏都原样保留。
+   */
+  cameraFollow: CameraFollowState;
+  /**
+   * 票 37 验收修复：区域出口的视觉标记（洞口几何/地面圈/头顶标记/光环）。
+   * 按出口 id 索引，切区时整体重建。
+   */
+  portalVisuals: Map<string, PortalVisual>;
 }
 
 /**
@@ -466,6 +497,28 @@ interface P1WorldDebugApi {
    * `tryTravel` 是显式触发（ego-browser 冒烟用，等价于走到路口）。
    */
   getRegion(): { regionId: string | null; traveling: boolean; exits: Array<{ id: string; targetRegionId: string; x: number; z: number }> };
+  /**
+   * 票 37 验收修复：出口视觉与相机跟随的证据（L4 冒烟断言用）。
+   *
+   * `portalMeshCount > 0` 即证明当前区域的出口不是「零视觉」；
+   * `playerInView` 用相机 target 与玩家距离 + 半屏宽高判断玩家是否在画面内。
+   */
+  getPortalEvidence(): {
+    portalCount: number;
+    portals: Array<{
+      id: string;
+      meshCount: number;
+      label: string;
+      position: { x: number; z: number };
+      markerAboveLintel: boolean;
+    }>;
+    /** 南边土路是否铺到洞口（判断路是否与视觉连通）。 */
+    southPathReachesExit: boolean;
+    cameraFollow: { x: number; z: number };
+    playerInView: boolean;
+  };
+  /** 相机跟随是否已收敛到玩家（误差 <0.5m）。 */
+  isCameraOnPlayer(tolerance?: number): boolean;
   /** 显式触发一次区域切换（x/z 缺省用玩家当前逻辑位置）。 */
   tryTravel(x?: number, z?: number): Promise<string | null>;
   /** 传送到指定区域（按该区域某个出口的坐标触发，L4 双向冒烟用）。 */
@@ -1024,6 +1077,27 @@ function entityPositions(session: GameSession): Map<string, { x: number; y: numb
   );
 }
 
+/**
+ * 把交互状态机的「冻结请求」同步到会话的 NPC 巡逻暂停。
+ *
+ * 记下当前被冻结的 NPC：状态机每次只带一个 npcId，切换目标时要把上一个
+ * 解冻。这里不做引用计数——交互是单目标语义，一个时刻最多冻结一个。
+ */
+function syncNpcHold(state: P1WorldState): void {
+  const hold = npcHoldFor(state.interaction);
+  const nextId = hold === null ? null : hold.npcId;
+  if (state.heldNpcId === nextId) {
+    return;
+  }
+  if (state.heldNpcId !== null) {
+    state.session.setNpcPaused(state.heldNpcId, false);
+  }
+  if (nextId !== null) {
+    state.session.setNpcPaused(nextId, true);
+  }
+  state.heldNpcId = nextId;
+}
+
 /** 执行交互状态机给出的动作（提交意图 + UI 同步）。 */
 function applyInteractionAction(
   state: P1WorldState,
@@ -1221,27 +1295,52 @@ function updateInteractionPresentation(state: P1WorldState, scene: Scene, deltaM
   const session = state.session;
   const interactables = interactableIndex(session);
   const positions = entityPositions(session);
-  const action = updateInteraction(state.interaction, positions, interactables, PLAYER_ID);
+  const action = updateInteraction(
+    state.interaction,
+    positions,
+    interactables,
+    PLAYER_ID,
+    deltaMs,
+  );
   applyInteractionAction(state, action);
+
+  // NPC 冻结（票 37 验收）：approaching / ready 阶段让对方停下等玩家，
+  // 否则玩家追不上巡逻中的 NPC，ready 后 NPC 走出 2m 气泡还会直接消失。
+  // 复用对话冻结走的那条 setNpcPaused 通路（逻辑层一个真相源）。
+  syncNpcHold(state);
 
   // 气泡投影：NPC 头顶（视觉位置 + 目标高度）→ 屏幕坐标。
   const npcId = state.interaction.npcId;
   const bubbleKind = state.interaction.bubble;
   const bubbleVisual = npcId === null ? undefined : state.visuals.get(npcId);
   const camera = scene.activeCamera;
-  if (bubbleKind === null || npcId === null || bubbleVisual === undefined || camera === null) {
+  const snapshotPosition = npcId === null ? undefined : positions.get(npcId);
+  if (
+    bubbleKind === null ||
+    npcId === null ||
+    bubbleVisual === undefined ||
+    snapshotPosition === undefined ||
+    camera === null
+  ) {
     state.dialogueUi.setBubble(null);
   } else {
-    const head = bubbleVisual.node.position.add(
-      new Vector3(0, bubbleVisual.targetY + 0.6, 0),
+    // 锚点取**逻辑快照位置**（x/z）而不是 bubbleVisual.node.position：
+    // 后者被 NpcIdleController 每帧改写（踱步/呼吸偏移），用它当锚点会
+    // 让气泡跟着待机演出抖，与对话判定用的距离对不上。
+    // y 与头顶高度仍来自视觉（视觉才知道模型多高）。
+    const head = new Vector3(
+      snapshotPosition.x,
+      snapshotPosition.y + bubbleVisual.targetY + NPC_BUBBLE_HEAD_OFFSET_M,
+      snapshotPosition.z,
     );
-    const projected = Vector3.Project(
+    // 投影直接用 CSS 像素视口（DOM 气泡是 CSS 像素定位的，
+    // 原先按 getRenderWidth 投影会在 dpr=2 时飘出画面，见 screen-projection）。
+    const projected = projectWorldToCss(
       head,
-      Matrix.Identity(),
       scene.getTransformMatrix(),
-      camera.viewport.toGlobal(
-        scene.getEngine().getRenderWidth(),
-        scene.getEngine().getRenderHeight(),
+      projectionViewportOf(
+        scene.getEngine(),
+        scene.getEngine().getRenderingCanvas(),
       ),
     );
     state.dialogueUi.setBubble({
@@ -1489,6 +1588,62 @@ function aspectRatioOf(scene: Scene): number {
   return engine.getRenderHeight() > 0 ? engine.getRenderWidth() / engine.getRenderHeight() : 1;
 }
 
+/**
+ * 重建当前区域的出口视觉标记（票 37 验收修复）。
+ *
+ * 洞口几何 + 地面提示圈 + 头顶标记 + 呼吸光环；出口位置来自
+ * `exitsForRegion`（content 的 exits 是权威），因此内容加一个出口，
+ * 渲染层自动多一处标记，零额外配置。
+ */
+function rebuildPortalVisuals(state: P1WorldState, scene: Scene): void {
+  for (const visual of state.portalVisuals.values()) {
+    visual.root.dispose(false, true);
+  }
+  state.portalVisuals.clear();
+  exitsForRegion(state.session.currentRegionId).forEach((exit, index) => {
+    state.portalVisuals.set(
+      exit.id,
+      createPortalVisual(scene, state.root, exit.id, { x: exit.position.x, z: exit.position.z }, index),
+    );
+  });
+}
+
+/** 每帧推进出口标记的呼吸/漂浮动画。 */
+function updatePortalVisuals(state: P1WorldState, now: number): void {
+  for (const visual of state.portalVisuals.values()) {
+    advancePortalVisual(visual, now, 0);
+  }
+}
+
+/**
+ * 每帧推进相机跟随（票 37 验收修复）。
+ *
+ * target 向玩家阻尼插值（lerp 0.08，60fps 下约 0.3s 收敛），
+ * 直接写 camera.target —— 不走 setTarget 的 alpha/beta 反解，
+ * 因此票 37 的缩放/旋转/复位与票 27 的震屏都不会被跟随打断。
+ */
+function updateCameraFollowStep(state: P1WorldState, scene: Scene): void {
+  const camera = scene.activeCamera as ArcRotateCamera | null;
+  if (camera === null) {
+    return;
+  }
+  const player = playerSnapshot(state.session);
+  if (player === null || !player.combat.alive) {
+    return;
+  }
+  advanceCameraFollow(state.cameraFollow, { x: player.position.x, z: player.position.z });
+  applyCameraFollow(camera, state.cameraFollow);
+}
+
+/** 传送/读档/切区后把相机直接对齐玩家（不留长镜头）。 */
+function snapCameraToPlayer(state: P1WorldState): void {
+  const player = playerSnapshot(state.session);
+  if (player === null) {
+    return;
+  }
+  snapCameraFollow(state.cameraFollow, { x: player.position.x, z: player.position.z });
+}
+
 /** 每帧推进相机复位插值。 */
 function updateCameraReset(state: P1WorldState, scene: Scene, dtMs: number): void {
   const start = state.cameraReset;
@@ -1599,6 +1754,9 @@ async function loadFromStorage(state: P1WorldState): Promise<boolean> {
       }
     }
     state.session.restoreSnapshot(snapshot);
+    // 票 37 验收修复：读档后相机直接落到玩家位置（跟随状态从 0 追过去
+    // 会变成一段十几秒的长镜头）。
+    snapCameraToPlayer(state);
     invalidateCollectProgressCache(state);
     clearWaypoints(state);
     // 读档不保留「靠近中/气泡待点」这类会话内交互阶段；对话本身由
@@ -1675,6 +1833,7 @@ async function restoreSlot(state: P1WorldState, slotId: SaveSlotId): Promise<boo
       }
     }
     state.session.restoreSnapshot(contents.snapshot);
+    snapCameraToPlayer(state);
     invalidateCollectProgressCache(state);
     clearWaypoints(state);
     state.deadEnemies.clear();
@@ -1750,6 +1909,8 @@ function startNewGame(state: P1WorldState): { playerLevel: number; elapsedMs: nu
   const snapshot = fresh.snapshot();
 
   state.session.restoreSnapshot(snapshot);
+  // 新游戏重置：相机回到出生点，跟随状态一起归零。
+  snapCameraToPlayer(state);
   invalidateCollectProgressCache(state);
   clearWaypoints(state);
   state.deadEnemies.clear();
@@ -2146,6 +2307,68 @@ function installDebugApi(scene: Scene, state: P1WorldState): void {
         outlined: state.occlusion.outlinedCount,
         position,
       };
+    },
+    getPortalEvidence: () => {
+      const portals = [...state.portalVisuals.values()].map((visual) => {
+        const marker = visual.marker;
+        const lintel = visual.meshes.find((mesh) => mesh.name.includes(".lintel"));
+        return {
+          id: visual.exitId,
+          meshCount: visual.meshes.length,
+          label: portalLabelFor(visual.exitId),
+          // 零件用世界坐标摆位（parent 节点在原点），直接读 marker 的位置。
+          position: {
+            x: round(marker?.position.x ?? visual.root.position.x, 3),
+            z: round(marker?.position.z ?? visual.root.position.z, 3),
+          },
+          markerAboveLintel:
+            marker !== null && lintel !== undefined
+              ? marker.position.y > lintel.position.y
+              : false,
+        };
+      });
+      const player = playerSnapshot(state.session);
+      const camera = scene.activeCamera as ArcRotateCamera | null;
+      let playerInView = false;
+      if (camera !== null && player !== null) {
+        const span = cameraVerticalSpan(camera, CAMERA_VERTICAL_SPAN);
+        const aspect = aspectRatioOf(scene);
+        // 正交：target 与玩家在 target 平移方向上的差小于半屏即可见。
+        const dx = Math.abs(player.position.x - state.cameraFollow.x);
+        const dz = Math.abs(player.position.z - state.cameraFollow.z);
+        playerInView = dx < (span * aspect) / 2 && dz < span / 2;
+      }
+      const southPath = GREEN_HOLLOW_RUNTIME_LAYOUT.groundPatches.find(
+        (patch) => patch.id === "ground.dirt.south",
+      );
+      const caveExit = (GREEN_HOLLOW_REGION.exits ?? []).find(
+        (exit) => exit.id === "exit:cave_mouth",
+      );
+      return {
+        portalCount: portals.length,
+        portals,
+        southPathReachesExit:
+          southPath !== undefined &&
+          caveExit !== undefined &&
+          southPath.z + southPath.depth / 2 >= caveExit.position.z - EXIT_TRIGGER_RADIUS,
+        cameraFollow: {
+          x: round(state.cameraFollow.x, 3),
+          z: round(state.cameraFollow.z, 3),
+        },
+        playerInView,
+      };
+    },
+    isCameraOnPlayer: (tolerance = 0.5) => {
+      const player = playerSnapshot(state.session);
+      if (player === null) {
+        return false;
+      }
+      return (
+        Math.hypot(
+          player.position.x - state.cameraFollow.x,
+          player.position.z - state.cameraFollow.z,
+        ) <= tolerance
+      );
     },
     blink: (holdMs = 500) => state.player.triggerBlink(holdMs),
     getEnemyAiEvidence: () => {
@@ -2707,6 +2930,13 @@ export const p1WorldScenario: ScenarioDefinition = {
       probeHoldUntil: 0,
       previousHardwareScaling: engine.getHardwareScalingLevel(),
       interaction: createInteractionState(),
+      heldNpcId: null,
+      // 票 37 验收：相机跟随 + 出口视觉标记。
+      cameraFollow: createCameraFollow(
+        initialSnapshot.entities.find((entity) => entity.id === PLAYER_ID)?.position.x ?? 0,
+        initialSnapshot.entities.find((entity) => entity.id === PLAYER_ID)?.position.z ?? 0,
+      ),
+      portalVisuals: new Map(),
       dialogueUi: {
         update: () => undefined,
         setSaveStatus: () => undefined,
@@ -3209,6 +3439,11 @@ export const p1WorldScenario: ScenarioDefinition = {
       // 票 37：宝箱盖子开合 + 收集品呼吸 + 相机复位插值。
       updateExplorationVisuals(state, now, deltaMs);
       updateCameraReset(state, scene, deltaMs);
+      // 票 37 验收修复：出口标记动画 + 相机跟随玩家。
+      // 跟随放在复位之后：复位只改 alpha/beta/span，不碰 target，
+      // 所以两者叠加时复位结束后相机继续平滑跟着玩家走。
+      updatePortalVisuals(state, now);
+      updateCameraFollowStep(state, scene);
       // 票 27：受击抖动（衰减位移）与击杀消散（缩小上浮）。
       for (const [entityId, react] of state.hitReacts) {
         const visual = state.visuals.get(entityId);
@@ -3760,6 +3995,9 @@ export const p1WorldScenario: ScenarioDefinition = {
     for (const controller of state.npcIdle.values()) {
       controller.dispose();
     }
+    for (const visual of state.portalVisuals.values()) {
+      visual.root.dispose(false, true);
+    }
     for (const visual of state.visuals.values()) {
       visual.procedural?.dispose();
     }
@@ -3909,6 +4147,8 @@ async function enterRegionForSnapshot(
     }
     await loadRegionVisuals(state, scene, layout);
     syncVisualToSnapshot(state, state.session.snapshot());
+    // 切区后玩家落在新区入口：相机直接就位，不做长镜头平移。
+    snapCameraToPlayer(state);
     return layout.regionId;
   } finally {
     await gate.maskOut(REGION_FADE_MS);
@@ -3954,6 +4194,8 @@ async function loadRegionVisuals(
   state.landscape = createLandscapeRing(scene, state.root, landscapeOptionsFor(layout.regionId));
   state.navigation = runtime.navigation;
   rebuildRegionVisuals(state, scene, runtime);
+  // 票 37 验收修复：出口标记随区域一起重建（洞口是当前区域的出口）。
+  rebuildPortalVisuals(state, scene);
   // 实体视觉重建（code-review #3）：上一区域的 NPC/敌人 mesh 必须清掉，
   // 新区域的敌人必须有 visual。玩家跨区域保留。
   rebuildEntityVisuals(state, scene, layout);
@@ -4004,6 +4246,8 @@ async function travelToRegion(
     // （对话/路点/死亡集合的清理都在 loadRegionVisuals 里）。
     await loadRegionVisuals(state, scene, layout);
     syncVisualToSnapshot(state, state.session.snapshot());
+    // 切区后玩家落在新区入口：相机直接就位，不做长镜头平移。
+    snapCameraToPlayer(state);
 
     // 自动存档：区域切换是关键节点（票 31 的触发时机之一）。
     await state.autoSaver.notifyRegionChanged();
