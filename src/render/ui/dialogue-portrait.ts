@@ -38,6 +38,22 @@ export interface DialogueUiOptions {
   onUiClick?(): void;
 }
 
+/**
+ * 对话压暗层的背景色（开 / 关）。
+ *
+ * 票 37 验收修复：之前用 `dimInitialBackground` 记「元素建出来时的背景」，
+ * 但那个值就是压暗本身（rgba(4,6,12,0.55)），closeDialogue 再赋回去等于
+ * 什么都没还原——「关闭后二次对话压暗失效」就是这么来的。
+ * 现在 on/off 是两个**显式不同的值**，且是纯函数（可在 node 下直测）。
+ */
+export const DIM_BACKGROUND_ON = "rgba(4, 6, 12, 0.55)";
+export const DIM_BACKGROUND_OFF = "rgba(4, 6, 12, 0)";
+
+/** 对话是否打开 → 该用的压暗背景（纯逻辑，L1 可直测）。 */
+export function dimBackgroundFor(open: boolean): string {
+  return open ? DIM_BACKGROUND_ON : DIM_BACKGROUND_OFF;
+}
+
 export interface BubbleAnchor {
   npcId: string;
   kind: "talk" | "quest";
@@ -117,9 +133,7 @@ export function createDialogueUi(options: DialogueUiOptions): DialogueUi {
     "position:absolute;inset:0;background:rgba(4,6,12,0.55);pointer-events:none;",
   );
   dim.dataset.testid = "dialogue-dim";
-  // 关闭对话后要还原的初始背景（closeDialogue 曾直接清空成 ""，
-  // 若宿主层预置了背景就会丢掉）。
-  const dimInitialBackground = dim.style.background;
+  dim.style.background = dimBackgroundFor(false);
 
   // galgame 全屏立绘：左右两个全高画格，底部对齐（立绘从屏幕底部长出）。
   const portraits = element(
@@ -280,6 +294,8 @@ export function createDialogueUi(options: DialogueUiOptions): DialogueUi {
 
     openDialogue(nextNpcId, nextPlayerId, text, choices) {
       open = true;
+      // 二次对话必须重新压暗：closeDialogue 把它清成透明，这里再打开回来。
+      dim.style.background = dimBackgroundFor(true);
       npcId = nextNpcId;
       playerId = nextPlayerId;
       activeSpeaker = nextNpcId;
@@ -306,7 +322,7 @@ export function createDialogueUi(options: DialogueUiOptions): DialogueUi {
       activeSpeaker = null;
       stage.style.display = "none";
       delete stage.dataset.open;
-      dim.style.background = dimInitialBackground;
+      dim.style.background = dimBackgroundFor(false);
       portraits.replaceChildren();
       choiceList.replaceChildren();
     },
